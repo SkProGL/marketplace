@@ -5,6 +5,7 @@
 > python version: 3.11  
 > docker-python version: 3.11-slim  
 
+[![Jira](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/anuraghazra/github-readme-stats)
 <details>
 <summary><b> &nbsp Python </b>
 </summary>
