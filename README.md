@@ -5,7 +5,6 @@
 > python version: 3.11  
 > docker-python version: 3.11-slim  
 
-[![Jira](https://vercel.com/button)](https://live-team-eagles.atlassian.net/jira/software/projects/SCRUM/boards/1)
 <details>
 <summary><b> &nbsp Python </b>
 </summary>
