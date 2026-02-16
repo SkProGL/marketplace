@@ -1,6 +1,6 @@
 ### Draft repository
 
-> [!IMPORTANT]
+> [!IMPORTANT]  
 > django version: 5.2  
 > python version: 3.11  
 > docker-python version: 3.11-slim  
@@ -31,7 +31,11 @@
       <td><code>source .venv/bin/activate</code></td>
     </tr>
     <tr>
-      <td><strong>1.2 deactivate environment</strong></td>
+      <td><strong>1.2 install packages (same as pip)</strong></td>
+      <td><code>uv pip install django</code></td>
+    </tr>
+    <tr>
+      <td><strong>1.3 deactivate environment</strong></td>
       <td><code>deactivate</code></td>
     </tr>
   </tbody>
@@ -103,7 +107,11 @@
     </tr>
     <tr>
       <td><code>app/templates</code></td>
-      <td><strong>contains all .html pages</strong></td>
+      <td><strong>contains .html pages</strong></td>
+    </tr>
+    <tr>
+      <td><code>app/static</code></td>
+      <td><strong>contains .css, .js files and images</strong></td>
     </tr>
     <tr>
       <td><code>project/settings.py</code></td>
