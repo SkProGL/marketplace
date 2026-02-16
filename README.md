@@ -1,6 +1,9 @@
-django version: 5.2  
-python version: 3.11  
-docker-python version: 3.11-slim  
+### Draft repository
+
+> [!IMPORTANT]
+> django version: 5.2  
+> python version: 3.11  
+> docker-python version: 3.11-slim  
 
 <details>
 <summary><b> &nbsp Python </b>
@@ -46,9 +49,6 @@ docker-python version: 3.11-slim
 <table>
   <tbody>
     <tr>
-      <td colspan="2"><strong>CLI (command line interface) commands:</strong></td>
-    </tr>
-    <tr>
       <td colspan="2"><strong>Admin commands</strong></td>
     </tr>
     <tr>
@@ -59,6 +59,10 @@ docker-python version: 3.11-slim
       <td><code>django-admin startproject project_name</code></td>
       <td><strong>template project</strong></td>
     </tr>
+  </tbody>
+</table>
+    <table>
+  <tbody>
     <tr>
       <td colspan="2"><strong>Server management</strong></td>
     </tr>
@@ -74,8 +78,12 @@ docker-python version: 3.11-slim
       <td><code>python manage.py makemigrations</code></td>
       <td></td>
     </tr>
-<tr>
-      <td colspan="2"><strong>Script / directory purpose:</strong></td>
+  </tbody>
+</table>
+<table>
+  <tbody>
+    <tr>
+      <td colspan="2"><strong>Script / folder purpose:</strong></td>
     </tr>
     <tr>
       <td><code>project/urls.py</code></td>
@@ -108,7 +116,9 @@ docker-python version: 3.11-slim
 <details>
 <summary><b> &nbsp Docker</b>
 </summary>
-Docker file:
-> to specify python version in docker, use slim build  
-> FROM python:3.11-slim
+<br/>
+<blockquote>
+to specify python version in docker, use slim build <br/>
+FROM python:3.11-slim
+</blockquote>
 </details>
