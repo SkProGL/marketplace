@@ -130,3 +130,113 @@ to specify python version in docker, use slim build <br/>
 FROM python:3.11-slim
 </blockquote>
 </details>
+
+
+<details>
+<summary><b> &nbsp Github task workflow</b>
+</summary>
+
+## Prerequistes:
+- Repository is cloned with `git clone <repo_url>`
+- Decide on assigned JIRA task and set it to _In-progress_  (i.e., Create login page)
+
+## Creating a Branch:
+1. **Ensure local main is up-to-date with remote**
+	```bash
+    git switch main
+    git fetch
+    git pull origin main
+    ```
+
+2. **Create a new branch with:**
+
+	```bash
+    git checkout -b <prefix/branch_name> 
+    # OR
+    git switch -c <prefix/branch_name>
+    ```
+
+    | prefix  |  Purpose |
+    |---|---|
+    | **main**   | Main development branch  |
+    | **feature/**  |  New features (e.g., feature/add-login-page, feat/add-login-page) |
+    | **bugfix/** |  Bug fixes (e.g., bugfix/fix-header-bug, fix/header-bug) |
+    |**chore/**: | For non-code tasks like dependency, docs updates (e.g., chore/update-dependencies) |
+
+
+## Making changes
+1. **Change to your branch and ensure it is up-to-date** 
+    ```bash
+        git switch <branch_name>
+        git fetch
+        git pull origin <branch_name>
+    ```
+
+2. **Commit local changes to remote**
+    - Try to make modular commits over commiting large amounts of changes at once.
+
+    - Ideally do not `git add . ` unless all changed files directly relate to the commit message.
+    - **Commit messages should start with imperative verb.** 
+    
+        Example:
+        "_Add button_", "_Update field_" or "_Delete variable_" .
+    ```bash
+    git branch                  # Verify that you are on the right branch
+    git add "<changed_files>"
+    git commit -m "<message>"
+    ```
+
+
+3. **Push changes to remote**
+    ```bash
+    git push origin <current_branch>
+    ```
+
+    - **IMPORTANT:** main may have updated since creating your branch, regularly **_merge_*** with
+    ```bash 
+    git fetch origin main        # Get up-to-date main from remote.       
+    git merge origin/main                   
+    git push origin <current_branch> 
+    
+    # You may be prompted to handle conflicts.
+    # If so, resolve the conflicts and
+    git add <resolved_files>
+    git commit
+    git push origin <current_branch>
+    ```
+
+
+4. **Once the task is complete. Create a pull request (PR) from the _<current_branch>_ to _main_.** Then:
+    1. Describe what your PR implements or fixes. (e.g., "This PR ...") with fitting title (e.g., "Feature: Add Thing... ").
+
+    2. Add other developers as reviewers and await their review.
+        - Apply feedback as applicable.
+    3. Once approved, select **_merge and squash_** with a descriptive commit message (e.g, "This commit ... ").
+    4. Once merged, delete the branch **when the prompt says it is safe to do so**.
+
+<br>
+
+---
+
+<br>
+
+### Rebasing
+
+*If working on a branch alone you can opt for **_rebase_** instead of **_merge_** for a cleaner linear git history:
+
+``` bash
+git fetch origin main                           
+git rebase origin/main             # Takes new main and places your branch's history on top
+git push --force-with-lease origin <current_branch> # DO NOT PULL. Force the rewritten history. 
+
+# Resolve conflicts as necessary
+git add <resolved_files>
+git rebase --continue
+# ...
+git push --force-with-lease origin <current_branch> 
+```
+
+![alt text](image.png)
+
+*Example diagram*
+</details>
