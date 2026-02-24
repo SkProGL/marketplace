@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:17
+    container_name: postgres_db
+    # restart: always
+    # environment reads .env file for authentication data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    # TLDR checks whether DB has started all of it's services and is ready to accept connections
+    # if fails after 5 tries container will terminate
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+  web:
+    build: . # build in current directory
+    container_name: django_app
+    command: uv run python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./marketplace_platform:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+    env_file:
+      - .env
+
+volumes:
+  postgres_db:

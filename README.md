@@ -1,9 +1,32 @@
 ### Draft repository
 
+> [!NOTE]  
+> Latest changes (based on https://www.youtube.com/watch?v=37aNpE-9dD4):
+> ```bash
+> // created draft project
+> django-admin startproject marketplace_platform
+> 
+> // created app inside project
+> python .\manage.py startapp core
+>
+> // run & build container
+> docker compose up --build 
+> 
+> // (open new terminal) execute commands inside container
+> // makemigrations is needed when app/models.py gets changed
+> docker exec django_app python manage.py makemigrations
+> // all migrations made in container will be updated in local files as well (based on where VOLUME is defined)
+> docker exec django_app python manage.py migrate
+>
+> // enters postgres CLI utility, -U user -d database
+> docker exec -ti postgres_db psql -U myuser -d mydb
+> ```
+
 > [!IMPORTANT]  
 > django version: 5.2  
 > python version: 3.11  
 > docker-python version: 3.11-slim  
+
 
 <details>
 <summary><b> &nbsp Python </b>
