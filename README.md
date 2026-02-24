@@ -263,3 +263,6 @@ git push --force-with-lease origin <current_branch>
 
 *Example diagram*
 </details>
+
+### Running pages 
+- use "python manage.py runserver" to preview pages in browser 
