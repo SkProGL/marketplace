@@ -4,6 +4,12 @@ from .models import Item
 # Create your views here.
 
 def home_view(request):
+    return render(request, 'home.html') # A simple welcome page
+def login_view(request):
+    form = LoginForm()
+    return render(request, 'login.html', {'form': form})
+
+def home_view(request):
     items = Item.objects.all() # Fetch all items from Postgres
     return render(request, 'home.html', {'items': items})
 def login_view(request):
