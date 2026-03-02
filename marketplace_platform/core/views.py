@@ -13,7 +13,6 @@ def home_view(request):
     items = Product.objects.all()  # Fetch all items from Postgres
     return render(request, 'home.html', {'items': items})
 
-
 def login_view(request):
     if request.method == 'POST':
         form = LoginForm(request.POST)
@@ -34,7 +33,6 @@ def login_view(request):
         form = LoginForm()
 
     return render(request, 'login.html', {'form': form})
-
 
 def upload_item(request):
     if request.method == 'POST':
@@ -61,3 +59,4 @@ def signup_view(request):
 
 def invoice_view(request):
     return render(request, 'invoice.html')
+

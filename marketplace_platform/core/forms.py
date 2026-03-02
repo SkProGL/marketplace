@@ -1,4 +1,5 @@
 from django import forms
+<<<<<<< HEAD
 from .models import Product
 
 
@@ -26,3 +27,16 @@ class ProductForm(forms.ModelForm):
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
         }
+=======
+from .models import Item
+
+
+class LoginForm(forms.Form):
+    username = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'}))
+
+class ItemForm(forms.ModelForm):
+    class Meta:
+        model = Item
+        fields = ['name', 'category', 'short_description', 'price', 'allergens', 'image']
+>>>>>>> f64f6c7 (add inventory mvp)

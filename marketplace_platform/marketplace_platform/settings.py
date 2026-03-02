@@ -16,12 +16,22 @@ from pathlib import Path
 # This loads the variables from your .env file
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+<<<<<<< HEAD
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 AUTH_USER_MODEL = 'core.User'
 LOGOUT_REDIRECT_URL = 'home'
+=======
+<<<<<<< HEAD
+AUTH_USER_MODEL = 'core.User'
+=======
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+>>>>>>> 64c145f (add inventory mvp)
+>>>>>>> f64f6c7 (add inventory mvp)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/

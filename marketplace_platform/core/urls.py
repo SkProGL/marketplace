@@ -10,3 +10,4 @@ urlpatterns = [
     path('inventory_upload/', views.upload_item, name='inventory_upload'),
     path('invoice/', views.invoice_view, name='invoice'),
 ]
+

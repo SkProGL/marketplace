@@ -19,12 +19,19 @@ from django.urls import path, include
 from core import views
 from django.conf import settings
 from django.conf.urls.static import static
+<<<<<<< HEAD
 from django.contrib.auth import views as auth_views
+=======
+>>>>>>> f64f6c7 (add inventory mvp)
 
 urlpatterns = [
     path("", include("core.urls")),
     path('admin/', admin.site.urls),
+<<<<<<< HEAD
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path("api/", include("api.urls")),
     path("__reload__/", include("django_browser_reload.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+=======
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+>>>>>>> f64f6c7 (add inventory mvp)
