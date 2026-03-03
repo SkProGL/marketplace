@@ -3,7 +3,6 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
-
 from core.forms import LoginForm, ProductForm, SignupForm
 from core.utils import get_management_context, handle_management_post
 from .models import Product
