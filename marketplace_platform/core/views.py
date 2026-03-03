@@ -7,6 +7,9 @@ from .models import User, Product, Order, Recipe, User
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.db import models
+import uuid
+from django.contrib.postgres.fields import ArrayField
 
 User = get_user_model()
 
@@ -63,102 +66,161 @@ def invoice_view(request):
     return render(request, 'invoice.html')
 
 def management_view(request):
-    # For CRUD model selection 
-    # TODO: Convert from brute force load
-    models = apps.get_app_config('core').get_models()
+    # Construct list of model names
+    app_config = apps.get_app_config('core')
+    model_names= [model.__name__ for model in app_config.get_models()]
 
-    db_data= {} 
-    
-    # Extract ALL data for display, for now
-    for model in models:
-        model_name = model.__name__
-        headers = [field.name for field in model._meta.fields]
-        records = model.objects.all()
-        
-        # Build records
-        rows = []
-        for record in records:
-            row_values = [getattr(record, h) for h in headers]
-            rows.append({
-                'id': record.pk,
-                'cells': row_values
-            })
-
-        db_data[model_name] = {
-            'headers': headers,
-            'rows': rows,
-        }
-
-    # Pull specific records for selected models
-    selected_model = request.GET.get('model')
-
-    # Select data for specified model
-    selected_data = db_data.get(selected_model)
-
+    # Pull specific records for selected model
+    selected_model_name = request.GET.get('model')
+    selected_data = None
 
     # CRUD actions
-    if request.method == 'POST' and selected_model:
-        
-        model = apps.get_model('core', selected_model)
+    if request.method == 'POST' and selected_model_name:
+        model = app_config.get_model(selected_model_name)
         
         # DELETE
         if 'delete_id' in request.POST:
-            model.objects.filter(pk=request.POST.get('delete_id')).delete()
+            try:
+                model.objects.filter(pk=request.POST.get('delete_id')).delete()
+            except Exception as e:
+                print(f"FAILED TO DELETE: {e}")
 
-            
         # CREATE
-        # TODO: Resolve this temporary workaround to more robust solution
         elif 'add_entry' in request.POST:
-            model = apps.get_model('core', selected_model)
+            fields = {}
             
-            # Get a dummy user for the mandatory FKs
-            first_user = User.objects.first()
-            first_prod = Product.objects.first()
-            first_order = Order.objects.first()
+            # Define default values for each field type
+            default_values = {
+                models.IntegerField: 0,
+                models.DecimalField: 0.00,
+                models.FloatField: 0.0,
+                models.BooleanField: False,
+                models.DateTimeField: timezone.now(),
+                models.DateField: timezone.now().date(),
+                models.CharField: "New CharField",
+                models.TextField: "New TextField",
+            }
 
-            params = {}
-            
-            # Logic to satisfy the database constraints
-            if selected_model == 'Order':
-                params = {
-                    'customer': first_user, 
-                    'product': first_prod, 
-                    'num_purchased': 1, 
-                    'total_price': 0, 
-                    'delivery_date': timezone.now()
+            for field in model._meta.fields:
+                if not field.blank and not field.null and not field.primary_key:
+                    # Handle unique CharFields (such as username)
+                    if field.unique and isinstance(field, models.CharField):
+                        unique_id = uuid.uuid4().hex
+                        fields[field.name] = f"{selected_model_name.lower()}_{unique_id[:10]}"
+                        continue
+
+                    # Handle Foreign Keys
+                    if isinstance(field, models.ForeignKey):
+                        fields[field.name] = field.related_model.objects.first()
+                        continue
+                    
+                    # Match againts dict of defaults
+                    for field_class, default_val in default_values.items():
+                        if isinstance(field, field_class):
+                            fields[field.name] = default_val
+                            break
+
+            if selected_model_name == 'User':
+                # Built-in method for creating AbstractUser
+                user = model.objects.create_user(**fields)
+                user.set_password('password') 
+                user.save()
+            else:
+                # Unpack details to create new model object instance
+                model.objects.create(**fields)
+            return redirect(f"{request.path}?model={selected_model_name}")
+
+        # UPDATE
+        elif 'update_id' in request.POST:
+            record_id = request.POST.get('update_id')  
+            try:
+                # Fetch specific record
+                record = model.objects.get(pk=record_id)
+                
+                for field in model._meta.fields:
+                    # Construct the exact name of the input box from your HTML
+                    input_name = f"cell_{record_id}_{field.name}"
+                    # print(f"{request.POST})
+                    
+                    if input_name in request.POST:
+                        raw_value = request.POST.get(input_name)
+                        # Field specific handling
+                        if isinstance(field, models.ForeignKey):
+                            # For ForeignKeys, Django expects the ID
+                            if raw_value:
+                                setattr(record, f"{field.name}_id", raw_value)    
+
+                        elif isinstance(field, ArrayField):
+                            # Strip out any brackets or quotes
+                            cleaned_str = raw_value.strip("[]'\" ")
+                            if cleaned_str:
+                                # Split by comma into a list
+                                array_val = [item.strip() for item in cleaned_str.split(',')]
+                                setattr(record, field.name, array_val)
+                            else:
+                                # if empty, save empty list
+                                setattr(record, field.name, list())
+
+                        elif isinstance(field, models.BooleanField):
+                            # Convert to boolean
+                            bool_val = str(raw_value).strip().lower() in ['true', '1', 'yes']
+                            setattr(record, field.name, bool_val)
+                        else:
+                            setattr(record, field.name, raw_value)
+                record.save()
+                
+            except Exception as e:
+                print(f"Failed to update: {e}")
+                
+            return redirect(f"{request.path}?model={selected_model_name}")
+        
+    # Get specified model contents for display
+    if selected_model_name:
+        model = app_config.get_model(selected_model_name)
+        fields = model._meta.fields
+        headers = [field.name for field in model._meta.fields]
+        records = model.objects.all()
+        
+        # Fetch FKs for drop-down selection
+        foreign_key_options = {}
+        for field in fields:
+            if isinstance(field, models.ForeignKey):
+                # Stores as list of tuples: (ID, String)
+                foreign_key_options[field.name] = [(str(obj.pk), str(obj)) for obj in field.related_model.objects.all()]
+
+        rows = []
+        for record in records:
+            row_cells = []
+            for field in fields:
+                is_fk = isinstance(field, models.ForeignKey)
+
+                raw_val = getattr(record, field.name)
+                # Convert obects into strings
+                if isinstance(field, models.DateTimeField) and raw_val:
+                    display_val = raw_val.strftime('%Y-%m-%d %H:%M:%S')
+                elif isinstance(field, models.DateField) and raw_val:
+                    display_val = raw_val.strftime('%Y-%m-%d')
+                else:
+                    display_val = raw_val
+                cell_data = {
+                    
+                    'name': field.name,
+                    'value': display_val,
+                    'is_fk': is_fk
                 }
-            elif selected_model == 'Product':
-                params = {'producer': first_user, 'name': "New Product", 'price': 0, 'food_miles': 0, 'stock': 0}
-            elif selected_model == 'Review':
-                params = {'user': first_user, 'order': first_order, 'rating': 5, 'title': "New Review"}
-            elif selected_model == 'StoryPost':
-                params = {'user': first_user, 'content': "Content", 'image': "path/to/image", 'date_posted': timezone.now()}
-            elif selected_model == 'Recipe':
-                new_recipe = model.objects.create(
-                        user=first_user, 
-                        title="New Recipe", 
-                        description="Description", 
-                        instructions="Instructions", 
-                        season=Recipe.Season.SPRING
-                    )               
-                if first_prod:
-                    new_recipe.ingredients.add(first_prod)
-                return redirect(f"{request.path}?model={selected_model}")
-            elif hasattr(model, 'user'): 
-                params = {'user': first_user, 'title': "New item", 'content': "...", 'description': "..."}
+                if is_fk:
+                    cell_data['fk_id'] = str(getattr(record, f"{field.name}_id"))
+                    cell_data['options'] = foreign_key_options[field.name]
+                
+                row_cells.append(cell_data)
 
-            # if no pre-existing user, create one
-            if first_user:
-                model.objects.create(**params) # ** => unpack
+            rows.append({'id': record.pk, 'cells': row_cells})
+                
+        selected_data = {'headers': headers, 'rows': rows}
 
-        return redirect(f"{request.path}?model={selected_model}")
-
-
-    content = {
-            'db_data': db_data,
-            'selected_model': selected_model,
-            'selected_data': selected_data, # This contains 'records' and 'headers'
-        }
-
-    return render(request, 'management.html', content)
+    return render(request, 'management.html', {
+            'model_names': model_names,
+            'selected_model_name': selected_model_name,
+            'selected_data': selected_data,
+        })
 
