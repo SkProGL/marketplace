@@ -1,5 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
-    <h1>Welcome to the Site!</h1>
-    <p>Please click the Login button in the top right to continue.</p>
+    <h1 class="mb-4">Marketplace Product</h1>
+    
+    <div class="row">
+        {% for item in items %}
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm">
+                    {% if item.image %}
+                        <img src="{{ item.image.url }}" class="card-img-top" alt="{{ item.name }}" style="height: 200px; object-fit: cover;">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ item.name }}</h5>
+                        <p class="text-muted small">{{ item.category }}</p>
+                        <p class="card-text">{{ item.description }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-success">${{ item.price }}</span>
+                            {% if item.allergens %}
+                                <small class="text-danger">⚠️ {{item.allergens|join:", "}}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p>No items found. Go to the <a href="{% url 'inventory_upload' %}">Inventory page</a> to add one!</p>
+        {% endfor %}
+    </div>
 {% endblock %}

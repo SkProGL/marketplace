@@ -23,10 +23,24 @@ class User(AbstractUser):
 
     id=models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     category=models.CharField(max_length=20,choices=Category.choices,default=Category.CUSTOMER)
-    email=models.CharField(max_length=128, unique=True)
     phone=models.CharField(max_length=20, blank=True)
     address=models.CharField(max_length=256, blank=True)
     postcode=models.CharField(max_length=20, blank=True)
+    
+    groups = models.ManyToManyField(
+        'auth.Group',
+        related_name='custom_user_set',
+        blank=True,
+        help_text='The groups this user belongs to.',
+        verbose_name='groups',
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        related_name='custom_user_permissions_set',
+        blank=True,
+        help_text='Specific permissions for this user.',
+        verbose_name='user permissions',
+    )
 
 class Product(models.Model):
     class Category(models.TextChoices):
@@ -41,7 +55,7 @@ class Product(models.Model):
         AUTUMN="Autumn"
         WINTER="Winter"
     id=models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False)
-    producer=models.ForeignKey(User, on_delete=models.CASCADE)
+    producer=models.ForeignKey('core.User', on_delete=models.CASCADE)
     name=models.CharField(max_length=128)
     category=models.CharField(max_length=20,choices=Category.choices,default=Category.VEGETABLE)
     description=models.TextField()
