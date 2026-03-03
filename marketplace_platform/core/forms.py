@@ -1,7 +1,5 @@
 from django import forms
-
 from .models import Product, User
-
 
 class SignupForm(forms.ModelForm):
     full_name = forms.CharField(
