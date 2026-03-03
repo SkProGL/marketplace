@@ -5,7 +5,7 @@
     <div class="col-md-8 col-lg-6">
         <div class="card shadow">
             <div class="card-header bg-primary text-white">
-                <h2 class="h5 mb-0">Upload New Item</h2>
+                <h2 class="h5 mb-0">Upload New Product</h2>
             </div>
             <div class="card-body">
                 <form method="post" enctype="multipart/form-data">
@@ -25,7 +25,7 @@
                     {% endfor %}
 
                     <div class="d-grid gap-2 mt-4">
-                        <button type="submit" class="btn btn-success">Upload Item</button>
+                        <button type="submit" class="btn btn-success">Upload Product</button>
                         <a href="{% url 'home' %}" class="btn btn-outline-secondary">Cancel</a>
                     </div>
                 </form>
