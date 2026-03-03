@@ -23,6 +23,7 @@ class User(AbstractUser):
 
     id=models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     category=models.CharField(max_length=20,choices=Category.choices,default=Category.CUSTOMER)
+    email=models.CharField(max_length=128, unique=True)
     phone=models.CharField(max_length=20, blank=True)
     address=models.CharField(max_length=256, blank=True)
     postcode=models.CharField(max_length=20, blank=True)
