@@ -1,5 +1,7 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import ArrayField
+from django.core.validators import MaxValueValidator, MinValueValidator
 import uuid
 
 
@@ -12,7 +14,7 @@ class Actor(models.Model):
     def __str__(self):
         return self.name
 
-class User(models.Model):
+class User(AbstractUser):
     class Category(models.TextChoices):
         CUSTOMER="Customer"
         PRODUCER="Producer"
@@ -20,33 +22,25 @@ class User(models.Model):
         ADMIN="Admin"
 
     id=models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name=models.CharField(max_length=128)
-    email=models.EmailField(unique=True,max_length=254)
     category=models.CharField(max_length=20,choices=Category.choices,default=Category.CUSTOMER)
-    phone=models.CharField(max_length=20)
-    address=models.CharField(max_length=256)
-    postcode=models.CharField(max_length=20)
-    passwordHash=models.CharField(max_length=256)
-    created=models.DateTimeField(auto_now_add=True)
+    phone=models.CharField(max_length=20, blank=True)
+    address=models.CharField(max_length=256, blank=True)
+    postcode=models.CharField(max_length=20, blank=True)
 
 class Product(models.Model):
     class Category(models.TextChoices):
-        VEGETABLE="Vegetable","veg"
+        VEGETABLE="Vegetable"
         FRUIT="Fruit"
-        DAIRY="dairy"
-        BAKERY="bakery"
-        PRESERVE="preserve"
+        DAIRY="Dairy"
+        BAKERY="Bakery"
+        PRESERVE="Preserve"
     class Season(models.TextChoices):
         SPRING="Spring"
         SUMMER="Summer"
         AUTUMN="Autumn"
         WINTER="Winter"
     id=models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False)
-    producerID=models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        editable=False
-    )
+    producer=models.ForeignKey(User, on_delete=models.CASCADE)
     name=models.CharField(max_length=128)
     category=models.CharField(max_length=20,choices=Category.choices,default=Category.VEGETABLE)
     description=models.TextField()
@@ -55,10 +49,10 @@ class Product(models.Model):
     season=models.CharField(max_length=20,choices=Season.choices, default=Season.SPRING)
     food_miles=models.IntegerField()
     stock=models.IntegerField()
-    allergens=ArrayField(models.CharField(max_length=128,blank=True))
+    allergens=ArrayField(models.CharField(max_length=128,blank=True),default=list)
     organic=models.BooleanField(default=False)
     surplus=models.BooleanField(default=False)
-    imgsrc=models.CharField(max_length=128)
+    image=models.ImageField(upload_to='item_images/', blank=True)
 
 class Order(models.Model):
     class Status(models.TextChoices):
@@ -66,34 +60,31 @@ class Order(models.Model):
         CONFIRMED="CONFIRMED"
         READY="READY"
         DELIVERED="DELIVERED"
-    id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    customerID=models.ForeignKey(
+    id=models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False)
+    customer =models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
-        editable=False
+        on_delete=models.CASCADE
     )
-    productID=models.ForeignKey(
+    product=models.ForeignKey(
         Product,
-        on_delete=models.CASCADE,
-        editable=False
+        on_delete=models.CASCADE
     )
-    numPurchased=models.IntegerField()
-    totalPrice=models.DecimalField(max_digits=10,decimal_places=2)
-    orderDate=models.DateTimeField(auto_now_add=True)
-    deliveryDate=models.DateTimeField()
-    orderStatus=models.CharField(max_length=20,choices=Status.choices,default=Status.PENDING)
-    specialInstructions=models.TextField(blank=True)
+    num_purchased=models.IntegerField()
+    total_price=models.DecimalField(max_digits=10,decimal_places=2)
+    order_date=models.DateTimeField(auto_now_add=True)
+    delivery_date=models.DateTimeField()
+    order_status=models.CharField(max_length=20,choices=Status.choices,default=Status.PENDING)
+    special_instructions=models.TextField(blank=True)
 
 class StoryPost(models.Model):
     id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    userID=models.ForeignKey(
+    user=models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
-        editable=False
+        on_delete=models.CASCADE
     )
     content=models.TextField()
-    imgsrc=models.CharField(max_length=128,blank=True)
-    datePosted=models.DateTimeField(auto_now_add=True)
+    image=models.ImageField(upload_to='item_images/', blank=True)
+    date_posted=models.DateTimeField(auto_now_add=True)
 
 class Recipe(models.Model):
     class Season(models.TextChoices):
@@ -102,31 +93,28 @@ class Recipe(models.Model):
         AUTUMN="Autumn"
         WINTER="Winter"
     id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    userID=models.ForeignKey(
+    user=models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
-        editable=False
+        on_delete=models.CASCADE
     )
     title=models.CharField(max_length=128)
     description=models.TextField()
-    imgsrc=models.CharField(max_length=128,blank=True)
+    image=models.ImageField(upload_to='item_images/', blank=True)
     instructions=models.TextField()
     season=models.CharField(max_length=20,choices=Season.choices,default=Season.SPRING)
-    ingredients=models.ManyToManyField(Product, through="RecipeIngredient")
+    ingredients=models.ManyToManyField(Product)
 
 class Review(models.Model):
     id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    userID=models.ForeignKey(
+    user=models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
-        editable=False
+        on_delete=models.CASCADE
     )
-    orderID=models.ForeignKey(
+    order=models.ForeignKey(
         Order,
-        on_delete=models.CASCADE,
-        editable=False
+        on_delete=models.CASCADE
     )
     title=models.CharField(max_length=128)
     content=models.TextField()
-    rating=models.IntegerField(min_length=1,max_length=5)
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     date_posted=models.DateTimeField(auto_now_add=True)
