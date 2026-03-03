@@ -4,7 +4,9 @@ from django.contrib.auth import authenticate, login
 from django.http import HttpResponse
 from core.forms import LoginForm, ProductForm
 from .models import User, Product
-# Create your views here.
+from core.forms import LoginForm, ItemForm
+from .models import Item
+from django.apps import apps
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
@@ -60,3 +62,28 @@ def signup_view(request):
 def invoice_view(request):
     return render(request, 'invoice.html')
 
+def management_view(request):
+    # Get all models
+    # TODO: Find better alternative to pulling all data
+    models = apps.get_app_config('core').get_models()
+    db_data = {}
+
+    for model in models:
+        model_name = model.__name__
+        db_data[model_name] = model.objects.all()
+
+    # Check for select model
+    selected_model = request.GET.get('model')
+
+    # Pull specific records
+    selected_records = None
+    if selected_model:
+        selected_records = db_data.get(selected_model)
+
+    content = {
+        'db_data': db_data,
+        'selected_model': selected_model,
+        'selected_records': selected_records,
+    }
+
+    return render(request, 'management.html', content)

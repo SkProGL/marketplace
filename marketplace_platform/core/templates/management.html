@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <!-- Primary card -->
+        <div class="card p-4 shadow mb-4">
+            <!-- Drop down -->
+            <div class="dropdown mb-4">
+                <button class="btn btn-primary border border-black bg-dark text-white dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                 {% if selected_model %}
+                    {{ selected_model }}
+                {% else %}
+                    Select a Table
+                {% endif %}
+                </button>
+                <ul class="dropdown-menu">
+                    {% for model_name, records in db_data.items %}
+                        <li><a class="dropdown-item" href="?model={{ model_name }}">{{ model_name }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+              {% if selected_model %}
+            <div class="card p-4 shadow mb-4">
+                <div class="card-header bg-dark text-white mb-3">
+                    <h2 class="h5 mb-0">{{ selected_model }}</h2>
+                </div>
+                
+                {% if selected_records %}
+                    <ul class="list-group list-group-flush">
+                        {% for record in selected_records %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ record }} 
+                                <div>
+                                    <span class="btn btn-sm btn-outline-danger">Delete</span>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted fst-italic">No records found.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+        
+
+    </div>
+</div>
+{% endblock %}

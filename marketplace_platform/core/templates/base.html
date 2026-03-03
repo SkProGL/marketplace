@@ -40,6 +40,10 @@
                             + Upload Product
                         </a>
 
+                         <a href="{% url 'inventory_upload' %}" class="btn btn-outline-light">
+                            Inventory
+                         </a>
+
                         <form action="{% url 'logout' %}" method="post" style="display:inline;">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-outline-danger">Logout</button>
