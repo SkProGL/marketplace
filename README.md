@@ -18,8 +18,18 @@
 > // all migrations made in container will be updated in local files as well (based on where VOLUME is defined)
 > docker exec django_app python manage.py migrate
 >
+> // create django superuser (for admin functionality)
+> docker exec -it django_app python manage.py createsuperuser
+> 
 > // enters postgres CLI utility, -U user -d database
 > docker exec -ti postgres_db psql -U myuser -d mydb
+>
+> // If experiencing unexpected issues:
+> // clear data volumes (this clears ALL data stored in db)
+> docker compose down -v
+> // rebuild images and containers from scratch
+> docker compose up --build
+> // delete numbered migration files under core/migrations/ MANUALLY and then make migrations as before
 > ```
 
 > [!IMPORTANT]  
@@ -263,6 +273,3 @@ git push --force-with-lease origin <current_branch>
 
 *Example diagram*
 </details>
-
-### Running pages 
-- use "python manage.py runserver" to preview pages in browser 
