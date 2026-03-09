@@ -200,8 +200,7 @@ class OrderProduct(models.Model):
         unique_together = ("order", "product")
 
     def __str__(self):
-        return f"{str(self.id)[:8]}"
-
+        return f"{str(self.id)[:8]} - {self.order_status}"
 
 class StoryPost(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
