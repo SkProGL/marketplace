@@ -40,6 +40,8 @@ class User(AbstractUser):
         help_text='Specific permissions for this user.',
         verbose_name='user permissions',
     )
+    def __str__(self):
+        return self.username
 
 
 class Product(models.Model):
@@ -140,6 +142,9 @@ class Product(models.Model):
     image = models.ImageField(upload_to='item_images/', blank=True)
 
 
+    def __str__(self):
+        return f"{self.name} ({self.producer}) £{self.price}"
+
 class Order(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING"
@@ -186,6 +191,9 @@ class OrderProduct(models.Model):
     class Meta:
         unique_together = ("order", "product")
 
+
+    def __str__(self):
+        return f"{str(self.id)[:8]} - {self.order_status}"
 
 class StoryPost(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
