@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'core',  # added app to current project
     "rest_framework",  # added drf
     "api",  # added app
+    'django_browser_reload',
 ]
 
 MIDDLEWARE = [
@@ -57,6 +58,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django_browser_reload.middleware.BrowserReloadMiddleware",
 ]
 
 ROOT_URLCONF = 'marketplace_platform.urls'
