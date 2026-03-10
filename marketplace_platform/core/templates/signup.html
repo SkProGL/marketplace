@@ -1,0 +1,29 @@
+{% extends "base.html" %} {% load static %} {% block content %}
+
+<link rel="stylesheet" href="{% static 'common.css' %}" />
+<div class="row justify-content-center">
+  <!-- From Uiverse.io by JkHuger -->
+  <div class="container">
+    <div class="card">
+      <!-- <a class="signup">Sign Up</a> -->
+      <h2>SIGN UP</h2>
+      <div class="inputBox1">
+        <input type="text" required="required" />
+        <span class="user">Email</span>
+      </div>
+
+      <div class="inputBox">
+        <input type="text" required="required" />
+        <span>Username</span>
+      </div>
+
+      <div class="inputBox">
+        <input type="password" required="required" />
+        <span>Password</span>
+      </div>
+
+      <button class="enter">Enter</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

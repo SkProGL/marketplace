@@ -1,0 +1,201 @@
+id,producer_id,name,category,description,price,unit,season,in_season,food_miles,stock,allergens,organic_cert,surplus,img_src
+1,154,Product 1,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",18.21,unit,Summer,no,33,476,none,yes,yes,/img/product_1.jpg
+2,48,Product 2,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,16.25,unit,Autumn,no,6,138,gluten,no,yes,/img/product_2.jpg
+3,172,Product 3,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",31.81,kg,All,yes,38,492,gluten,yes,no,/img/product_3.jpg
+4,158,Product 4,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",42.36,kg,Spring,yes,42,404,nuts,yes,no,/img/product_4.jpg
+5,8,Product 5,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",31.48,litre,Autumn,no,31,135,dairy,no,no,/img/product_5.jpg
+6,13,Product 6,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",5.04,pack,Winter,no,30,114,nuts,yes,no,/img/product_6.jpg
+7,99,Product 7,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,43.28,pack,Summer,no,33,297,none,no,yes,/img/product_7.jpg
+8,90,Product 8,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",24.12,unit,Summer,yes,4,158,dairy,no,yes,/img/product_8.jpg
+9,48,Product 9,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,48.19,litre,Autumn,yes,49,91,dairy,no,no,/img/product_9.jpg
+10,142,Product 10,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",44.14,kg,Winter,no,16,120,nuts,yes,yes,/img/product_10.jpg
+11,169,Product 11,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",15.15,box,All,yes,7,230,gluten,no,no,/img/product_11.jpg
+12,115,Product 12,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",38.55,pack,Spring,yes,24,293,nuts,yes,no,/img/product_12.jpg
+13,154,Product 13,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,25.96,litre,All,yes,9,59,dairy,no,no,/img/product_13.jpg
+14,115,Product 14,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",28.55,unit,All,no,33,30,none,yes,yes,/img/product_14.jpg
+15,139,Product 15,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",36.11,pack,Summer,yes,21,486,nuts,yes,no,/img/product_15.jpg
+16,97,Product 16,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",49.54,box,All,no,46,298,nuts,no,yes,/img/product_16.jpg
+17,199,Product 17,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",19.37,pack,All,no,47,456,none,no,no,/img/product_17.jpg
+18,162,Product 18,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",48.4,unit,Spring,no,11,278,dairy,yes,yes,/img/product_18.jpg
+19,32,Product 19,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",3.03,kg,Winter,no,27,87,dairy,yes,no,/img/product_19.jpg
+20,172,Product 20,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",25.84,kg,Summer,yes,36,176,dairy,no,no,/img/product_20.jpg
+21,130,Product 21,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",47.9,box,All,no,44,405,nuts,no,yes,/img/product_21.jpg
+22,90,Product 22,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",47.93,box,Summer,no,50,157,gluten,no,no,/img/product_22.jpg
+23,154,Product 23,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,24.77,box,Spring,no,26,429,nuts,yes,no,/img/product_23.jpg
+24,20,Product 24,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,3.54,pack,Autumn,no,14,113,nuts,no,yes,/img/product_24.jpg
+25,162,Product 25,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",6.8,unit,Spring,yes,41,129,none,yes,no,/img/product_25.jpg
+26,139,Product 26,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",17.52,unit,Spring,yes,27,344,dairy,no,yes,/img/product_26.jpg
+27,91,Product 27,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,38.16,box,Spring,yes,42,303,gluten,yes,yes,/img/product_27.jpg
+28,64,Product 28,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",21.77,pack,Winter,yes,48,456,nuts,yes,yes,/img/product_28.jpg
+29,169,Product 29,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",15.97,box,Autumn,no,42,288,dairy,yes,no,/img/product_29.jpg
+30,32,Product 30,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,14.73,unit,Winter,no,46,105,none,no,no,/img/product_30.jpg
+31,69,Product 31,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",29.04,litre,Winter,no,33,177,none,no,yes,/img/product_31.jpg
+32,34,Product 32,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",10.46,box,Summer,yes,17,206,gluten,no,no,/img/product_32.jpg
+33,97,Product 33,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",47.77,litre,Spring,no,42,194,gluten,yes,yes,/img/product_33.jpg
+34,48,Product 34,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",24.07,litre,Autumn,yes,41,479,nuts,no,yes,/img/product_34.jpg
+35,34,Product 35,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",12.13,unit,Winter,no,27,369,dairy,yes,yes,/img/product_35.jpg
+36,169,Product 36,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",34.5,litre,Winter,no,5,479,none,yes,yes,/img/product_36.jpg
+37,47,Product 37,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",29.28,box,All,no,8,358,gluten,no,yes,/img/product_37.jpg
+38,125,Product 38,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",45.1,pack,Summer,no,30,298,none,no,no,/img/product_38.jpg
+39,118,Product 39,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,36.58,kg,Summer,yes,3,226,nuts,yes,yes,/img/product_39.jpg
+40,16,Product 40,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",46.83,kg,Autumn,no,12,403,gluten,no,no,/img/product_40.jpg
+41,117,Product 41,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",49.65,pack,Winter,yes,44,348,gluten,no,yes,/img/product_41.jpg
+42,153,Product 42,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",10.16,litre,Summer,yes,1,397,none,no,no,/img/product_42.jpg
+43,153,Product 43,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",34.16,litre,Winter,yes,16,245,nuts,yes,no,/img/product_43.jpg
+44,32,Product 44,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",10.64,pack,All,yes,16,115,none,yes,yes,/img/product_44.jpg
+45,199,Product 45,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",23.15,unit,Spring,no,29,129,gluten,yes,yes,/img/product_45.jpg
+46,91,Product 46,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",25.94,litre,Autumn,no,16,164,gluten,yes,no,/img/product_46.jpg
+47,13,Product 47,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",16.07,litre,Summer,no,36,263,none,no,no,/img/product_47.jpg
+48,99,Product 48,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",39.61,pack,Summer,no,25,104,dairy,yes,yes,/img/product_48.jpg
+49,47,Product 49,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",16.09,kg,All,no,27,295,gluten,no,yes,/img/product_49.jpg
+50,100,Product 50,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",13.87,pack,Autumn,yes,35,380,gluten,yes,no,/img/product_50.jpg
+51,169,Product 51,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",19.79,kg,Spring,yes,49,310,gluten,no,yes,/img/product_51.jpg
+52,100,Product 52,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,43.67,kg,Summer,yes,48,70,dairy,yes,yes,/img/product_52.jpg
+53,84,Product 53,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",20.74,box,Autumn,no,30,283,nuts,no,no,/img/product_53.jpg
+54,142,Product 54,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",18.94,kg,Winter,no,14,199,nuts,no,yes,/img/product_54.jpg
+55,82,Product 55,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",28.78,kg,Autumn,no,19,88,gluten,no,yes,/img/product_55.jpg
+56,84,Product 56,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",19.92,litre,Autumn,no,49,430,dairy,no,no,/img/product_56.jpg
+57,111,Product 57,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",9.66,unit,All,no,12,479,none,yes,yes,/img/product_57.jpg
+58,191,Product 58,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",47.34,kg,Winter,yes,41,128,none,yes,yes,/img/product_58.jpg
+59,130,Product 59,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,12.11,kg,All,no,43,259,none,yes,no,/img/product_59.jpg
+60,150,Product 60,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,2.07,litre,Autumn,yes,33,426,dairy,yes,yes,/img/product_60.jpg
+61,150,Product 61,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",46.03,unit,Summer,no,23,146,dairy,yes,no,/img/product_61.jpg
+62,130,Product 62,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",48.03,unit,Summer,no,44,433,none,yes,yes,/img/product_62.jpg
+63,117,Product 63,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",21.16,pack,Spring,yes,45,97,none,no,no,/img/product_63.jpg
+64,100,Product 64,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",32.78,kg,All,yes,15,118,dairy,no,yes,/img/product_64.jpg
+65,199,Product 65,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,46.32,litre,All,yes,12,485,nuts,yes,yes,/img/product_65.jpg
+66,118,Product 66,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",29.97,box,Summer,yes,37,437,dairy,no,no,/img/product_66.jpg
+67,34,Product 67,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",38.15,litre,Autumn,yes,7,233,gluten,yes,no,/img/product_67.jpg
+68,172,Product 68,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",30.85,pack,Autumn,yes,41,149,dairy,no,yes,/img/product_68.jpg
+69,117,Product 69,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",18.76,unit,All,no,6,405,nuts,yes,yes,/img/product_69.jpg
+70,47,Product 70,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",5.48,unit,Winter,no,24,64,none,yes,no,/img/product_70.jpg
+71,90,Product 71,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",23.07,unit,Spring,yes,28,239,dairy,yes,yes,/img/product_71.jpg
+72,154,Product 72,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",5.85,litre,All,no,25,16,nuts,no,no,/img/product_72.jpg
+73,154,Product 73,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",39.29,litre,All,yes,44,204,gluten,yes,no,/img/product_73.jpg
+74,142,Product 74,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",16.1,kg,Summer,no,18,225,nuts,no,yes,/img/product_74.jpg
+75,84,Product 75,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",19.01,litre,All,yes,30,64,gluten,no,yes,/img/product_75.jpg
+76,100,Product 76,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",47.52,pack,Autumn,no,22,230,gluten,no,no,/img/product_76.jpg
+77,69,Product 77,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",30.76,box,Summer,no,21,159,dairy,yes,no,/img/product_77.jpg
+78,118,Product 78,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,19.74,kg,All,yes,38,289,gluten,yes,no,/img/product_78.jpg
+79,74,Product 79,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",47.23,box,Spring,no,44,265,gluten,no,yes,/img/product_79.jpg
+80,47,Product 80,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",13.76,pack,Spring,no,39,255,dairy,no,yes,/img/product_80.jpg
+81,115,Product 81,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",39.85,litre,Spring,yes,50,137,nuts,yes,yes,/img/product_81.jpg
+82,182,Product 82,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",28.82,box,Winter,yes,1,60,nuts,yes,yes,/img/product_82.jpg
+83,118,Product 83,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",23.12,litre,All,yes,23,22,dairy,yes,no,/img/product_83.jpg
+84,20,Product 84,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",21.67,unit,Autumn,no,22,243,gluten,no,no,/img/product_84.jpg
+85,125,Product 85,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",24.59,box,Spring,no,3,424,none,yes,no,/img/product_85.jpg
+86,199,Product 86,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",32.93,unit,All,yes,36,91,nuts,no,no,/img/product_86.jpg
+87,118,Product 87,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",12.74,unit,Winter,no,2,387,gluten,no,no,/img/product_87.jpg
+88,74,Product 88,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",20.36,box,Spring,yes,35,105,nuts,no,yes,/img/product_88.jpg
+89,85,Product 89,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",23.69,litre,Autumn,no,40,210,none,no,no,/img/product_89.jpg
+90,172,Product 90,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",42.51,box,All,yes,44,78,nuts,yes,yes,/img/product_90.jpg
+91,64,Product 91,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,16.31,unit,All,no,27,315,gluten,no,no,/img/product_91.jpg
+92,173,Product 92,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",10.51,unit,All,yes,32,157,gluten,yes,no,/img/product_92.jpg
+93,172,Product 93,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",42.34,box,Spring,no,9,109,dairy,no,no,/img/product_93.jpg
+94,119,Product 94,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",34.71,pack,Summer,yes,37,25,gluten,no,yes,/img/product_94.jpg
+95,153,Product 95,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,14.83,unit,Winter,no,36,271,none,yes,no,/img/product_95.jpg
+96,115,Product 96,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",39.09,kg,Winter,yes,28,62,gluten,no,yes,/img/product_96.jpg
+97,111,Product 97,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",23.31,pack,Spring,yes,14,425,nuts,no,yes,/img/product_97.jpg
+98,74,Product 98,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",31.38,kg,All,no,35,153,gluten,no,no,/img/product_98.jpg
+99,90,Product 99,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",15.53,kg,Summer,no,4,151,gluten,yes,yes,/img/product_99.jpg
+100,99,Product 100,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",8.59,pack,Winter,yes,37,333,nuts,no,no,/img/product_100.jpg
+101,173,Product 101,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",23.42,pack,All,no,45,489,nuts,no,no,/img/product_101.jpg
+102,6,Product 102,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",17.37,pack,Autumn,yes,35,213,gluten,no,yes,/img/product_102.jpg
+103,99,Product 103,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,25.49,box,All,yes,37,446,dairy,no,yes,/img/product_103.jpg
+104,173,Product 104,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",3.73,kg,Spring,yes,29,243,none,no,yes,/img/product_104.jpg
+105,34,Product 105,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,49.79,unit,Autumn,yes,42,194,nuts,yes,no,/img/product_105.jpg
+106,182,Product 106,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",33.73,kg,Winter,no,47,368,gluten,no,yes,/img/product_106.jpg
+107,6,Product 107,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",35.63,pack,Spring,yes,38,125,dairy,yes,yes,/img/product_107.jpg
+108,32,Product 108,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",35.24,unit,Winter,yes,15,206,none,yes,yes,/img/product_108.jpg
+109,97,Product 109,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",16.7,pack,Summer,yes,5,281,none,yes,no,/img/product_109.jpg
+110,74,Product 110,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",18.53,pack,All,no,14,54,none,yes,yes,/img/product_110.jpg
+111,117,Product 111,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,30.09,pack,Autumn,yes,16,151,none,yes,no,/img/product_111.jpg
+112,8,Product 112,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,39.28,unit,All,yes,48,210,nuts,yes,yes,/img/product_112.jpg
+113,32,Product 113,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",25.5,pack,All,yes,34,465,none,no,no,/img/product_113.jpg
+114,158,Product 114,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",7.9,box,All,yes,49,251,none,yes,yes,/img/product_114.jpg
+115,74,Product 115,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",2.17,kg,Winter,no,41,374,dairy,no,no,/img/product_115.jpg
+116,153,Product 116,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",5.5,litre,Summer,no,6,168,none,yes,yes,/img/product_116.jpg
+117,118,Product 117,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",27.51,kg,Autumn,no,47,498,gluten,yes,yes,/img/product_117.jpg
+118,123,Product 118,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",5.68,pack,All,yes,20,351,gluten,yes,yes,/img/product_118.jpg
+119,6,Product 119,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",35.83,pack,Autumn,no,11,200,gluten,no,yes,/img/product_119.jpg
+120,8,Product 120,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,38.91,pack,Autumn,yes,17,374,none,no,no,/img/product_120.jpg
+121,13,Product 121,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",26.27,litre,Summer,no,11,140,none,yes,yes,/img/product_121.jpg
+122,6,Product 122,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",37.43,kg,Summer,yes,31,196,dairy,yes,yes,/img/product_122.jpg
+123,9,Product 123,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",46.66,pack,Summer,no,16,223,nuts,no,yes,/img/product_123.jpg
+124,32,Product 124,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",29.22,kg,Summer,yes,34,33,dairy,yes,no,/img/product_124.jpg
+125,97,Product 125,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,43.5,kg,All,no,1,198,gluten,no,no,/img/product_125.jpg
+126,84,Product 126,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",37.37,box,All,no,50,407,gluten,yes,yes,/img/product_126.jpg
+127,119,Product 127,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",1.81,unit,All,no,41,439,none,no,yes,/img/product_127.jpg
+128,117,Product 128,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,38.31,kg,Summer,yes,27,261,none,yes,no,/img/product_128.jpg
+129,82,Product 129,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",6.01,pack,Autumn,no,48,53,none,yes,no,/img/product_129.jpg
+130,158,Product 130,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",5.13,pack,Summer,yes,19,143,nuts,no,no,/img/product_130.jpg
+131,90,Product 131,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",16.93,kg,Summer,yes,50,404,none,yes,yes,/img/product_131.jpg
+132,130,Product 132,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,9.47,pack,Spring,no,50,116,dairy,no,no,/img/product_132.jpg
+133,32,Product 133,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",14.35,unit,Autumn,yes,14,437,nuts,yes,yes,/img/product_133.jpg
+134,111,Product 134,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",35.99,litre,Spring,no,17,429,gluten,yes,no,/img/product_134.jpg
+135,154,Product 135,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",42.95,unit,Spring,no,7,421,gluten,yes,yes,/img/product_135.jpg
+136,82,Product 136,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",4.49,unit,Winter,no,44,332,none,no,yes,/img/product_136.jpg
+137,16,Product 137,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",2.56,pack,Summer,yes,22,72,none,no,yes,/img/product_137.jpg
+138,158,Product 138,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",9.65,pack,Winter,yes,25,359,dairy,yes,no,/img/product_138.jpg
+139,64,Product 139,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,11.91,box,Winter,yes,3,324,gluten,no,no,/img/product_139.jpg
+140,154,Product 140,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",21.48,kg,Spring,no,25,80,dairy,yes,yes,/img/product_140.jpg
+141,153,Product 141,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",32.09,pack,Autumn,no,35,410,dairy,no,no,/img/product_141.jpg
+142,64,Product 142,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",20.34,box,All,yes,2,468,nuts,yes,no,/img/product_142.jpg
+143,162,Product 143,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",27.18,unit,Spring,yes,43,133,nuts,yes,yes,/img/product_143.jpg
+144,117,Product 144,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,29.42,unit,Summer,yes,38,172,nuts,yes,no,/img/product_144.jpg
+145,158,Product 145,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",47.46,litre,Summer,no,35,168,gluten,no,yes,/img/product_145.jpg
+146,82,Product 146,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",5.88,unit,Spring,no,1,179,gluten,yes,no,/img/product_146.jpg
+147,99,Product 147,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",36.27,kg,Summer,yes,50,66,nuts,yes,no,/img/product_147.jpg
+148,191,Product 148,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",35.67,litre,Spring,no,20,175,gluten,yes,no,/img/product_148.jpg
+149,142,Product 149,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,39.9,unit,All,no,15,350,gluten,no,no,/img/product_149.jpg
+150,91,Product 150,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",37.1,unit,Spring,no,50,300,none,yes,no,/img/product_150.jpg
+151,172,Product 151,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",46.17,litre,Spring,no,10,179,none,yes,no,/img/product_151.jpg
+152,48,Product 152,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",49.15,box,Winter,yes,17,117,gluten,yes,no,/img/product_152.jpg
+153,29,Product 153,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",13.95,kg,Winter,no,47,224,gluten,no,no,/img/product_153.jpg
+154,111,Product 154,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",44.27,pack,Spring,no,37,343,gluten,yes,no,/img/product_154.jpg
+155,9,Product 155,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,5.07,kg,Autumn,no,7,47,nuts,yes,no,/img/product_155.jpg
+156,16,Product 156,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",9.3,kg,Autumn,no,46,25,dairy,yes,no,/img/product_156.jpg
+157,29,Product 157,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,9.12,unit,Summer,no,45,293,nuts,no,no,/img/product_157.jpg
+158,13,Product 158,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",13.02,litre,All,no,10,37,nuts,yes,no,/img/product_158.jpg
+159,191,Product 159,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",5.75,pack,Summer,yes,2,115,gluten,no,yes,/img/product_159.jpg
+160,32,Product 160,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,24.47,pack,Winter,no,43,145,none,no,yes,/img/product_160.jpg
+161,117,Product 161,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,19.49,unit,Winter,yes,17,235,dairy,no,yes,/img/product_161.jpg
+162,158,Product 162,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",42.1,unit,Spring,yes,43,186,dairy,yes,yes,/img/product_162.jpg
+163,150,Product 163,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",42.28,litre,Winter,yes,31,163,none,no,yes,/img/product_163.jpg
+164,150,Product 164,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",25.85,litre,Summer,yes,49,239,gluten,yes,yes,/img/product_164.jpg
+165,34,Product 165,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",40.71,pack,Spring,no,13,431,gluten,no,no,/img/product_165.jpg
+166,16,Product 166,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",45.67,pack,All,no,36,176,nuts,no,yes,/img/product_166.jpg
+167,172,Product 167,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",39.65,litre,Winter,yes,27,86,gluten,yes,yes,/img/product_167.jpg
+168,29,Product 168,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,28.79,litre,Autumn,no,17,206,dairy,no,yes,/img/product_168.jpg
+169,118,Product 169,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",9.85,litre,All,no,3,212,nuts,yes,yes,/img/product_169.jpg
+170,90,Product 170,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,37.67,kg,Autumn,no,20,153,dairy,yes,yes,/img/product_170.jpg
+171,125,Product 171,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,8.02,box,Winter,yes,13,236,gluten,no,no,/img/product_171.jpg
+172,115,Product 172,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",38.34,litre,Summer,yes,20,373,dairy,yes,yes,/img/product_172.jpg
+173,69,Product 173,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",9.93,unit,Spring,no,4,480,nuts,yes,no,/img/product_173.jpg
+174,130,Product 174,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",19.37,pack,Spring,yes,16,200,dairy,no,yes,/img/product_174.jpg
+175,139,Product 175,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",48.09,litre,Autumn,no,11,438,nuts,yes,no,/img/product_175.jpg
+176,13,Product 176,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",2.83,litre,Summer,yes,42,125,gluten,no,no,/img/product_176.jpg
+177,199,Product 177,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",26.39,pack,Summer,yes,39,420,none,yes,no,/img/product_177.jpg
+178,97,Product 178,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,31.0,pack,Winter,no,30,139,gluten,no,no,/img/product_178.jpg
+179,172,Product 179,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",34.34,litre,Spring,yes,33,349,nuts,no,no,/img/product_179.jpg
+180,139,Product 180,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",34.69,box,Autumn,no,18,143,nuts,yes,yes,/img/product_180.jpg
+181,84,Product 181,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",26.59,litre,Winter,no,44,81,none,no,no,/img/product_181.jpg
+182,119,Product 182,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",14.08,pack,Spring,yes,22,381,gluten,no,no,/img/product_182.jpg
+183,48,Product 183,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",26.1,unit,Autumn,yes,31,75,nuts,yes,no,/img/product_183.jpg
+184,82,Product 184,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,33.24,unit,Autumn,no,22,200,nuts,no,no,/img/product_184.jpg
+185,139,Product 185,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",42.78,litre,All,yes,31,465,gluten,yes,no,/img/product_185.jpg
+186,119,Product 186,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",27.2,unit,Summer,yes,22,219,dairy,yes,no,/img/product_186.jpg
+187,64,Product 187,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",43.33,pack,Autumn,yes,21,334,none,yes,no,/img/product_187.jpg
+188,48,Product 188,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",14.77,unit,Winter,yes,9,324,dairy,no,no,/img/product_188.jpg
+189,139,Product 189,preserves,"Handcrafted preserve made from locally sourced fruit, carefully cooked to retain natural flavour.",22.31,kg,Spring,yes,47,201,none,no,yes,/img/product_189.jpg
+190,6,Product 190,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",2.37,unit,Autumn,no,9,62,dairy,no,yes,/img/product_190.jpg
+191,9,Product 191,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,4.67,box,Winter,no,28,464,gluten,no,no,/img/product_191.jpg
+192,69,Product 192,dairy,"Creamy, farm-produced dairy item made using traditional methods and locally sourced milk.",18.92,pack,Spring,yes,15,382,gluten,yes,yes,/img/product_192.jpg
+193,48,Product 193,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",30.1,box,Spring,no,41,140,none,yes,yes,/img/product_193.jpg
+194,8,Product 194,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",33.2,kg,Winter,no,25,73,nuts,no,yes,/img/product_194.jpg
+195,199,Product 195,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",11.47,box,Winter,yes,43,276,nuts,yes,no,/img/product_195.jpg
+196,29,Product 196,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",41.79,litre,Spring,no,8,411,none,no,yes,/img/product_196.jpg
+197,85,Product 197,seasonal,"Limited seasonal speciality available for a short time, celebrating the best of local harvests.",31.04,unit,Autumn,no,19,92,none,no,yes,/img/product_197.jpg
+198,139,Product 198,bakery,Artisan baked goods prepared in small batches using slow fermentation and quality ingredients.,34.88,unit,Spring,yes,43,55,none,no,yes,/img/product_198.jpg
+199,146,Product 199,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",47.55,kg,Autumn,yes,30,161,nuts,no,yes,/img/product_199.jpg
+200,64,Product 200,vegetables,"Locally grown seasonal vegetables harvested at peak freshness, full of flavour and nutrients.",6.34,box,Autumn,no,28,388,none,yes,yes,/img/product_200.jpg

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>BRFN - Order Invoice</title>
+    <script>
+      function download_pdf() {
+        var element = document.querySelector("html");
+        var element = document.querySelector(".invoice-box");
+        html2pdf(element);
+      }
+    </script>
+    <link rel="stylesheet" href="../static/invoice.css" />
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+      integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+  </head>
+
+  <body>
+    <div class="invoice-box">
+      <table cellpadding="0" cellspacing="0">
+        <tr class="top">
+          <td colspan="2">
+            <table>
+              <tr>
+                <td class="title">
+                  <a class="nav-home" href="/home">
+                    <span>Bristol&nbsp</span>
+                    <span>Marketplace</span>
+                  </a>
+                </td>
+
+                <td>
+                  Order ID: #BRFN-2026-0142<br />
+                  Order Date: 03 Mar 2026<br />
+                  Delivery Date: 06 Mar 2026<br />
+                  Order Type: Multi-Producer
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr class="information">
+          <td colspan="2">
+            <table>
+              <tr>
+                <td>
+                  Bristol Regional Food Network<br />
+                  20-Mile Community Marketplace<br />
+                  Bristol, United Kingdom
+                </td>
+
+                <td>
+                  Customer: GreenLeaf Café<br />
+                  Contact: Emma Turner<br />
+                  +44 7700 900456<br />
+                  emma@greenleafcafe.co.uk
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr class="heading">
+          <td>Product</td>
+          <td>Price</td>
+        </tr>
+
+        <tr class="item">
+          <td>
+            Organic Carrots (5kg)<br />
+            Producer: Willow Farm<br />
+            Harvested: 01 Mar 2026
+          </td>
+          <td>£15.00</td>
+        </tr>
+
+        <tr class="item">
+          <td>
+            Artisan Sourdough (10 units)<br />
+            Producer: RedBrick Bakery<br />
+            Allergen: Contains Gluten
+          </td>
+          <td>£28.00</td>
+        </tr>
+
+        <tr class="item">
+          <td>
+            Free-Range Eggs (30 tray)<br />
+            Producer: SunnySide Poultry<br />
+            Best Before: 20 Mar 2026
+          </td>
+          <td>£12.00</td>
+        </tr>
+
+        <tr class="item">
+          <td>Subtotal</td>
+          <td>£55.00</td>
+        </tr>
+
+        <tr class="item">
+          <td>Network Commission (5%)</td>
+          <td>£2.75</td>
+        </tr>
+
+        <tr class="total">
+          <td></td>
+          <td>Total: £57.75</td>
+        </tr>
+      </table>
+    </div>
+
+    <button onclick="download_pdf()" type="button">Download .PDF</button>
+    <a href="/account">Back to marketplace</a>
+  </body>
+</html>

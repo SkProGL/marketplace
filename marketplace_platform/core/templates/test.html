@@ -1,43 +1,12 @@
-{% extends "base.html" %}
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Upload Product</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-{% load static %}
-
-{% block content %}
-<link rel="stylesheet" href="{% static 'inventory_upload.css' %}">
-<!-- <div class="row justify-content-center"> -->
-<!--     <div class="col-md-8 col-lg-6"> -->
-<!--         <div class="card shadow"> -->
-<!--             <div class="card-header bg-primary text-white"> -->
-<!--                 <h2 class="h5 mb-0">Upload New Product</h2> -->
-<!--             </div> -->
-<!--             <div class="card-body"> -->
-<!--                 <form method="post" enctype="multipart/form-data"> -->
-<!--                     {% csrf_token %} -->
-<!---->
-<!--                     {% for field in form %} -->
-<!--                         <div class="mb-3"> -->
-<!--                             <label class="form-label fw-bold">{{ field.label }}</label> -->
-<!--                             {{ field }} -->
-<!--                             {% if field.help_text %} -->
-<!--                                 <div class="form-text">{{ field.help_text }}</div> -->
-<!--                             {% endif %} -->
-<!--                             {% for error in field.errors %} -->
-<!--                                 <div class="text-danger small">{{ error }}</div> -->
-<!--                             {% endfor %} -->
-<!--                         </div> -->
-<!--                     {% endfor %} -->
-<!---->
-<!--                     <div class="d-grid gap-2 mt-4"> -->
-<!--                         <button type="submit" class="btn btn-success">Upload Product</button> -->
-<!--                         <a href="{% url 'home' %}" class="btn btn-outline-secondary">Cancel</a> -->
-<!--                     </div> -->
-<!--                 </form> -->
-<!--             </div> -->
-<!--         </div> -->
-<!--     </div> -->
-<!-- </div> -->
-
-
+  <body>
     <div class="form">
       <h2>Upload Product</h2>
 
@@ -115,5 +84,6 @@
 
         <button>Upload Product</button>
       </form>
-
-{% endblock %}
+    </div>
+  </body>
+</html>

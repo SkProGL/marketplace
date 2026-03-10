@@ -1,0 +1,130 @@
+:root {
+  --font: system-ui;
+
+  --bg-page: #f4f6f8;
+  --bg-card: #fff;
+
+  --color-border: #ddd;
+  --color-border-upload: #ccc;
+
+  --color-primary: #2c73f3;
+  --color-success: #28a745;
+  --color-text-light: #fff;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-pill: 20px;
+
+  --padding-input: 10px;
+  --padding-button: 12px;
+  --padding-card: 28px;
+
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  --gap-row: 6px;
+  --gap-toggle: 8px;
+}
+
+/* layout */
+.form {
+  background: var(--bg-card);
+  padding: var(--padding-card);
+  border-radius: var(--radius-lg);
+  width: 420px;
+  box-shadow: var(--shadow-card);
+  margin: auto;
+}
+
+label {
+  display: block;
+  margin-top: 14px;
+  font-weight: 600;
+}
+
+/* inputs */
+
+input,
+textarea {
+  width: 100%;
+  padding: var(--padding-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+textarea {
+  height: 70px;
+  resize: none;
+  overflow: hidden;
+}
+
+/* rows */
+
+.row {
+  display: flex;
+  gap: var(--gap-row);
+  margin-top: 6px;
+}
+
+.price-row input {
+  flex: 1;
+}
+
+/* toggle buttons */
+
+.toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-toggle);
+  margin-top: 6px;
+}
+
+.toggles input {
+  display: none;
+}
+
+.toggles label {
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.toggles input:checked + label {
+  background: var(--color-primary);
+  color: var(--color-text-light);
+  border-color: var(--color-primary);
+}
+
+/* upload */
+
+.upload {
+  display: block;
+  margin-top: 8px;
+  border: 2px dashed var(--color-border-upload);
+  padding: 18px;
+  text-align: center;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.upload input {
+  display: none;
+}
+
+/* button */
+
+button {
+  margin-top: 18px;
+  width: 100%;
+  padding: var(--padding-button);
+  background: var(--color-success);
+  color: var(--color-text-light);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  cursor: pointer;
+}

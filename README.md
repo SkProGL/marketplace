@@ -1,5 +1,11 @@
 ### Draft repository
 
+mkdir frontend
+cd frontend
+npm init -y
+npm install react react-dom
+npm install vite @vitejs/plugin-react --save-dev
+
 > [!NOTE]  
 > Latest changes (based on https://www.youtube.com/watch?v=37aNpE-9dD4):
 > ```bash

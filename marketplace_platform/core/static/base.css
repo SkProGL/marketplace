@@ -1,0 +1,20 @@
+body {
+  background-color: #ededed;
+}
+* {
+  /* font-family: sans-serif; */
+  font-family: monospace;
+}
+#logo {
+  filter: brightness(0) saturate(100%) invert(29%) sepia(78%) saturate(5443%)
+    hue-rotate(149deg) brightness(94%) contrast(80%);
+  padding-bottom: 2px;
+  transform: rotate(-10deg);
+}
+
+.navbar-brand:hover #logo {
+  transform: rotate(0deg);
+}
+.navbar-brand {
+  margin-left: 0.2rem;
+}
