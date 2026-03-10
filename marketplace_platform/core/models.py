@@ -80,9 +80,9 @@ class Order(models.Model):
         User,
         on_delete=models.CASCADE
     )
-    product=models.ForeignKey(
+    products=models.ManyToMany(
         Product,
-        on_delete=models.CASCADE
+        through="OrderProduct"
     )
     num_purchased=models.IntegerField()
     total_price=models.DecimalField(max_digits=10,decimal_places=2)
@@ -90,6 +90,14 @@ class Order(models.Model):
     delivery_date=models.DateTimeField()
     order_status=models.CharField(max_length=20,choices=Status.choices,default=Status.PENDING)
     special_instructions=models.TextField(blank=True)
+
+class OrderProduct(models.Model):
+    order=models.ForeignKey(Order, on_delete=models.CASCADE)
+    product=models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity=models.IntegerField()
+    class Meta:
+        unique_together=("order","product")
+
 
 class StoryPost(models.Model):
     id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
@@ -117,7 +125,11 @@ class Recipe(models.Model):
     image=models.ImageField(upload_to='item_images/', blank=True)
     instructions=models.TextField()
     season=models.CharField(max_length=20,choices=Season.choices,default=Season.SPRING)
-    ingredients=models.ManyToManyField(Product)
+    ingredients=models.ManyToManyField(Product,through="RecipeProducts")
+
+class RecipeProducts(models.Model):
+    recipe=models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    product=models.ForeignKey(Product,on_delete=models.CASCADE)
 
 class Review(models.Model):
     id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
