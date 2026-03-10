@@ -8,7 +8,8 @@
   --color-border-upload: #ccc;
 
   --color-primary: #2c73f3;
-  --color-success: #28a745;
+  /* --color-success: #28a745; */
+  --color-success: #198754;
   --color-text-light: #fff;
 
   --radius-sm: 6px;
@@ -31,7 +32,7 @@
   background: var(--bg-card);
   padding: var(--padding-card);
   border-radius: var(--radius-lg);
-  width: 420px;
+  width: 35vw;
   box-shadow: var(--shadow-card);
   margin: auto;
 }

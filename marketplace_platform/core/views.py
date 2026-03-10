@@ -54,3 +54,7 @@ def upload_item(request):
 
 def signup_view(request):
     return render(request, 'signup.html')
+
+
+def invoice_view(request):
+    return render(request, 'invoice.html')

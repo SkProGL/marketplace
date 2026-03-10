@@ -1,5 +1,7 @@
 :root {
-  --link-color: #2c73f3;
+  /* --link-color: #2c73f3; */
+  --link-color: #00ac7c;
+  --row-gap: 2rem;
 }
 .custom-filters {
   height: 45px;
@@ -7,13 +9,14 @@
   display: inline-flex;
   width: 100%;
   align-items: center;
-  justify-content: center;
-  margin-bottom: 4rem;
+  justify-content: flex-start;
+  margin-bottom: var(--row-gap);
 }
 
 /*FILTER ---------------------------------*/
 .filters {
-  margin: 2rem 0;
+  user-select: none;
+  margin: var(--row-gap) 0;
 }
 .filters input {
   display: none;
@@ -24,7 +27,9 @@
   padding: 6px 12px;
   margin: 4px;
   border-radius: 20px;
-  border: 1px solid var(--link-color);
+
+  max-height: 30px;
+  /* border: 1px solid var(--link-color); */
   cursor: pointer;
   transition: 0.2s;
   background: white;
@@ -37,6 +42,11 @@
 
 /*CARD ---------------------------------*/
 /* From Uiverse.io by dovatgabriel */
+
+.widget-card-grid {
+  display: inline-flex;
+  gap: 4rem;
+}
 .card {
   position: relative;
   width: 13.875em;
@@ -48,8 +58,10 @@
   align-items: center;
   justify-content: center;
   background: #fff;
-  padding: 0.5em;
-  padding-bottom: 3.4em;
+  /* padding: 0.5em; */
+  /* padding-bottom: 3.4em; */
+
+  padding: 0 0 3.4rem;
   overflow: hidden;
 }
 
@@ -169,6 +181,7 @@
   padding-inline: 1em;
   padding-block: 0.8em;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  color: black;
 }
 
 .input-border-alt {
@@ -179,4 +192,9 @@
 
 .input-alt:focus + .input-border-alt {
   width: 100%;
+}
+
+.home-results {
+  margin: 0 0 2rem 0;
+  padding: 6px 12px;
 }

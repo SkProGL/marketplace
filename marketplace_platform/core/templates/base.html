@@ -15,7 +15,7 @@
 <body>
 
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
-        <div class="container">
+        <div class="navbar-container">
 
             <a class="navbar-brand" href="{% url 'home' %}">
 		    <span>
@@ -46,9 +46,11 @@
                         </form>
                     {% else %}
                         <a class="nav-link" href="">Community</a>
+                        <a class="nav-link" href="">Cart</a>
                         <a class="nav-link" href="">Profile</a>
-                        <a class="nav-link" href="" style="margin: 0 2rem;">Order history</a>
-                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        <a class="nav-link" href="" >Order history</a>
+                        <a class="nav-link" href="{% url 'invoice' %}">Invoice</a>
+                        <a class="nav-link" href="{% url 'login' %}">Log in</a>
 			<div> / </div>
                         <a class="nav-link" href="{% url 'signup' %}">Sign up</a>
                     {% endif %}

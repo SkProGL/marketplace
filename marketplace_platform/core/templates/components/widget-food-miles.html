@@ -1,6 +1,6 @@
 <div class="food-miles-filter">
-  <span>Food miles</span>
   <!-- From Uiverse.io by Yaya12085 -->
+  <span class="food-miles-title">Food miles:</span>
   <div class="radio-input">
     <label>
       <input
@@ -36,7 +36,7 @@
     display: inline-flex;
     align-items: center;
     gap: 1rem;
-    margin-left: 7rem;
+    margin-left: 2rem;
   }
 
   /* From Uiverse.io by Yaya12085 */
@@ -48,7 +48,7 @@
     content: " mi";
   }
   .radio-input {
-    --container_width: 400px;
+    --container_width: 350px;
     position: relative;
     display: flex;
     align-items: center;
@@ -57,7 +57,11 @@
     color: #000000;
     width: var(--container_width);
     overflow: hidden;
-    border: 1px solid rgba(53, 52, 52, 0.226);
+    max-height: 30px;
+    user-select: none;
+    /* border: 1px solid rgba(53, 52, 52, 0.226); */
+
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
 
   .radio-input label {
@@ -88,7 +92,7 @@
   }
 
   .radio-input label:has(input:checked) ~ .selection {
-    background-color: rgb(11 117 223);
+    background-color: #00ac7c;
     display: inline-block;
   }
 
