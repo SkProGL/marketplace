@@ -129,6 +129,8 @@ class Recipe(models.Model):
 class RecipeProducts(models.Model):
     recipe=models.ForeignKey(Recipe, on_delete=models.CASCADE)
     product=models.ForeignKey(Product,on_delete=models.CASCADE)
+    class Meta:
+        unique_together=("recipe","product")
 
 class Review(models.Model):
     id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
