@@ -1,39 +1,33 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-
 <link rel="stylesheet" href="{% static 'common.css' %}">
 <link rel="stylesheet" href="{% static 'login.css' %}">
-<div class="row justify-content-center">
-{% if form.errors %}
-  <div class="alert alert-danger">
-    {{ form.errors }}
-  </div>
-{% endif %}
-<form method="POST">
-    {% csrf_token %}
 
+<div class="row justify-content-center">
     <div class="widget-account-form-container">
         <div class="widget-account-form-card">
             <h2>LOG IN</h2>
 
-            <div class="widget-account-form-inputBox">
-                <input type="text" name="username" required>
-                <span class="widget-account-form-user">Username</span>
-            </div>
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} small">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
 
-            <div class="widget-account-form-inputBox">
-                <input type="password" name="password" required>
-                <span>Password</span>
-            </div>
-
-            <button type="submit" class="widget-account-form-enter">
-                Enter
-            </button>
+            <form method="POST">
+                {% csrf_token %}
+                <div class="widget-account-form-inputBox">
+                    <input type="text" name="username" required="required">
+                    <span class="widget-account-form-user">Username</span>
+                </div>
+                <div class="widget-account-form-inputBox">
+                    <input type="password" name="password" required="required">
+                    <span>Password</span>
+                </div>
+                <button type="submit" class="widget-account-form-enter">Enter</button>
+            </form>
         </div>
     </div>
-</form>
-
-
 </div>
 {% endblock %}
