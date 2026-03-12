@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'community.css' %}">
+
+<div class="ch-header">
+    <h1>Community Hub</h1>
+    <p>Seasonal recipes and farm stories from local producers</p>
+</div>
+
+<div class="ch-tabs">
+    <button class="ch-tab active" onclick="switchTab(this, 'recipes')">Recipes</button>
+    <button class="ch-tab" onclick="switchTab(this, 'stories')">Farm Stories</button>
+</div>
+
+<div id="tab-recipes" class="ch-section">
+    <div class="ch-grid">
+        {% for recipe in recipes %}
+        <div class="ch-card">
+            {% if recipe.image %}
+            <img src="{{ recipe.image.url }}" class="ch-card-img" alt="{{ recipe.title }}">
+            {% else %}
+            <div class="ch-card-img ch-placeholder">🍽️</div>
+            {% endif %}
+            <div class="ch-card-body">
+                <div class="ch-producer">{{ recipe.user.username }}</div>
+                <div class="ch-season-tag ch-season-{{ recipe.season|lower }}">{{ recipe.season }}</div>
+                <h3 class="ch-title">{{ recipe.title }}</h3>
+                <p class="ch-desc">{{ recipe.description|truncatewords:20 }}</p>
+                <div class="ch-ingredients">
+                    {% for ingredient in recipe.ingredients.all %}
+                    <span class="ch-chip">{{ ingredient.name }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p class="ch-empty">No recipes yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<div id="tab-stories" class="ch-section" style="display:none">
+    <div class="ch-grid">
+        {% for story in stories %}
+        <div class="ch-card">
+            {% if story.image %}
+            <img src="{{ story.image.url }}" class="ch-card-img" alt="Farm story">
+            {% else %}
+            <div class="ch-card-img ch-placeholder">🌾</div>
+            {% endif %}
+            <div class="ch-card-body">
+                <div class="ch-producer">{{ story.user.username }}</div>
+                <div class="ch-date">{{ story.date_posted|date:"j F Y" }}</div>
+                <p class="ch-desc">{{ story.content|truncatewords:30 }}</p>
+            </div>
+        </div>
+        {% empty %}
+        <p class="ch-empty">No stories yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function switchTab(btn, tab) {
+    document.querySelectorAll('.ch-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.ch-section').forEach(s => s.style.display = 'none');
+    document.getElementById('tab-' + tab).style.display = 'block';
+}
+</script>
+{% endblock %}

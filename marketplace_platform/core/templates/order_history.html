@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'order_history.css' %}">
+
+<div class="oh-header">
+    <h1>Order History</h1>
+    <p>Your past and current orders from local producers</p>
+</div>
+
+<div class="oh-layout">
+
+    <div class="oh-orders">
+        {% for order in orders %}
+        <div class="oh-card">
+            <div class="oh-card-header">
+                <div class="oh-meta">
+                    <span class="oh-num">#{{ order.id|stringformat:"s"|slice:":8"|upper }}</span>
+                    <span class="oh-date">{{ order.order_date|date:"j F Y" }}</span>
+                    <span class="oh-status oh-status-{{ order.order_status|lower }}">{{ order.order_status }}</span>
+                </div>
+                <span class="oh-total">£{{ order.total_price }}</span>
+            </div>
+            <div class="oh-card-body">
+                <div class="oh-item">
+                    <div>
+                        <div class="oh-item-name">{{ order.product.name }} × {{ order.num_purchased }}</div>
+                        <div class="oh-item-farm">{{ order.product.producer.username }}</div>
+                    </div>
+                    <span class="oh-item-price">£{{ order.total_price }}</span>
+                </div>
+                {% if order.special_instructions %}
+                <p class="oh-instructions">📝 {{ order.special_instructions }}</p>
+                {% endif %}
+                <div class="oh-actions">
+                    <a href="{% url 'invoice' %}" class="oh-btn-outline">View Invoice</a>
+                    {% if order.order_status == "DELIVERED" %}
+                    <a href="#" class="oh-btn-outline">Write Review</a>
+                    {% endif %}
+                    <a href="{% url 'home' %}" class="oh-btn-primary">Reorder</a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="oh-empty">
+            <p>No orders yet. <a href="{% url 'home' %}">Start shopping →</a></p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="oh-ai-panel">
+        <div class="oh-ai-card">
+            <div class="oh-ai-header">
+                <span class="oh-ai-icon">🔄</span>
+                <div>
+                    <div class="oh-ai-title">Quick Re-order</div>
+                    <div class="oh-ai-sub">Based on your purchase history</div>
+                </div>
+            </div>
+            <div class="oh-xai-toggle" onclick="toggleXAI('xai1')">● Why these recommendations?</div>
+            <div class="oh-xai-box" id="xai1">
+                These items were identified from your last orders.
+                The model uses <strong>order frequency</strong> and
+                <strong>weekly patterns</strong> to suggest what you likely need next.
+            </div>
+            {% for rec in recommendations %}
+            <div class="oh-rec-item">
+                <div class="oh-rec-info">
+                    <div class="oh-rec-name">{{ rec.product.name }}</div>
+                    <div class="oh-rec-farm">{{ rec.product.producer.username }}</div>
+                    <div class="oh-rec-reason">Ordered {{ rec.count }}× recently</div>
+                </div>
+                <span class="oh-rec-price">£{{ rec.product.price }}</span>
+                <a href="{% url 'home' %}" class="oh-add-btn">+</a>
+            </div>
+            {% empty %}
+            <p class="oh-ai-empty">Place some orders to get recommendations.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<script>
+function toggleXAI(id) {
+    document.getElementById(id).classList.toggle('visible');
+}
+</script>
+{% endblock %}

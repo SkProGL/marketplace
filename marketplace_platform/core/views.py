@@ -3,7 +3,9 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.http import HttpResponse
 from core.forms import LoginForm, ProductForm
-from .models import User, Product
+from .models import User, Product, Order, Recipe, StoryPost
+from django.db.models import Count
+
 # Create your views here.
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -58,3 +60,33 @@ def signup_view(request):
 
 def invoice_view(request):
     return render(request, 'invoice.html')
+
+def order_history_view(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+    orders = Order.objects.filter(customer=request.user).order_by('-order_date')
+    recommendations = (
+        Order.objects.filter(customer=request.user)
+        .values('product')
+        .annotate(count=Count('product'))
+        .order_by('-count')[:3]
+    )
+    recs_with_products = []
+    for r in recommendations:
+        recs_with_products.append({
+            'product': Product.objects.get(pk=r['product']),
+            'count': r['count']
+        })
+    return render(request, 'order_history.html', {
+        'orders': orders,
+        'recommendations': recs_with_products
+    })
+
+
+def community_view(request):
+    recipes = Recipe.objects.all().order_by('-id')
+    stories = StoryPost.objects.all().order_by('-date_posted')
+    return render(request, 'community.html', {
+        'recipes': recipes,
+        'stories': stories
+    })

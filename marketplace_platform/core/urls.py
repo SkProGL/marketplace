@@ -9,4 +9,6 @@ urlpatterns = [
     path('signup/', views.signup_view, name='signup'),
     path('inventory_upload/', views.upload_item, name='inventory_upload'),
     path('invoice/', views.invoice_view, name='invoice'),
+    path('orders/', views.order_history_view, name='order_history'),
+    path('community/', views.community_view, name='community'),
 ]
