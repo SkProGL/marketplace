@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'community.css' %}">
+
+<div class="ch-header">
+    <h1>Add New Recipe</h1>
+    <p>Share a recipe using your farm's ingredients</p>
+</div>
+
+<div class="ch-form-container">
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="ch-form-row">
+            <label>Recipe Title</label>
+            {{ form.title }}
+        </div>
+        <div class="ch-form-row">
+            <label>Description</label>
+            {{ form.description }}
+        </div>
+        <div class="ch-form-row">
+            <label>Season</label>
+            {{ form.season }}
+        </div>
+        <div class="ch-form-row">
+            <label>Ingredients (from your inventory)</label>
+            <div class="ch-ingredients-list">{{ form.ingredients }}</div>
+        </div>
+        <div class="ch-form-row">
+            <label>Instructions</label>
+            {{ form.instructions }}
+        </div>
+        <div class="ch-form-row">
+            <label>Image (optional)</label>
+            {{ form.image }}
+        </div>
+        <div class="ch-form-actions">
+            <a href="{% url 'community' %}" class="ch-btn-outline">Cancel</a>
+            <button type="submit" class="ch-btn-primary">Publish Recipe</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

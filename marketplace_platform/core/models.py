@@ -76,6 +76,9 @@ class Product(models.Model):
     surplus = models.BooleanField(default=False)
     image = models.ImageField(upload_to='item_images/', blank=True)
 
+    def __str__(self):
+        return self.name
+
 
 class Order(models.Model):
     class Status(models.TextChoices):
@@ -148,3 +151,11 @@ class Review(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(5)])
     date_posted = models.DateTimeField(auto_now_add=True)
 
+class SavedRecipe(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    saved_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'recipe')
