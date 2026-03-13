@@ -2,9 +2,10 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.http import HttpResponse
-from core.forms import LoginForm, ProductForm
-from .models import User, Product, Order, Recipe, StoryPost
 from django.db.models import Count
+from django.contrib.auth import get_user_model
+from .forms import LoginForm, ProductForm, RecipeForm, StoryForm
+from .models import User, Product, Order, Recipe, StoryPost, SavedRecipe
 
 # Create your views here.
 from django.contrib.auth import get_user_model
@@ -84,9 +85,58 @@ def order_history_view(request):
 
 
 def community_view(request):
+    season = request.GET.get('season', '')
     recipes = Recipe.objects.all().order_by('-id')
+    if season:
+        recipes = recipes.filter(season=season)
     stories = StoryPost.objects.all().order_by('-date_posted')
+    saved_ids = []
+    if request.user.is_authenticated:
+        saved_ids = SavedRecipe.objects.filter(user=request.user).values_list('recipe_id', flat=True)
     return render(request, 'community.html', {
         'recipes': recipes,
-        'stories': stories
+        'stories': stories,
+        'saved_ids': saved_ids,
+        'selected_season': season,
     })
+
+
+def add_recipe_view(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+    if request.method == 'POST':
+        form = RecipeForm(request.user, request.POST, request.FILES)
+        if form.is_valid():
+            recipe = form.save(commit=False)
+            recipe.user = request.user
+            recipe.save()
+            form.save_m2m()
+            return redirect('community')
+    else:
+        form = RecipeForm(user=request.user)
+    return render(request, 'add_recipe.html', {'form': form})
+
+
+def add_story_view(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+    if request.method == 'POST':
+        form = StoryForm(request.POST, request.FILES)
+        if form.is_valid():
+            story = form.save(commit=False)
+            story.user = request.user
+            story.save()
+            return redirect('community')
+    else:
+        form = StoryForm()
+    return render(request, 'add_story.html', {'form': form})
+
+
+def save_recipe_view(request, recipe_id):
+    if not request.user.is_authenticated:
+        return redirect('login')
+    recipe = Recipe.objects.get(pk=recipe_id)
+    saved, created = SavedRecipe.objects.get_or_create(user=request.user, recipe=recipe)
+    if not created:
+        saved.delete()
+    return redirect('community')
