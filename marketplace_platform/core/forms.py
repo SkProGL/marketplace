@@ -18,12 +18,19 @@ class ProductForm(forms.ModelForm):
             'description', 
             'price', 
             'unit', 
-            'season', 
+            'availability',
+            'seasonStart',
+            'seasonEnd',
+            'best_before',
             'food_miles', 
-            'stock', 
+            'stock',
+            'stock_alert_threshold',
             'allergens', 
-            'organic', 
-            'surplus', 
+            'organic',
+            'surplus',
+            'discount_percentage',
+            'discount_expiry',
+            'discount_note',
             'image'
         ]
         widgets = {
