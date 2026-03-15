@@ -151,6 +151,15 @@ class Order(models.Model):
         CONFIRMED="CONFIRMED"
         READY="READY"
         DELIVERED="DELIVERED"
+    
+    class Recurrence(models.TextChoices):
+        NONE="None"
+        WEEKLY="Weekly"
+        FORTNIGHTLY="Fortnightly"
+
+    class Weekday(models.IntegerChoices):
+        MON,TUE,WED,THUR,FRI,SAT,SUN=range(1,8)
+    
     id=models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False)
     customer =models.ForeignKey(
         User,
@@ -165,6 +174,10 @@ class Order(models.Model):
     delivery_date=models.DateTimeField()
     order_status=models.CharField(max_length=20,choices=Status.choices,default=Status.PENDING)
     special_instructions=models.TextField(blank=True)
+    recurring=models.BooleanField(default=False)
+    recurrence_type=models.CharField(max_length=20,choices=Recurrence.choices,default=Recurrence.NONE)
+    recurrence_day=models.IntegerField(choices=Weekday.choices,null=True,blank=True)
+    #last_generated=models.DateTimeField(null=True,blank=True)
 
 class OrderProduct(models.Model):
     order=models.ForeignKey(Order, on_delete=models.CASCADE)
