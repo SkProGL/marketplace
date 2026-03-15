@@ -213,11 +213,12 @@ class Recipe(models.Model):
     image=models.ImageField(upload_to='item_images/', blank=True)
     instructions=models.TextField()
     season=models.CharField(max_length=20,choices=Season.choices,default=Season.SPRING)
-    ingredients=models.ManyToManyField(Product,through="RecipeIngredients")
+    ingredients=models.ManyToManyField("Product",through="RecipeIngredients")
 
 class RecipeIngredients(models.Model):
     recipe=models.ForeignKey(Recipe, on_delete=models.CASCADE)
     product=models.ForeignKey(Product,on_delete=models.CASCADE)
+    quantity=models.CharField(max_length=30)
     class Meta:
         unique_together=("recipe","product")
 
@@ -238,3 +239,26 @@ class Review(models.Model):
     rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     date_posted=models.DateTimeField(auto_now_add=True)
     anonymous=models.BooleanField(default=False)
+
+class Payment(models.Model):
+    class Status(models.TextChoices):
+        PENDING="PENDING"
+        PROCESSED="PROCESSED"
+        FAILED="FAILED"
+    
+    id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
+    producer=models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+    orders=models.ManyToManyField("Order",blank=True)
+    amount=models.DecimalField(max_digits=10,decimal_places=2)
+    status=models.CharField(max_length=20,choices=Status.choices,default=Status.PENDING)
+    created_at=models.DateTimeField(auto_now_add=True)
+    processed_at=models.DateTimeField(null=True,blank=True)
+
+class OrderPayment(models.Model):
+    order=models.ForeignKey(Order,on_delete=models.CASCADE)
+    payment=models.ForeignKey(Payment,on_delete=models.CASCADE)
+    class Meta:
+        unique_together=("order","payment")
