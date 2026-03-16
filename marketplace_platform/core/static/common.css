@@ -1,0 +1,217 @@
+:root {
+  --main-color: #198754;
+  --secondary-color: #00ac7c;
+}
+.container {
+  justify-content: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 70vh;
+  flex-direction: column;
+}
+
+.container {
+  /* flex-direction: column; */
+}
+/* SIGNUP ---------------------------------------------- */
+/* From Uiverse.io by JkHuger */
+
+.widget-account-form-row {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.widget-account-form-signup {
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  display: block;
+  font-weight: bold;
+  font-size: x-large;
+  margin-top: 1.5em;
+}
+.widget-account-form-card {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* min-height: 90vh; */
+  width: fit-content;
+  min-width: 500px;
+  flex-direction: column;
+  gap: 1.2rem;
+  border-radius: 15px;
+  background: #e3e3e3;
+  box-shadow:
+    16px 16px 32px #c8c8c8,
+    -16px -16px 32px #fefefe;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.widget-account-form-card h2 {
+  padding: 2rem 0 0 0;
+  color: var(--main-color);
+}
+.widget-account-form-inputBox,
+.widget-account-form-inputBox1 {
+  position: relative;
+  width: fit-content;
+  margin: 1rem 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.widget-account-form-inputBox input,
+.widget-account-form-inputBox1 input {
+  width: 100%;
+  padding: 10px;
+  outline: none;
+  border: none;
+  color: #000;
+  font-size: 1em;
+  background: transparent;
+  border-left: 2px solid var(--secondary-color);
+  border-bottom: 2px solid var(--secondary-color);
+  transition: 0.1s;
+  border-bottom-left-radius: 8px;
+}
+.widget-account-form-inputBox.right input,
+.widget-account-form-inputBox1.right input {
+  border-left: none;
+  border-bottom-left-radius: 0;
+  border-right: 2px solid var(--secondary-color);
+  border-bottom-right-radius: 8px;
+}
+
+.widget-account-form-inputBox span,
+.widget-account-form-inputBox1 span {
+  margin-top: 5px;
+  position: absolute;
+  left: 0;
+  /* max-width: 100px; */
+  transform: translateY(-4px);
+  margin-left: 10px;
+  padding: 10px;
+  pointer-events: none;
+  font-size: 12px;
+  color: #000;
+  text-transform: uppercase;
+  transition: 0.5s;
+  letter-spacing: 3px;
+  border-radius: 8px;
+}
+
+.widget-account-form-inputBox input:valid ~ span,
+.widget-account-form-inputBox input:focus ~ span,
+.widget-account-form-inputBox1 input:valid ~ span,
+.widget-account-form-inputBox1 input:focus ~ span {
+  transform: translateX(113px) translateY(-15px);
+  font-size: 0.8em;
+  padding: 5px 10px;
+  /* background: #000; */
+  background: var(--main-color);
+
+  white-space: nowrap;
+  letter-spacing: 0.2em;
+  color: #fff;
+  border: 2px;
+}
+
+.widget-account-form-inputBox1 input:valid ~ span,
+.widget-account-form-inputBox1 input:focus ~ span {
+  transform: translateX(156px) translateY(-15px);
+}
+
+.widget-account-form-inputBox input:valid,
+.widget-account-form-inputBox input:focus,
+.widget-account-form-inputBox1 input:valid,
+.widget-account-form-inputBox1 input:focus {
+  border: 2px solid var(--main-color);
+  border-radius: 8px;
+}
+
+.widget-account-form-enter {
+  height: 45px;
+  width: 100px;
+  border-radius: 5px;
+  border: 2px solid var(--secondary-color);
+  cursor: pointer;
+  /* background-color: transparent; */
+  background-color: var(--secondary-color);
+  color: white;
+  transition: 0.5s;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 2px;
+  margin-bottom: 2em;
+  margin-top: 0.8rem;
+}
+
+.widget-account-form-enter:hover {
+  background-color: var(--main-color);
+  border: 2px solid var(--main-color);
+  color: white;
+}
+
+/* From Uiverse.io by boryanakrasteva */
+.widget-sign-checkbox-wrapper input[type="checkbox"] {
+  visibility: hidden;
+  display: none;
+}
+
+.widget-sign-checkbox-wrapper *,
+.widget-sign-checkbox-wrapper ::after,
+.widget-sign-checkbox-wrapper ::before {
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.widget-sign-checkbox-wrapper {
+  position: relative;
+  /* display: block; */
+  overflow: hidden;
+  max-width: 85%;
+  margin: auto;
+  display: flex;
+}
+
+.widget-sign-checkbox-wrapper .widget-sign-label {
+  cursor: pointer;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
+.widget-sign-label span {
+  width: 65%;
+  white-space: pre-wrap;
+}
+
+.widget-sign-checkbox-wrapper .widget-sign-check {
+  width: 50px;
+  height: 50px;
+  position: absolute;
+  opacity: 0;
+}
+
+.widget-sign-checkbox-wrapper .widget-sign-label svg {
+  vertical-align: middle;
+}
+
+.widget-sign-checkbox-wrapper .widget-sign-path1 {
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+  transition: 0.5s stroke-dashoffset;
+  opacity: 1;
+}
+
+.widget-sign-checkbox-wrapper .widget-sign-check:checked + label svg g path {
+  stroke-dashoffset: 0;
+  opacity: 1;
+}
+.widget-sign-label g {
+  filter: brightness(0) saturate(100%) invert(42%) sepia(18%) saturate(2168%)
+    hue-rotate(102deg) brightness(91%) contrast(80%);
+}

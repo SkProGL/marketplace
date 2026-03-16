@@ -1,0 +1,200 @@
+:root {
+  /* --link-color: #2c73f3; */
+  --link-color: #00ac7c;
+  --row-gap: 2rem;
+}
+.custom-filters {
+  height: 45px;
+  max-height: 45px;
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: var(--row-gap);
+}
+
+/*FILTER ---------------------------------*/
+.filters {
+  user-select: none;
+  margin: var(--row-gap) 0;
+}
+.filters input {
+  display: none;
+}
+
+.filters label {
+  display: inline-block;
+  padding: 6px 12px;
+  margin: 4px;
+  border-radius: 20px;
+
+  max-height: 30px;
+  /* border: 1px solid var(--link-color); */
+  cursor: pointer;
+  transition: 0.2s;
+  background: white;
+}
+
+.filters input:checked + label {
+  background: var(--link-color);
+  color: white;
+}
+
+/*CARD ---------------------------------*/
+/* From Uiverse.io by dovatgabriel */
+
+.widget-card-grid {
+  display: inline-flex;
+  gap: 4rem;
+}
+.card {
+  position: relative;
+  width: 13.875em;
+  height: 20.5em;
+  box-shadow: 0px 1px 13px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 120ms;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  /* padding: 0.5em; */
+  /* padding-bottom: 3.4em; */
+
+  padding: 0 0 3.4rem;
+  overflow: hidden;
+}
+
+.card::after {
+  content: "Add";
+  padding-top: 1.25em;
+  padding-bottom: 2.5em;
+  position: absolute;
+  left: 0;
+  bottom: -64px;
+  background: black;
+  color: #fff;
+  height: 2.5em;
+  width: 100%;
+  /* transition: */
+  /*   bottom 0.7s ease, */
+  /*   opacity 0.7s ease; */
+  transition:
+    bottom 0.7s ease,
+    opacity 0.7s ease,
+    background 1.7s ease;
+  display: flex;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0;
+  justify-content: center;
+  padding: 1.2em 0 2.75em 0;
+}
+.card .title {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.9em;
+  position: absolute;
+  left: 0.625em;
+  bottom: 1.875em;
+  font-weight: 400;
+  color: #000;
+}
+
+.card .price {
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  font-size: 0.9em;
+  position: absolute;
+  left: 0.625em;
+  bottom: 0.625em;
+  color: #000;
+  letter-spacing: 3px;
+}
+
+.card:hover::after {
+  bottom: 0;
+  opacity: 1;
+}
+
+.card:active {
+  transform: scale(0.98);
+}
+
+.card:active::after {
+  content: "Basket updated";
+  background: #00ac7c;
+  transition: opacity 0.7s ease;
+  height: 3.125em;
+}
+.text {
+  max-width: 55px;
+}
+
+.image {
+  background: rgb(241, 241, 241);
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+/* From Uiverse.io by adamgiebl */
+.input {
+  color: #fff;
+  font-size: 0.9rem;
+  background-color: transparent;
+  width: 100%;
+  box-sizing: border-box;
+  padding-inline: 0.5em;
+  padding-block: 0.7em;
+  border: none;
+  border-bottom: var(--border-height) solid var(--border-before-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.input-border {
+  position: absolute;
+  background: var(--border-after-color);
+  width: 0%;
+  height: 2px;
+  bottom: 0;
+  left: 0;
+  transition: width 0.3s cubic-bezier(0.6, -0.28, 0.735, 0.045);
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input:focus + .input-border {
+  width: 100%;
+}
+
+.form-control {
+  position: relative;
+  --width-of-input: 300px;
+  border: none;
+  padding: 0;
+}
+
+.input-alt {
+  font-size: 1.2rem;
+  padding-inline: 1em;
+  padding-block: 0.8em;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  color: black;
+}
+
+.input-border-alt {
+  height: 3px;
+  background: linear-gradient(90deg, #ff6464 0%, #ffbf59 50%, #47c9ff 100%);
+  transition: width 0.4s cubic-bezier(0.42, 0, 0.58, 1);
+}
+
+.input-alt:focus + .input-border-alt {
+  width: 100%;
+}
+
+.home-results {
+  margin: 0 0 2rem 0;
+  padding: 6px 12px;
+}

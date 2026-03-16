@@ -14,6 +14,7 @@ class Actor(models.Model):
     def __str__(self):
         return self.name
 
+
 class User(AbstractUser):
     # User category options
     class Category(models.TextChoices):
@@ -49,6 +50,7 @@ class User(AbstractUser):
         help_text='Specific permissions for this user.',
         verbose_name='user permissions',
     )
+
 
 class Product(models.Model):
     # List of food categories
@@ -188,23 +190,24 @@ class OrderProduct(models.Model):
 
 
 class StoryPost(models.Model):
-    id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    user=models.ForeignKey(
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
         User,
         on_delete=models.CASCADE
     )
-    content=models.TextField()
-    image=models.ImageField(upload_to='item_images/', blank=True)
-    date_posted=models.DateTimeField(auto_now_add=True)
+    content = models.TextField()
+    image = models.ImageField(upload_to='item_images/', blank=True)
+    date_posted = models.DateTimeField(auto_now_add=True)
+
 
 class Recipe(models.Model):
     class Season(models.TextChoices):
-        SPRING="Spring"
-        SUMMER="Summer"
-        AUTUMN="Autumn"
-        WINTER="Winter"
-    id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    user=models.ForeignKey(
+        SPRING = "Spring"
+        SUMMER = "Summer"
+        AUTUMN = "Autumn"
+        WINTER = "Winter"
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
         User,
         on_delete=models.CASCADE
     )
@@ -223,8 +226,8 @@ class RecipeIngredients(models.Model):
         unique_together=("recipe","product")
 
 class Review(models.Model):
-    id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    user=models.ForeignKey(
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
         User,
         on_delete=models.CASCADE
     )

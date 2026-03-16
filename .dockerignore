@@ -1,0 +1,9 @@
+**/node_modules/
+**/frontend/node_modules
+npm-debug.log
+dist
+build
+.git
+.gitignore
+__pycache__
+*.pyc

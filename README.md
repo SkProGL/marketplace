@@ -1,16 +1,24 @@
 ### Draft repository
 
+mkdir frontend
+cd frontend
+npm init -y
+npm install react react-dom
+npm install vite @vitejs/plugin-react --save-dev
+
 > [!NOTE]  
 > Latest changes (based on https://www.youtube.com/watch?v=37aNpE-9dD4):
 > ```bash
+> // To run & build container try:
+> docker compose up --build 
+> 
+> Steps project went through:
+>
 > // created draft project
 > django-admin startproject marketplace_platform
 > 
 > // created app inside project
 > python .\manage.py startapp core
->
-> // run & build container
-> docker compose up --build 
 > 
 > // (open new terminal) execute commands inside container
 > // makemigrations is needed when app/models.py gets changed
@@ -37,7 +45,26 @@
 > python version: 3.11  
 > docker-python version: 3.11-slim  
 
+<details>
+<summary><b> &nbsp Tech stack </b>
+</summary>
 
+| Tool     | Use                                                           |
+|----------|---------------------------------------------------------------|
+| Jira     | Managing individual duties and deadlines            |
+| Overleaf | Real-time collaboration on reports and documentation |
+| Docker   | Hosting and running the application                 |
+| Python   | Programming language used for development               |
+##### Libraries
+| Tool         | Use                                                                                 | Version |
+|--------------|-------------------------------------------------------------------------------------|---------|
+| scikit-learn | Library that provides the machine learning resources used in the application       |         |
+| numpy        | Handling and calculating with various data structures                     |         |
+| pandas       | Handling large data structures and CSV files                              |         |
+| django       | High level web framework used for handling web applications | 3.11    |
+| psycopg2     | Connecting Python to PostgreSQL for database management                   | 2.9.11  |
+| docker       | Connecting Python to Docker                                               |         |
+</details>
 <details>
 <summary><b> &nbsp Python </b>
 </summary>
