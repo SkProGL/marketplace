@@ -32,6 +32,9 @@ npm install vite @vitejs/plugin-react --save-dev
 > // enters postgres CLI utility, -U user -d database
 > docker exec -ti postgres_db psql -U myuser -d mydb
 >
+> // create a user 
+> docker compose exec web python manage.py createsuperuser
+>
 > // If experiencing unexpected issues:
 > // clear data volumes (this clears ALL data stored in db)
 > docker compose down -v
