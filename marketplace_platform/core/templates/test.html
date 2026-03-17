@@ -1,0 +1,151 @@
+<!-- From Uiverse.io by withyzu -->
+<div class="template">
+  <div
+    tabindex="0"
+    class="popup button"
+    style="
+      padding: 0 0.225rem 0;
+      border-top-right-radius: 1.2rem;
+      border-bottom-right-radius: 1.2rem;
+    "
+  >
+    <div class="popup-header">
+      <p
+        style="
+          letter-spacing: 1px;
+          font-weight: 600;
+          padding: 0.625rem 0rem 0.625rem 0.825rem;
+        "
+      >
+        wihtyzu
+      </p>
+    </div>
+
+    <div class="popup-main">
+      <ul class="list-box">
+        <li class="button item">Withyzu's zone</li>
+        <li class="button item">Manage Blog</li>
+        <li class="button item">Manage Thinks</li>
+        <hr />
+        <li class="button item">Manages Message</li>
+        <li class="button item">Recent Visitor</li>
+        <li class="button item">Friendship Links</li>
+        <li class="button item">Setting</li>
+        <hr />
+        <li class="button item quit">Quit</li>
+      </ul>
+    </div>
+  </div>
+</div>
+<style>
+  body {
+    margin: 15rem;
+  }
+  /* From Uiverse.io by withyzu */
+  .template {
+    /* ------------------------------------------------------------ */
+    /* fill */
+    --fill: #0000;
+    --fill-hover: hsla(0, 0%, 45%, 0.2);
+    --fill-active: hsl(0, 0%, 10%);
+    /* txt */
+    --txt: #ccc;
+    /*-------------------------*/
+    --br: 0.625rem;
+    --gap: 0.25rem;
+    --popup-main-h: 20rem;
+    /* ---------------------------------------------------------- */
+    display: flex;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-size: 0.975rem;
+    color: var(--txt);
+  }
+
+  /* button */
+  .button {
+    position: relative;
+    display: inline-block;
+    list-style-type: none;
+    list-style: none;
+    appearance: none;
+    outline: 0;
+    border: 0;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: inherit;
+    color: inherit;
+    white-space: nowrap;
+    padding: calc(var(--gap) * 2) calc(var(--gap) * 8) calc(var(--gap) * 2)
+      calc(var(--gap) * 4);
+    text-align: left;
+    background-color: var(--fill);
+    border-radius: var(--br) calc(var(--br) / 2) calc(var(--br) / 2) var(--br);
+    transition: background-color 500ms;
+  }
+
+  .button:hover {
+    background-color: var(--fill-hover);
+  }
+
+  .button.quit:hover {
+    background-color: #962434;
+  }
+
+  .button:focus,
+  .button:active,
+  .button.active {
+    background-color: var(--fill-active);
+  }
+
+  hr {
+    margin: 0.8rem;
+
+    border: 1px dashed #313131;
+  }
+
+  /* popup */
+  .popup {
+    position: relative;
+  }
+
+  .popup-header {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: calc(var(--gap) * 3);
+  }
+
+  .popup-main {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    opacity: 0;
+    margin-top: var(--gap);
+    border-radius: var(--br);
+    padding: 0 calc(var(--gap) * 1.5);
+    background-color: hsl(0, 0%, 10%);
+    box-shadow: hsl(0, 0%, 12%) 0px 0px 0px 1px;
+    transition: 0.4s;
+    overflow: hidden;
+    height: var(--popup-main-h);
+  }
+
+  .popup:focus .popup-main {
+    margin-top: 1rem;
+    opacity: 1;
+  }
+
+  .list-box {
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+    overflow: auto;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: calc(var(--gap) * 2) 0 calc(var(--gap) * 3) 0;
+  }
+</style>

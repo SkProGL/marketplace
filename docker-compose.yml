@@ -35,6 +35,12 @@ services:
         restart: true
     env_file:
       - .env
-
+  api:
+    build:
+      context: .
+      args:
+        REQUIREMENTS_FILE: api_requirements.txt
+    ports:
+      - "8001:8001"
 volumes:
   postgres_db:

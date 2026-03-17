@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <style>
+      .widget-stepper-container {
+        display: inline-flex;
+        /* display: none; */
+        align-items: center;
+        height: 3rem;
+        gap: 8px;
+        border-radius: 40px;
+        /* border: 3px dashed #f5ddb7; */
+        /* box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); */
+      }
+
+      .widget-stepper-btn {
+        border: none;
+        background: transparent;
+        font-size: 2.2rem;
+        cursor: pointer;
+        padding: 8px;
+
+        color: #f5ddb7;
+        text-shadow: 1px 1px 1px black;
+      }
+
+      .widget-stepper-input {
+        width: fit-content;
+        text-align: center;
+        font-style: italic;
+        font-size: 2rem;
+        border: none;
+        outline: none;
+        background: none;
+
+        color: #f5ddb7;
+        text-shadow: 1px 1px 1px black;
+      }
+
+      .widget-stepper-input::-webkit-outer-spin-button,
+      .widget-stepper-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .widget-stepper-input {
+        -moz-appearance: textfield;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="widget-stepper-container">
+      <button class="widget-stepper-btn widget-stepper-minus">−</button>
+
+      <input
+        class="widget-stepper-input"
+        id="widget-stepper-input"
+        type="number"
+        value="2"
+        min="0"
+        max="99"
+        step="1"
+      />
+
+      <button class="widget-stepper-btn widget-stepper-plus">+</button>
+    </div>
+
+    <script>
+      const widgetStepperInput = document.getElementById(
+        "widget-stepper-input",
+      );
+
+      document.querySelector(".widget-stepper-plus").onclick = () =>
+        widgetStepperInput.stepUp();
+
+      document.querySelector(".widget-stepper-minus").onclick = () =>
+        widgetStepperInput.stepDown();
+
+      /* prevent manual typing above 99 */
+      widgetStepperInput.oninput = () =>
+        (widgetStepperInput.value = Math.min(widgetStepperInput.value, 99));
+    </script>
+  </body>
+</html>
