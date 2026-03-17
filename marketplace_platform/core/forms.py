@@ -16,8 +16,13 @@ class LoginForm(forms.Form):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['name', 'category', 'description', 'price', 'unit', 'season',
-                  'food_miles', 'stock', 'allergens', 'organic', 'surplus', 'image']
+        fields = [
+            'name', 'category', 'description', 'price', 
+            'unit', 'availability', 'seasonStart', 'seasonEnd',
+            'best_before', 'food_miles', 'stock', 'stock_alert_threshold',
+            'allergens', 'organic', 'surplus', 'discount_percentage',
+            'discount_expiry', 'discount_note', 'image'
+        ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
         }
