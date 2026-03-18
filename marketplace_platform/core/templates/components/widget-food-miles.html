@@ -61,7 +61,14 @@
     user-select: none;
     /* border: 1px solid rgba(53, 52, 52, 0.226); */
 
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); */
+    box-shadow:
+      1px 1px 2px -1px #fff inset,
+      0 2px 1px #00000010,
+      0 4px 2px #00000010,
+      0 8px 4px #00000010,
+      0 16px 8px #00000010,
+      0 32px 16px #00000010;
   }
 
   .radio-input label {
@@ -110,6 +117,16 @@
 
   .radio-input label:nth-child(4):has(input:checked) ~ .selection {
     transform: translateX(calc(var(--container_width) * 3 / 4));
+  }
+  .input-alt,
+  label {
+    box-shadow:
+      1px 1px 2px -1px #fff inset,
+      0 2px 1px #00000010,
+      0 4px 2px #00000010,
+      0 8px 4px #00000010,
+      0 16px 8px #00000010,
+      0 32px 16px #00000010;
   }
 </style>
 <!-- From Uiverse.io by Javierrocadev -->
