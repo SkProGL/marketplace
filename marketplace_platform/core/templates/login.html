@@ -5,49 +5,34 @@
 <link rel="stylesheet" href="{% static 'common.css' %}">
 <link rel="stylesheet" href="{% static 'login.css' %}">
 <div class="row justify-content-center">
-    <!-- <div class="col-md-4"> -->
-    <!--     <div class="card p-4 shadow"> -->
-    <!--         <h3>Sign In</h3> -->
-    <!---->
-    <!--         {% if messages %} -->
-    <!--             {% for message in messages %} -->
-    <!--                 <div class="alert alert-{{ message.tags }} small"> -->
-    <!--                     {{ message }} -->
-    <!--                 </div> -->
-    <!--             {% endfor %} -->
-    <!--         {% endif %} -->
-    <!---->
-    <!--         <form method="POST"> -->
-    <!--             {% csrf_token %} -->
-    <!--             {{ form.as_p }}   -->
-    <!--             <button type="submit" class="btn btn-primary w-100">Enter</button> -->
-    <!--         </form> -->
-    <!--         <div class="d-grid mt-2"> -->
-    <!--             <a href="{% url 'home' %}" class="btn btn-outline-secondary">Back to Home</a> -->
-    <!--         </div> -->
-    <!--     </div> -->
-    <!-- </div> -->
+{% if form.errors %}
+  <div class="alert alert-danger">
+    {{ form.errors }}
+  </div>
+{% endif %}
+<form method="POST">
+    {% csrf_token %}
 
-<!-- From Uiverse.io by JkHuger --> 
-<div class="widget-account-form-container">
+    <div class="widget-account-form-container">
         <div class="widget-account-form-card">
-            <!-- <a class="widget-account-form-login">Log in</a> -->
             <h2>LOG IN</h2>
+
             <div class="widget-account-form-inputBox">
-                <input type="text" required="required">
-                <span class="widget-account-form-user">Email</span>
+                <input type="text" name="username" required>
+                <span class="widget-account-form-user">Username</span>
             </div>
 
             <div class="widget-account-form-inputBox">
-                <input type="password" required="required">
+                <input type="password" name="password" required>
                 <span>Password</span>
             </div>
 
-            <button class="widget-account-form-enter">Enter</button>
-
+            <button type="submit" class="widget-account-form-enter">
+                Enter
+            </button>
         </div>
     </div>
-
+</form>
 
 
 </div>

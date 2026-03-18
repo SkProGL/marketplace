@@ -2,31 +2,6 @@
 {% load static %}
 {% block content %}
     <link rel="stylesheet" href="{% static 'home.css' %}">
-    
-    <div class="row">
-        {% for item in items %}
-            <div class="col-md-4 mb-4">
-                <div class="card shadow-sm">
-                    {% if item.image %}
-                        <img src="{{ item.image.url }}" class="card-img-top" alt="{{ item.name }}" style="height: 200px; object-fit: cover;">
-                    {% endif %}
-                    <div class="card-body">
-                        <h5 class="card-title">{{ item.name }}</h5>
-                        <p class="text-muted small">{{ item.category }}</p>
-                        <p class="card-text">{{ item.description }}</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge bg-success">${{ item.price }}</span>
-                            {% if item.allergens %}
-                                <small class="text-danger">⚠️ {{item.allergens|join:", "}}</small>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        {% empty %}
-            <p>No items found. Go to the <a href="{% url 'inventory_upload' %}">Inventory page</a> to add one!</p>
-        {% endfor %}
-    </div>
 
 <!-- From Uiverse.io by adamgiebl --> 
 <div class="form-control">
@@ -61,40 +36,46 @@
 	{% include "components/widget-offer.html" %}
 	<br/>
 </div>
-
-<div class="home-results"><b>Found 2 matches</b></div>
+<div class="home-results">
+  <b>Found {{ items|length }} matches</b>
+</div>
 
 <div class="widget-card-grid">
-<div class="card">
-	<div class="image">
-		<img src="{% static 'test.jpg' %}" class="card-img-top" style="height: 100%; object-fit: cover; -webkit-user-drag: none;">
-		<!-- <span class="text">This is a chair.</span> -->
-	</div>
-	<span class="allergens">
+  {% for item in items %}
+    <div class="card">
+
+      <div class="image">
+        {% if item.image %}
+          <img src="{{ item.image.url }}" class="card-img-top" style="height: 100%; object-fit: cover;">
+        {% else %}
+          <img src="{% static 'test.jpg' %}" class="card-img-top" style="height: 100%; object-fit: cover;">
+        {% endif %}
+      </div>
+
+      {% if item.allergens %}
+      <span class="allergens">
+
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle-warning-icon lucide-message-circle-warning" transform="scale(-1,1)"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-<span>Contains salsa</span>
-	</span>
+         {{ item.allergens|join:", " }}
+      </span>
+      {% endif %}
 
-	<span class="cart">
-	{% include "components/widget-stepper.html" %}
-	</span>
-  <span class="title">Chilli (Mexican)</span>
-  <span class="price">$1.20</span>
+      <span class="cart">
+        {% include "components/widget-stepper.html" %}
+      </span>
+
+      <span class="title">{{ item.name }}</span>
+      <span class="price">£{{ item.price }}</span>
+
+    </div>
+  {% empty %}
+    <p>No items found. Go to 
+      <a href="{% url 'inventory_upload' %}">Inventory page</a>
+    </p>
+  {% endfor %}
 </div>
+<!-- <div class="home-results"><b>Found 2 matches</b></div> -->
 
-<div class="card">
-	<div class="image">
-		<img src="{% static 'test.jpg' %}" class="card-img-top" style="height: 100%; object-fit: cover; -webkit-user-drag: none;">
-	</div>
-
-	<span class="cart">
-	{% include "components/widget-stepper.html" %}
-	</span>
-  <span class="title">Chilli</span>
-  <span class="price">$1.00</span>
-</div>
-
-</div>
 <br/>
 <br/>
 <br/>

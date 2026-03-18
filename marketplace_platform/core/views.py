@@ -40,6 +40,7 @@ def upload_item(request):
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES)
         if form.is_valid():
+            print("FORM VALID ✅")
             product = form.save(commit=False)
             if request.user.is_authenticated:
                 product.producer = User.objects.get(pk=request.user.pk)
@@ -47,6 +48,8 @@ def upload_item(request):
                 return redirect('home')
             else:
                 return HttpResponse("You must be logged in to upload.")
+        else:
+            print("FORM ERRORS ❌", form.errors)
     else:
         form = ProductForm()
     return render(request, 'inventory_upload.html', {'form': form})
