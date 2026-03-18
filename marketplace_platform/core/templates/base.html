@@ -1,4 +1,3 @@
-{% load static %}
 <!DOCTYPE html>
 {% load static %}
 <html lang="en">
@@ -7,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Marketplace</title>
     <link rel="stylesheet" href="{% static 'bootstrap/bootstrap.min.css' %}">
-	<link rel="stylesheet" href="{% static 'base.css' %}">
     <link rel="stylesheet" href="{% static 'style.css' %}">
+	<link rel="stylesheet" href="{% static 'base.css' %}">
     <style>
         .navbar-brand { font-weight: 700; color: #198754 !important; }
     </style>
@@ -55,6 +54,7 @@
                         <a class="nav-link" href="">Cart</a>
                         <a class="nav-link" href="">Profile</a>
                         <a class="nav-link" href="" >Order history</a>
+                        <a class="nav-link" href="{% url 'management' %}">Management</a>
                         <a class="nav-link" href="{% url 'invoice' %}">Invoice</a>
                         <a class="nav-link" href="{% url 'login' %}">Log in</a>
                         <a class="nav-link" href="{% url 'signup' %}">Sign up</a>
@@ -78,7 +78,7 @@
         {% block content %}
         {% endblock %}
         
-
+    </div> 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

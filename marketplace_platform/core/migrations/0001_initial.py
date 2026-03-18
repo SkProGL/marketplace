@@ -21,15 +21,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Actor',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=128)),
-                ('nationality', models.CharField(max_length=128)),
-                ('created', models.DateTimeField(auto_now_add=True)),
-            ],
-        ),
-        migrations.CreateModel(
             name='User',
             fields=[
                 ('password', models.CharField(max_length=128, verbose_name='password')),
@@ -186,6 +177,10 @@ class Migration(migrations.Migration):
             name='OrderPayment',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('title', models.CharField(max_length=128)),
+                ('content', models.TextField()),
+                ('rating', models.IntegerField(validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(5)])),
+                ('date_posted', models.DateTimeField(auto_now_add=True)),
                 ('order', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.order')),
                 ('payment', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.payment')),
             ],
