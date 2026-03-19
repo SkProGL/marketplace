@@ -3,3 +3,4 @@ django
 psycopg[binary]
 pillow
 djangorestframework
+django-browser-reload
