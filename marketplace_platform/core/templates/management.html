@@ -6,7 +6,7 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'management.css' %}">
 <div class="row justify-content-center">
-    <div class="col-10">
+    <div class="col-11">
         <!--Define form-->
         <form method="POST" action="{% url 'management' %}?model={{ selected_model_name }}">
             <!-- Pass auth token for POST -->
@@ -108,7 +108,7 @@
 
                                     </td>
                                     {% endfor %}
-                                    <td>
+                                    <td class="text-center">
                                         <button type="submit" name="delete" value="{{ row.id }}" class="btn btn-sm btn-outline-danger mx-auto m-2 shadow-sm" onclick="return confirm('Are you sure you want to permanently delete this {{ selected_model_name }}?');"><i class="bi bi-trash"></i></button>
                                     </td>
                                       
