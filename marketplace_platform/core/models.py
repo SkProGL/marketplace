@@ -182,6 +182,9 @@ class Order(models.Model):
         choices=Weekday.choices, null=True, blank=True)
     # last_generated=models.DateTimeField(null=True,blank=True)
 
+    def __str__(self):
+        return f"{self.customer} ({str(self.id)[:8]}) - {self.order_status} ({self.order_date.strftime('%d-%m-%Y %H:%M:%S')})"
+
 
 class OrderProduct(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
@@ -191,9 +194,8 @@ class OrderProduct(models.Model):
     class Meta:
         unique_together = ("order", "product")
 
-
     def __str__(self):
-        return f"{str(self.id)[:8]} - {self.order_status}"
+        return f"{str(self.id)[:8]}"
 
 class StoryPost(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
