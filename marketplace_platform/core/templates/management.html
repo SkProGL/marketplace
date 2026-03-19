@@ -1,17 +1,20 @@
 {% extends "base.html" %}
+{% load static %}
+<!-- Override default body container for smaller gutter -->
+{% block container_class %}container-fluid px-5 {% endblock %}
 
 {% block content %}
-
+<link rel="stylesheet" href="{% static 'management.css' %}">
 <div class="row justify-content-center">
-    <div class="col-12">
+    <div class="col-10">
         <!--Define form-->
         <form method="POST" action="{% url 'management' %}?model={{ selected_model_name }}">
             <!-- Pass auth token for POST -->
             {% csrf_token %}
             <!-- Primary card -->
-            <div class="card shadow mb-5">
+            <div class="card shadow">
                 <!-- Model selection button group -->
-                <div class="btn-group w-100 card-header border-0" role="group" >
+                <div class="flex-wrap gap-1 btn-group card-header border-0" role="group" >
                     {% for model_name in model_names %}
                         <input  type="radio" 
                                 class="btn-check" 
@@ -23,17 +26,18 @@
                             {{ model_name }}
                         </label>
                     {% endfor %}
-                    </div>
+                    </div> 
                 <!-- Construct selected model table -->
                 {% if selected_data %}
-                <div class="table-responsive m-1">
-                    <table class="table table-sm table-hover align-middle mb-0">
-                        <thead class="table-light">
+                <div class="table-responsive m-1" style="max-height: 75vh; overflow: auto;">
+                    <table class="table table-sm  table-striped align-middle mb-0">
+                        <thead class="table-light sticky-top" style="z-index: 1;">
                             <!-- Construct headers -->
-                            <tr> 
+                            <tr > 
                                 {% for header in selected_data.headers %}
-                                    <th>{{ header }}</th>
+                                    <th  style="min-width: 50px;">{{ header }}</th>
                                 {% endfor %}
+                                <!-- Delete header -->
                             </tr>
                             
                         </thead>
@@ -41,7 +45,7 @@
                             <!-- Handle input based on type flag -->
                             <tbody>
                                 {% for row in selected_data.rows %}
-                               <tr data-row-id="{{ row.id }}" class="selectable-row">
+                               <tr data-row-id="{{ row.id }}" class="">
                                     {% for cell in row.cells %}
                                     <td>
                                         {% if cell.name == 'id' %}
@@ -49,12 +53,26 @@
                                             onclick="navigator.clipboard.writeText('{{ cell.value }}')"
                                             >{{ cell.value|stringformat:"s"|slice:":7" }}</span>
                                             <input type="hidden" name="cell_{{ row.id }}_{{ cell.name }}" value="{{ cell.value }}">
-                                        {% elif cell.name == 'password' %}
+                                        {% elif cell.is_readonly %}
                                         <input type="text" 
                                             name="cell_{{ row.id }}_{{ cell.name }}"
                                             value="{{ cell.value }}" 
                                             class="form-control form-control-sm"
-                                            readonly>
+                                            disabled>
+                                        {% elif cell.is_password %}
+                                        <!-- TODO - Improve visual. Modal? -->
+                                        <div class="dropdown dropend">
+                                                <button class="btn btn-sm dropdown-toggle"  type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                                                    <i class="bi bi-key-fill"></i> {% if row.id == 'NEW' %}Set Password{% else %}{{ cell.value }}{% endif %}
+                                                </button>
+                                                
+                                                <div class="dropdown-menu p-2 shadow-sm" style="min-width: 150px;">
+                                                    <div class="d-flex flex-row gap-2">
+                                                        <input type="password" name="cell_{{ row.id }}_{{ cell.name }}" placeholder="New Password..." class="form-control form-control-sm">
+                                                        <input type="password" name="cell_{{ row.id }}_confirm_password" placeholder="Confirm Password..." class="form-control form-control-sm">
+                                                    </div>
+                                                </div>
+                                            </div>
                                         {% elif cell.is_fk %}
                                         <select name="cell_{{ row.id }}_{{ cell.name }}" class="form-select form-select-sm">
                                             <option value="" selected="selected">Select an option</option>
@@ -87,8 +105,13 @@
                                             value="{{ cell.value }}" 
                                             class="form-control form-control-sm">
                                         {% endif %}
+
                                     </td>
                                     {% endfor %}
+                                    <td>
+                                        <button type="submit" name="delete" value="{{ row.id }}" class="btn btn-sm btn-outline-danger mx-auto m-2 shadow-sm" onclick="return confirm('Are you sure you want to permanently delete this {{ selected_model_name }}?');"><i class="bi bi-trash"></i></button>
+                                    </td>
+                                      
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -100,39 +123,18 @@
                 </div>
                 {% endif %}
                 {% if selected_model_name %}
-                <div class="m-3 text-center">
-                        <input type="hidden" name="record_id" id="selected_record_id" value="">
-                        <button type="submit" name="add_entry" class="btn btn-sm btn-success mx-auto m-2 shadow-sm">Add New Entry</button>
-                        <button type="submit" name="update_id" class="btn btn-sm btn-warning mx-auto m-2 shadow-sm" >Update</button>
-                        <button type="submit" name="delete_id" class="btn btn-sm btn-danger mx-auto m-2 shadow-sm">Delete</button>
+                <div class="d-grid gap-1 m-2">
+                    <button type="submit" name="update"  class="btn btn-outline-primary" onclick="return confirm('Are you sure you want to save all changes {{ selected_model_name }}?');"><i class="bi bi-floppy-fill"></i></button>
+                    <a href="?model={{ selected_model_name }}&new_row=true" class="btn btn-outline-success" >
+                        <i class="bi bi-plus-square-fill"></i> Add New Entry
+                    </a>
+                </div>            
                 </div>
                 {% endif %}
             </div>
         </form>
     </div>
 </div>
-
-<script>
-    // Grab all inputs and dropdowns inside selectable rows
-    document.querySelectorAll('.selectable-row input, .selectable-row select').forEach(element => {
-        // Triggers whenfield field is focused
-        element.addEventListener('focus', function() {
-            
-            // Find nearest row
-            let parentRow = this.closest('tr');
-            
-            // get row id
-            document.getElementById('selected_record_id').value = parentRow.getAttribute('data-row-id');
-            
-            //Highlight row
-            document.querySelectorAll('.selectable-row').forEach(row => {
-                row.classList.remove('table-success'); 
-            });
-            parentRow.classList.add('table-success');
-            
-        });
-    });
-</script>
 
 {% endblock %}
 
