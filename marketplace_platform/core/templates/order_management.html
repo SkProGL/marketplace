@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'common.css' %}">
+<style>
+    .order-card { background: #fdfdfd; border-left: 5px solid var(--main-color); margin-bottom: 20px; padding: 1.5rem; border-radius: 8px; box-shadow: 4px 4px 10px #ddd; }
+    .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
+    .status-processed { background: var(--secondary-color); color: white; }
+    .status-pending { background: #ffc107; color: black; }
+</style>
+
+<div class="container mt-4">
+    <h2 class="mb-4" style="color: var(--main-color);">Order History</h2>
+    
+    {% for order in orders %}
+    <div class="order-card">
+        <div class="row align-items-center">
+            <div class="col-md-2">
+                <strong>#{{ order.id|stringformat:".8s" }}</strong>
+            </div>
+            <div class="col-md-2">{{ order.order_date|date:"d M Y" }}</div>
+            <div class="col-md-3">
+                <small class="text-muted">Producers:</small><br>
+                {% for item in order.orderproduct_set.all %}
+                    {{ item.product.producer.name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </div>
+            <div class="col-md-2"><strong>£{{ order.total_price }}</strong></div>
+            <div class="col-md-1">
+                <span class="status-badge status-{{ order.status|lower }}">{{ order.order_status }}</span>
+            </div>
+            <div class="col-md-2 text-end">
+                <a href="{% url 'order_detail' order.id %}" class="btn btn-sm btn-outline-success">Details</a>
+                <form action="{% url 'reorder' order.id %}" method="POST" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success">Reorder</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <p>You haven't placed any orders yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}
