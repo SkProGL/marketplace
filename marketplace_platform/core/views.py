@@ -1,18 +1,115 @@
 from django.apps import apps
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
-from core.forms import LoginForm, ProductForm, SignupForm
+from core.forms import LoginForm, ProductForm, SignupForm, CheckoutForm
 from core.utils import get_management_context, handle_management_post
-from .models import Order, Product
-
+from django.contrib.auth import authenticate, login, get_user_model
+from django.contrib.auth.decorators import login_required
+from .models import User, Product, Order, OrderProduct
+from django.utils import timezone
+from datetime import timedelta
+# Create your views here.
 User = get_user_model()
 
+@login_required
+def order_history(request):
+    # Fetch orders for the logged-in user, sorted by most recent first
+    orders = Order.objects.filter(customer=request.user).order_by('-order_date')
+    return render(request, 'order_management.html', {'orders': orders})
+
+@login_required
+def order_detail(request, order_id):
+    order = get_object_or_404(Order, id=order_id, customer=request.user)
+    return render(request, 'order_detail.html', {'order': order})
+
+@login_required
+def reorder(request, order_id):
+    old_order = get_object_or_404(Order, id=order_id, customer=request.user)
+    # Logic to add items to cart would go here
+    # Check availability and add to session or Cart model
+    return redirect('cart')
+
+@login_required
+def checkout(request):
+    cart = request.session.get('cart', {})
+    
+    # If memory is empty, kick them back home
+    if not cart:
+        messages.error(request, "You haven't selected any items.")
+        return redirect('home')
+
+    # 1. Gather all products and calculate the total price
+    total_price = 0
+    cart_items = []
+    
+    for pid, qty in cart.items():
+        product = get_object_or_404(Product, id=pid)
+        total_price += product.price * qty
+        cart_items.append({'product': product, 'quantity': qty})
+
+    min_delivery_date = (timezone.now() + timedelta(hours=48)).strftime('%Y-%m-%dT%H:%M')
+
+    if request.method == "POST":
+        form = CheckoutForm(request.POST)
+        if form.is_valid():
+            # 2. Create the ONE main Order
+            new_order = Order.objects.create(
+                customer=request.user,
+                total_price=total_price,
+                delivery_date=form.cleaned_data['delivery_date'],
+                order_status='PENDING'
+            )
+            
+            # 3. Loop through the memory to link ALL items to this order
+            for item in cart_items:
+                OrderProduct.objects.create(
+                    order=new_order,
+                    product=item['product'],
+                    numPurchased=item['quantity']
+                )
+            
+            # Clear the memory now that the order is placed!
+            request.session['cart'] = {}
+            
+            messages.success(request, "Order placed successfully!")
+            return redirect('order_history')
+    else:
+        form = CheckoutForm()
+
+    return render(request, 'checkout.html', {
+        'form': form, 
+        'cart_items': cart_items, # Pass the list to HTML so you can show what they are buying
+        'total_price': total_price,
+        'min_delivery_date': min_delivery_date,
+        'user_address': request.user.address,
+        'user_postcode': request.user.postcode
+    })
+    
 def home_view(request):
     items = Product.objects.all()  # Fetch all items from Postgres
     return render(request, 'home.html', {'items': items})
 
+def add_to_cart(request, product_id):
+    if request.method == 'POST':
+        # Get the current memory, or start a blank dictionary
+        cart = request.session.get('cart', {})
+        
+        quantity = int(request.POST.get('quantity', 1))
+        pid = str(product_id) # Session keys must be strings
+
+        # Add or update the quantity
+        if pid in cart:
+            cart[pid] += quantity
+        else:
+            cart[pid] = quantity
+
+        # Save it back to the session
+        request.session['cart'] = cart
+        messages.success(request, "Item added!")
+        
+    return redirect('home')
 
 def login_view(request):
     if request.method == 'POST':
