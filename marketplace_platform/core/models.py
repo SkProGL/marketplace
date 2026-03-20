@@ -198,7 +198,12 @@ class OrderProduct(models.Model):
 
     class Meta:
         unique_together = ("order", "product")
-
+        
+    @property
+    def get_total_item_price(self):
+        """Calculates the total cost for this specific item line"""
+        return self.numPurchased * self.product.price
+    
     def __str__(self):
         return f"{str(self.id)[:8]} - {self.order_status}"
 
