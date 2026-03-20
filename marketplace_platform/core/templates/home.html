@@ -36,13 +36,21 @@
 	{% include "components/widget-offer.html" %}
 	<br/>
 </div>
+
+{% if request.session.cart %}
+<div class="alert alert-success d-flex justify-content-between align-items-center mb-4">
+    <strong>You have {{ request.session.cart|length }} items ready to buy!</strong>
+    <a href="{% url 'checkout' %}" class="btn btn-warning fw-bold">PROCEED TO CHECKOUT</a>
+</div>
+{% endif %}
+
 <div class="home-results">
   <b>Found {{ items|length }} matches</b>
 </div>
 
 <div class="widget-card-grid">
   {% for item in items %}
-    <div class="card">
+    <div class="card" style="display: flex; flex-direction: column;">
 
       <div class="image">
         {% if item.image %}
@@ -54,18 +62,32 @@
 
       {% if item.allergens %}
       <span class="allergens">
-
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle-warning-icon lucide-message-circle-warning" transform="scale(-1,1)"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-         {{ item.allergens|join:", " }}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle-warning-icon lucide-message-circle-warning" transform="scale(-1,1)"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+          {{ item.allergens|join:", " }}
       </span>
       {% endif %}
 
-      <span class="cart">
-        {% include "components/widget-stepper.html" %}
-      </span>
-
       <span class="title">{{ item.name }}</span>
       <span class="price">£{{ item.price }}</span>
+      <!--This is the cart icon part-->
+
+      <div class="card-footer-controls" style="margin-top: auto; padding-top: 15px; display: flex; justify-content: flex-end;">
+        <form action="{% url 'add_to_cart' item.id %}" method="POST" class="m-0">
+          {% csrf_token %}
+          <div class="input-group">
+            <input type="number" name="quantity" value="1" min="1" 
+                   class="form-control form-control-sm" 
+                   style="max-width: 60px; border: 1px solid #ccc; border-radius: 5px 0 0 5px;">
+            
+            <button type="submit" class="btn btn-success btn-sm" style="border-radius: 0 5px 5px 0;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart-plus" viewBox="0 0 16 16">
+                <path d="M9 5.5a.5.5 0 0 0-1 0V7H6.5a.5.5 0 0 0 0 1H8v1.5a.5.5 0 0 0 1 0V8h1.5a.5.5 0 0 0 0-1H9z"/>
+                <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1z"/>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
 
     </div>
   {% empty %}
@@ -80,3 +102,4 @@
 <br/>
 <br/>
 {% endblock %}
+
