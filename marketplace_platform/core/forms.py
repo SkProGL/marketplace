@@ -1,3 +1,6 @@
+from datetime import timedelta
+from django.utils import timezone
+
 from django import forms
 from .models import Product, User
 
@@ -75,8 +78,25 @@ class LoginForm(forms.Form):
         widget=forms.PasswordInput(
             attrs={'class': 'form-control', 'placeholder': 'Password'})
     )
+class CheckoutForm(forms.Form):
+    
+    delivery_date = forms.DateTimeField(
+        widget=forms.DateTimeInput(attrs={
+            'type': 'datetime-local', 
+            'class': 'form-control'
+        })
+    )
 
-
+    def clean_delivery_date(self):
+        delivery_date = self.cleaned_data.get('delivery_date')
+        
+        # Check if delivery_date is not None (in case of empty input)
+        if delivery_date:
+            # Check if it's at least 48 hours away
+            if delivery_date < timezone.now() + timedelta(hours=48):
+                raise forms.ValidationError("Delivery must be at least 48 hours from now.")
+        return delivery_date
+    
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
