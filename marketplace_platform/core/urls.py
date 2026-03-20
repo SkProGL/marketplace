@@ -9,9 +9,18 @@ urlpatterns = [
     path('signup/', views.signup_view, name='signup'),
     path('inventory_upload/', views.upload_item, name='inventory_upload'),
     path('invoice/', views.invoice_view, name='invoice'),
-    path('order_history/', views.order_history, name='order_history'),
     path('community/', views.community, name='community'),
+    # Order URLs
+    path('order_history/', views.order_history, name='order_history'),
+    path('orders/', views.order_history, name='order'),
+    path('orders/<uuid:order_id>/', views.order_detail, name='order_detail'),
+    path('orders/<uuid:order_id>/reorder/', views.reorder, name='reorder'),
+    # Checkout URLs
+    path('add-to-cart/<uuid:product_id>/', views.add_to_cart, name='add_to_cart'),
+    path('checkout/', views.checkout, name='checkout'),
+    
     # Management URLs
     path('management/', views.management_view, name="management"),
     path('management/order/<uuid:order_id>/order_summary/', views.get_order_summary_json, name='order_summary'),
+
 ] 
