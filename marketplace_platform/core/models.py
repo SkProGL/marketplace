@@ -92,10 +92,10 @@ class Order(models.Model):
         on_delete=models.CASCADE
     )
     product = models.ForeignKey(
-        Product,
+        Product, null=True, blank=True,
         on_delete=models.CASCADE
     )
-    num_purchased = models.IntegerField()
+    num_purchased = models.IntegerField(default=0)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     order_date = models.DateTimeField(auto_now_add=True)
     delivery_date = models.DateTimeField()
@@ -142,7 +142,7 @@ class Review(models.Model):
         on_delete=models.CASCADE
     )
     order = models.ForeignKey(
-        Order,
+        Order, null=True, blank=True,
         on_delete=models.CASCADE
     )
     title = models.CharField(max_length=128)
