@@ -4,32 +4,30 @@
 }
 
 .table-sm td {
-    padding: 0;
-    margin: 0;
-    /* padding: 0.2em;  */
-    border: none;
-    
+  padding: 0;
+  margin: 0;
+  /* padding: 0.2em;  */
+  border: none;
 }
 
 .table-sm .form-control,
-.table-sm .form-select{
-    margin: 0;
-    display: block;
+.table-sm .form-select {
+  margin: 0;
+  display: block;
+  width: fit-content;
 }
 
-.table-sm .form-control:focus, 
+.table-sm .form-control:focus,
 .table-sm .form-control:hover,
 .table-sm .form-select:focus,
 .table-sm .form-select:hover {
-    color: var(--primary-bg-color);
-    border-color: var(--primary-bg-color);
-    background-color: rgb(239, 247, 239);
-    border-radius: 0.2em;
-    box-shadow: 0 0 0 0.2rem var(--primary-focus-glow);
+  color: var(--primary-bg-color);
+  border-color: var(--primary-bg-color);
+  background-color: rgb(239, 247, 239);
+  border-radius: 0.2em;
+  box-shadow: 0 0 0 0.2rem var(--primary-focus-glow);
 }
-
 
 .table-sm input[type="date"] {
-    padding-right: 0; 
+  padding-right: 0;
 }
-

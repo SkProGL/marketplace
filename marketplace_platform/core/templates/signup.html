@@ -8,43 +8,68 @@
       <!-- <a class="widget-account-form-signup">Sign Up</a> -->
       <h2>SIGN UP</h2>
 
+      {% if messages %}
+        <div class="mt-3">
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+<form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
       <div style="display:flex; gap:20px;">
 	      <div style="gap:20px;">
 		      <div class="widget-account-form-inputBox">
-			<input type="text" required="required" />
+			<input type="text" name="username" value="{{ form.username.value|default_if_none:'' }}" required="required" />
 			<span>Full name</span>
 		      </div>
 
 		      <div class="widget-account-form-inputBox1">
-			<input type="text" required="required" />
+			<input type="email" name="email" value="{{ form.email.value|default_if_none:'' }}" required="required" />
 			<span class="widget-account-form-user">Email</span>
 		      </div>
 
 		      <div class="widget-account-form-inputBox">
-			<input type="text" required="required" />
+			<input type="text" name="phone" value="{{ form.phone.value|default_if_none:'' }}" required="required" />
 			<span>Phone</span>
+		      </div>
+
+		      <div class="widget-account-form-dropdownBox">
+			<select name="category" id="category" class="widget-account-form-dropdown" required="required">
+			  <option value="" disabled {% if not form.category.value %}selected{% endif %}></option>
+			  <option value="Customer" {% if form.category.value == 'Customer' %}selected{% endif %}>Customer</option>
+			  <option value="Producer" {% if form.category.value == 'Producer' %}selected{% endif %}>Producer</option>
+			  <option value="Community group" {% if form.category.value == 'Community group' %}selected{% endif %}>Community group</option>
+			  <option value="Restaurant" {% if form.category.value == 'Restaurant' %}selected{% endif %}>Restaurant</option>
+			</select>
+			<label for="category" class="widget-account-form-dropdown-label">Category</label>
 		      </div>
 
 	      </div>
 	      <div>
 		      <div class="widget-account-form-inputBox right">
-			<input type="text" required="required" />
+			<input type="text" name="address" value="{{ form.address.value|default_if_none:'' }}" required="required" />
 			<span>Address (delivery): </span>
 		      </div>
 		      <div class="widget-account-form-inputBox right">
-			<input type="text" required="required" />
+			<input type="text" name="postcode" value="{{ form.postcode.value|default_if_none:'' }}" required="required" />
 			<span>Postcode</span>
 		      </div>
 		      <div class="widget-account-form-inputBox right">
-			<input type="password" required="required" />
+			<input type="password" name="password" required="required" />
 			<span>Password</span>
 		      </div>
 
 	      </div>
-      </div>
+        </div>
+
+
 	<!-- From Uiverse.io by boryanakrasteva --> 
-	<div class="widget-sign-checkbox-wrapper">
-	  <input type="checkbox" class="widget-sign-check" id="check1-61" />
+	<div class="widget-sign-checkbox-wrapper" tabindex="0">
+	  <input type="checkbox" class="widget-sign-check" id="check1-61" required />
 	  <label for="check1-61" class="widget-sign-label">
 	    <svg width="45" height="45" viewBox="0 0 95 95">
 	      <rect
@@ -68,8 +93,16 @@
 	    <span>Accept terms, conditions &amp; cookie policy</span>
 	  </label>
 	</div>
-      <button class="widget-account-form-enter">Enter</button>
+        <div class="text-danger">{{ form.username.errors }}</div>
+        <div class="text-danger">{{ form.email.errors }}</div>
+        <div class="text-danger">{{ form.phone.errors }}</div>
+        <div class="text-danger">{{ form.address.errors }}</div>
+        <div class="text-danger">{{ form.postcode.errors }}</div>
+        <div class="text-danger">{{ form.password.errors }}</div>
+        <button type="submit" class="widget-account-form-enter">Enter</button>
+      </form>
     </div>
   </div>
 </div>
 {% endblock %}
+
