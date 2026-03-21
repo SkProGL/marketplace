@@ -27,12 +27,13 @@
   padding: 6px 12px;
   margin: 4px;
   border-radius: 20px;
-
+  /* width: 120px; */
   max-height: 30px;
   /* border: 1px solid var(--link-color); */
   cursor: pointer;
   transition: 0.2s;
   background: white;
+  white-space: nowrap;
 }
 
 .filters input:checked + label {

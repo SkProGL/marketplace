@@ -268,19 +268,6 @@ git push --force-with-lease origin <current_branch>
 
 </details>
 
-
-<details><summary><b> &nbsp vite commands</b></summary>
-
->```bash
->mkdir frontend
->cd frontend
->npm init -y
->npm install react react-dom
->npm install vite @vitejs/plugin-react --save-dev
->```
-
-</details>
-
 <details>
 <summary><b> &nbsp Tech stack </b>
 </summary>
