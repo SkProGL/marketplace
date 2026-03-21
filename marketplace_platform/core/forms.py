@@ -22,6 +22,7 @@ class SignupForm(forms.ModelForm):
             "category",
         ]
 
+
     def clean(self):
         cleaned_data = super().clean()
         email = cleaned_data.get("email")

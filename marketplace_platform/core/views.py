@@ -129,3 +129,11 @@ def management_view(request):
         'selected_model_name': selected_model_name,
         'selected_data': selected_data,
     })
+
+
+def order_history(request):
+    return render(request, 'order_history.html')
+
+
+def community(request):
+    return render(request, 'community.html')
