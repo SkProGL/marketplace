@@ -4,17 +4,6 @@ from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
 import uuid
 
-
-class Actor(models.Model):
-    # create models here
-    name = models.CharField(max_length=128)
-    nationality = models.CharField(max_length=128)
-    created = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.name
-
-
 class User(AbstractUser):
     # User category options
     class Category(models.TextChoices):
@@ -51,6 +40,8 @@ class User(AbstractUser):
         help_text='Specific permissions for this user.',
         verbose_name='user permissions',
     )
+    def __str__(self):
+        return self.username
 
 
 class Product(models.Model):
@@ -151,6 +142,9 @@ class Product(models.Model):
     image = models.ImageField(upload_to='item_images/', blank=True)
 
 
+    def __str__(self):
+        return f"{self.name} ({self.producer}) £{self.price}"
+
 class Order(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING"
@@ -188,6 +182,9 @@ class Order(models.Model):
         choices=Weekday.choices, null=True, blank=True)
     # last_generated=models.DateTimeField(null=True,blank=True)
 
+    def __str__(self):
+        return f"{self.customer} ({str(self.id)[:8]}) - {self.order_status} ({self.order_date.strftime('%d-%m-%Y %H:%M:%S')})"
+
 
 class OrderProduct(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
@@ -197,6 +194,8 @@ class OrderProduct(models.Model):
     class Meta:
         unique_together = ("order", "product")
 
+    def __str__(self):
+        return f"{str(self.id)[:8]}"
 
 class StoryPost(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -284,3 +283,7 @@ class OrderPayment(models.Model):
 
     class Meta:
         unique_together = ("order", "payment")
+    title=models.CharField(max_length=128)
+    content=models.TextField()
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    date_posted=models.DateTimeField(auto_now_add=True)

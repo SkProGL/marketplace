@@ -1,10 +1,11 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
-from django.http import HttpResponse
+from django.http import  HttpResponse
 from core.forms import LoginForm, ProductForm
+from core.utils import get_management_context, handle_management_post
 from .models import User, Product
-# Create your views here.
+from django.apps import apps
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
@@ -12,7 +13,6 @@ User = get_user_model()
 def home_view(request):
     items = Product.objects.all()  # Fetch all items from Postgres
     return render(request, 'home.html', {'items': items})
-
 
 def login_view(request):
     if request.method == 'POST':
@@ -34,7 +34,6 @@ def login_view(request):
         form = LoginForm()
 
     return render(request, 'login.html', {'form': form})
-
 
 def upload_item(request):
     if request.method == 'POST':
@@ -61,3 +60,36 @@ def signup_view(request):
 
 def invoice_view(request):
     return render(request, 'invoice.html')
+
+def management_view(request):
+    # Construct list of model names
+    # Pull specific records for selected model
+    app_config = apps.get_app_config('core')
+    model_names= [model.__name__ for model in app_config.get_models()]
+    selected_model_name = request.GET.get('model')
+
+    # Handle POST actions (Create, Update & Delete)
+    if request.method == 'POST' and selected_model_name:
+        success = handle_management_post(request, app_config, selected_model_name)
+        if success:        
+            # Pop attempt record on success
+            previous_attempt = request.session.get('previous_attempt', {})
+            previous_attempt.pop(selected_model_name, None)
+            request.session.modified = True
+            return redirect(f"{request.path}?model={selected_model_name}")
+        
+    # Fetch data for display
+    # Set flag if new draft row has been created 
+    previous_attempts = request.session.get('previous_attempt', {}).get(selected_model_name, {})
+    add_new = request.GET.get('new_row') == 'true' or 'NEW' in previous_attempts
+    selected_data = None
+    if selected_model_name:
+        selected_model = app_config.get_model(selected_model_name)
+        selected_data = get_management_context(request, selected_model, selected_model_name, add_new)
+    
+    return render(request, 'management.html', {
+            'model_names': model_names,
+            'selected_model_name': selected_model_name,
+            'selected_data': selected_data,
+        })
+

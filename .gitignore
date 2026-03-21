@@ -1,8 +1,6 @@
-<<<<<<< HEAD
 *.pyc
 .venv
 __pycache__/
-=======
 # Created by https://www.gitignore.io
 
 ### OSX ###
@@ -90,6 +88,4 @@ target/
 __pycache__/
 local_settings.py
 
-.env
 db.sqlite3
->>>>>>> bd1d5db (Add django .gitignore template)
