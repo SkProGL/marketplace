@@ -20,8 +20,9 @@ def login_view(request):
     if request.method == 'POST':
         form = LoginForm(request.POST)
         if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
+            login_data = form.cleaned_data
+            username = login_data.get('username')
+            password = login_data.get('password')
 
             # Check if these credentials match a user in the DB
             user = authenticate(request, username=username, password=password)
@@ -69,11 +70,13 @@ def signup_view(request):
             print("Created user:", {
                 "id": str(user.id),
                 "username": user.username,
+                "full_name": user.full_name,
                 "email": user.email,
                 "phone": user.phone,
                 "address": user.address,
                 "postcode": user.postcode,
                 "category": user.category,
+                "organisation_name": user.organisation_name,
             })
             login(request, user)
             messages.success(request, "Account created successfully.")

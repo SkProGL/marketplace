@@ -23,7 +23,7 @@
 <div style="display:flex; gap:20px;">
 	      <div style="gap:20px;">
 		      <div class="widget-account-form-inputBox">
-			<input type="text" name="username" value="{{ form.username.value|default_if_none:'' }}" required="required" />
+			<input type="text" name="full_name" value="{{ form.full_name.value|default_if_none:'' }}" required="required" />
 			<span>Full name</span>
 		      </div>
 
@@ -65,6 +65,11 @@
 
 <button type="button" class="password-toggle" aria-label="Show password" onclick="const i=this.parentElement.querySelector('[name=password]'); i.type = i.type === 'password' ? 'text' : 'password'; this.textContent = i.type === 'password' ? 'show' : 'hide'">show</button>
 		      </div>
+
+<div class="widget-account-form-inputBox" id="organization-name-box" style="display:none;">
+  <input type="text" name="organization_name" id="organization_name" value="{{ form.organization_name.value|default_if_none:'' }}" />
+  <span>Organization name</span>
+</div>
 		      <!-- <div class="text-danger">{{ form.password.errors }}</div> -->
 
 	      </div>
@@ -99,7 +104,7 @@
 	  </label>
 	</div>
 	<div class="text-danger">{{ form.accept_policy.errors }}</div>
-        <div class="text-danger">{{ form.username.errors }}</div>
+        <div class="text-danger">{{ form.full_name.errors }}</div>
         <div class="text-danger">{{ form.email.errors }}</div>
         <div class="text-danger">{{ form.phone.errors }}</div>
         <div class="text-danger">{{ form.address.errors }}</div>
@@ -113,6 +118,27 @@
 <script>
   const passwordInput = document.querySelector('input[name="password"]');
   const passwordMatch = document.querySelector('.password-match');
+  const categorySelect = document.getElementById('category');
+  const organizationBox = document.getElementById('organization-name-box');
+  const organizationInput = document.getElementById('organization_name');
+  const acceptPolicy = document.querySelector('input[name="accept_policy"]');
+  const submitButton = document.querySelector('.widget-account-form-enter');
+
+  function toggleOrganizationName() {
+    const show = categorySelect.value && categorySelect.value !== 'Customer';
+    organizationBox.style.display = show ? '' : 'none';
+    organizationInput.disabled = !show;
+    organizationInput.required = show;
+  }
+
+  function toggleSubmitState() {
+    submitButton.disabled = !acceptPolicy.checked;
+  }
+
+  categorySelect.addEventListener('change', toggleOrganizationName);
+  acceptPolicy.addEventListener('change', toggleSubmitState);
+  toggleOrganizationName();
+  toggleSubmitState();
 
   passwordInput.addEventListener('input', () => {
     const value = passwordInput.value;

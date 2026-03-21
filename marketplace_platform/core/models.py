@@ -1,11 +1,12 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.contrib.auth.models import AbstractUser
 import uuid
 
+
 class User(AbstractUser):
-    # User category options
     class Category(models.TextChoices):
         CUSTOMER = "Customer"
         PRODUCER = "Producer"
@@ -15,6 +16,8 @@ class User(AbstractUser):
 
     # Primary key as UUID
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    full_name = models.CharField(max_length=128, blank=True, default="")
     # User category
     category = models.CharField(
         max_length=20, choices=Category.choices, default=Category.CUSTOMER)
@@ -23,6 +26,7 @@ class User(AbstractUser):
     # Address fields
     address = models.CharField(max_length=256, blank=True)
     postcode = models.CharField(max_length=20, blank=True)
+
     # Organisation name for producers, restaurants and community groups
     organisation_name = models.CharField(
         max_length=128, blank=True, default="")
@@ -40,6 +44,7 @@ class User(AbstractUser):
         help_text='Specific permissions for this user.',
         verbose_name='user permissions',
     )
+
     def __str__(self):
         return self.username
 
@@ -141,9 +146,9 @@ class Product(models.Model):
     # Associated image
     image = models.ImageField(upload_to='item_images/', blank=True)
 
-
     def __str__(self):
         return f"{self.name} ({self.producer}) £{self.price}"
+
 
 class Order(models.Model):
     class Status(models.TextChoices):
@@ -196,6 +201,7 @@ class OrderProduct(models.Model):
 
     def __str__(self):
         return f"{str(self.id)[:8]}"
+
 
 class StoryPost(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -283,7 +289,8 @@ class OrderPayment(models.Model):
 
     class Meta:
         unique_together = ("order", "payment")
-    title=models.CharField(max_length=128)
-    content=models.TextField()
-    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
-    date_posted=models.DateTimeField(auto_now_add=True)
+    title = models.CharField(max_length=128)
+    content = models.TextField()
+    rating = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)])
+    date_posted = models.DateTimeField(auto_now_add=True)
