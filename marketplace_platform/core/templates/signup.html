@@ -20,7 +20,7 @@
         {% csrf_token %}
         {{ form.non_field_errors }}
 
-      <div style="display:flex; gap:20px;">
+<div style="display:flex; gap:20px;">
 	      <div style="gap:20px;">
 		      <div class="widget-account-form-inputBox">
 			<input type="text" name="username" value="{{ form.username.value|default_if_none:'' }}" required="required" />
@@ -58,18 +58,23 @@
 			<input type="text" name="postcode" value="{{ form.postcode.value|default_if_none:'' }}" required="required" />
 			<span>Postcode</span>
 		      </div>
-		      <div class="widget-account-form-inputBox right">
+		      <div class="widget-account-form-inputBox right password-field">
 			<input type="password" name="password" required="required" />
 			<span>Password</span>
+			<div class="password-match password-invalid password-hidden">8+ chars, 1 lower, 1 upper</div>
+
+<button type="button" class="password-toggle" aria-label="Show password" onclick="const i=this.parentElement.querySelector('[name=password]'); i.type = i.type === 'password' ? 'text' : 'password'; this.textContent = i.type === 'password' ? 'show' : 'hide'">show</button>
 		      </div>
+		      <!-- <div class="text-danger">{{ form.password.errors }}</div> -->
 
 	      </div>
         </div>
 
 
+
 	<!-- From Uiverse.io by boryanakrasteva --> 
 	<div class="widget-sign-checkbox-wrapper" tabindex="0">
-	  <input type="checkbox" class="widget-sign-check" id="check1-61" required />
+	  <input type="checkbox" class="widget-sign-check" id="check1-61" name="accept_policy" {% if form.accept_policy.value %}checked{% endif %} required />
 	  <label for="check1-61" class="widget-sign-label">
 	    <svg width="45" height="45" viewBox="0 0 95 95">
 	      <rect
@@ -93,6 +98,7 @@
 	    <span>Accept terms, conditions &amp; cookie policy</span>
 	  </label>
 	</div>
+	<div class="text-danger">{{ form.accept_policy.errors }}</div>
         <div class="text-danger">{{ form.username.errors }}</div>
         <div class="text-danger">{{ form.email.errors }}</div>
         <div class="text-danger">{{ form.phone.errors }}</div>
@@ -104,5 +110,19 @@
     </div>
   </div>
 </div>
+<script>
+  const passwordInput = document.querySelector('input[name="password"]');
+  const passwordMatch = document.querySelector('.password-match');
+
+  passwordInput.addEventListener('input', () => {
+    const value = passwordInput.value;
+    const ok = value.length >= 8 && /[a-z]/.test(value) && /[A-Z]/.test(value);
+
+    passwordMatch.classList.toggle('password-hidden', !value);
+    passwordMatch.classList.toggle('password-valid', ok);
+    passwordMatch.classList.toggle('password-invalid', !ok);
+    passwordMatch.textContent = ok ? 'password is strong.' : '8+ chars, 1 lower, 1 upper';
+  });
+</script>
 {% endblock %}
 

@@ -218,7 +218,6 @@
 
 /* From Uiverse.io by boryanakrasteva */
 .widget-sign-checkbox-wrapper input[type="checkbox"] {
-  /* visibility: hidden; */
   display: none;
 }
 
@@ -245,7 +244,6 @@
   display: flex;
 }
 .widget-sign-label span {
-  width: 65%;
   white-space: pre-wrap;
 }
 
@@ -275,3 +273,42 @@
   filter: brightness(0) saturate(100%) invert(42%) sepia(18%) saturate(2168%)
     hue-rotate(102deg) brightness(91%) contrast(80%);
 }
+
+.password-field {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  bottom: -30px;
+  left: 0;
+  border: none;
+  border-left: 1px solid var(--main-color);
+  border-bottom: 1px solid var(--main-color);
+  background: transparent;
+  color: var(--main-color);
+  cursor: pointer;
+  padding: 0 5px;
+}
+
+.password-match {
+  position: absolute;
+  right: 5px;
+  bottom: -30px;
+  /* padding: 0 5px; */
+  /* font-size: 0.8rem; */
+}
+
+.password-valid {
+  color: var(--main-color);
+}
+
+.password-invalid {
+  color: #cc2323;
+}
+
+.password-hidden {
+  display: none;
+}
+
+

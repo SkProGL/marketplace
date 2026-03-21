@@ -7,6 +7,10 @@ class SignupForm(forms.ModelForm):
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'})
     )
+    accept_policy = forms.BooleanField(
+        required=True,
+        error_messages={'required': 'You must accept the policy.'},
+    )
 
     class Meta:
         model = User
@@ -22,11 +26,18 @@ class SignupForm(forms.ModelForm):
         cleaned_data = super().clean()
         email = cleaned_data.get("email")
         category = cleaned_data.get("category")
+        password = cleaned_data.get("password", "")
 
         if email and category and User.objects.filter(email__iexact=email, category=category).exists():
             self.add_error(
                 "email",
                 "An account with this email already exists for this category."
+            )
+
+        if password and not (len(password) >= 8 and any(c.islower() for c in password) and any(c.isupper() for c in password)):
+            self.add_error(
+                "password",
+                "Password must be at least 8 characters and include 1 lowercase and 1 uppercase letter."
             )
 
         return cleaned_data
