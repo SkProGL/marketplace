@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'community.css' %}">
+
+<div class="ch-header">
+    <h1>Community Hub</h1>
+    <p>Seasonal recipes and farm stories from local producers</p>
+</div>
+
+{% if request.user.is_authenticated %}
+<div class="ch-producer-actions">
+    <a href="{% url 'add_recipe' %}" class="ch-btn-primary">+ Add Recipe</a>
+    <a href="{% url 'add_story' %}" class="ch-btn-outline">+ Add Farm Story</a>
+</div>
+{% endif %}
+
+<div class="ch-tabs">
+    <button class="ch-tab active" onclick="switchTab(this, 'recipes')">Recipes</button>
+    <button class="ch-tab" onclick="switchTab(this, 'stories')">Farm Stories</button>
+</div>
+
+<div id="tab-recipes" class="ch-section">
+    <div class="ch-season-filter">
+        <a href="{% url 'community' %}" class="ch-season-btn {% if not selected_season %}active{% endif %}">All</a>
+        <a href="?season=Spring" class="ch-season-btn {% if selected_season == 'Spring' %}active{% endif %}">Spring</a>
+        <a href="?season=Summer" class="ch-season-btn {% if selected_season == 'Summer' %}active{% endif %}">Summer</a>
+        <a href="?season=Autumn" class="ch-season-btn {% if selected_season == 'Autumn' %}active{% endif %}">Autumn</a>
+        <a href="?season=Winter" class="ch-season-btn {% if selected_season == 'Winter' %}active{% endif %}">Winter</a>
+    </div>
+    <div class="ch-grid">
+        {% for recipe in recipes %}
+        <div class="ch-card">
+            {% if recipe.image %}
+            <img src="{{ recipe.image.url }}" class="ch-card-img" alt="{{ recipe.title }}">
+            {% else %}
+            <div class="ch-card-img ch-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+            </div>
+            {% endif %}
+            <div class="ch-card-body">
+                <div class="ch-producer">{{ recipe.user.username }}</div>
+                <span class="ch-season-tag ch-season-{{ recipe.season|lower }}">{{ recipe.season }}</span>
+                <h3 class="ch-title">{{ recipe.title }}</h3>
+                <p class="ch-desc">{{ recipe.description|truncatewords:20 }}</p>
+                <div class="ch-ingredients">
+                    {% for ingredient in recipe.ingredients.all %}
+                    <span class="ch-chip">{{ ingredient.name }}</span>
+                    {% endfor %}
+                </div>
+                <div class="ch-card-footer">
+                    {% if request.user.is_authenticated %}
+                    <a href="{% url 'save_recipe' recipe.id %}" class="ch-save-btn {% if recipe.id in saved_ids %}saved{% endif %}">
+                        {% if recipe.id in saved_ids %}Saved{% else %}Save{% endif %}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p class="ch-empty">No recipes yet{% if selected_season %} for {{ selected_season }}{% endif %}.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<div id="tab-stories" class="ch-section" style="display:none">
+    <div class="ch-grid">
+        {% for story in stories %}
+        <div class="ch-card">
+            {% if story.image %}
+            <img src="{{ story.image.url }}" class="ch-card-img" alt="Farm story">
+            {% else %}
+            <div class="ch-card-img ch-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            {% endif %}
+            <div class="ch-card-body">
+                <div class="ch-producer">{{ story.user.username }}</div>
+                <div class="ch-date">{{ story.date_posted|date:"j F Y" }}</div>
+                <p class="ch-desc">{{ story.content|truncatewords:30 }}</p>
+            </div>
+        </div>
+        {% empty %}
+        <p class="ch-empty">No stories yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function switchTab(btn, tab) {
+    document.querySelectorAll(".ch-tab").forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".ch-section").forEach(s => s.style.display = "none");
+    document.getElementById("tab-" + tab).style.display = "block";
+}
+</script>
+{% endblock %}
