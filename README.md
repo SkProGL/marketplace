@@ -1,15 +1,27 @@
-### Draft repository
+### BFRN Marketplace Repository
+> [!IMPORTANT]  
+> django version: 5.2  
+> python version: 3.11  
+> docker-python version: 3.11-slim  
 
-mkdir frontend
-cd frontend
-npm init -y
-npm install react react-dom
-npm install vite @vitejs/plugin-react --save-dev
 
+
+
+
+											
 > [!NOTE]  
 > Latest changes (based on https://www.youtube.com/watch?v=37aNpE-9dD4):
 > ```bash
-> // To run & build container try:
+> // Hard Reset script
+> // Deletes and rebuilds docker containers from scratch.
+> // Additionally creates django superuser (root, password123), makes migrations and boots system.
+> 
+> // WINDOWS
+> .\scripts\hard_reset_server.bat
+> // UNIX
+> bash ./scripts/hard_reset_server.sh 
+> 
+> // To run & build the system:
 > docker compose up --build 
 > 
 > Steps project went through:
@@ -32,39 +44,10 @@ npm install vite @vitejs/plugin-react --save-dev
 > // enters postgres CLI utility, -U user -d database
 > docker exec -ti postgres_db psql -U myuser -d mydb
 >
-> // If experiencing unexpected issues:
-> // clear data volumes (this clears ALL data stored in db)
-> docker compose down -v
-> // rebuild images and containers from scratch
-> docker compose up --build
-> // delete numbered migration files under core/migrations/ MANUALLY and then make migrations as before
+> // create a superuser
+> docker compose exec web python manage.py createsuperuser
 > ```
 
-> [!IMPORTANT]  
-> django version: 5.2  
-> python version: 3.11  
-> docker-python version: 3.11-slim  
-
-<details>
-<summary><b> &nbsp Tech stack </b>
-</summary>
-
-| Tool     | Use                                                           |
-|----------|---------------------------------------------------------------|
-| Jira     | Managing individual duties and deadlines            |
-| Overleaf | Real-time collaboration on reports and documentation |
-| Docker   | Hosting and running the application                 |
-| Python   | Programming language used for development               |
-##### Libraries
-| Tool         | Use                                                                                 | Version |
-|--------------|-------------------------------------------------------------------------------------|---------|
-| scikit-learn | Library that provides the machine learning resources used in the application       |         |
-| numpy        | Handling and calculating with various data structures                     |         |
-| pandas       | Handling large data structures and CSV files                              |         |
-| django       | High level web framework used for handling web applications | 3.11    |
-| psycopg2     | Connecting Python to PostgreSQL for database management                   | 2.9.11  |
-| docker       | Connecting Python to Docker                                               |         |
-</details>
 <details>
 <summary><b> &nbsp Python </b>
 </summary>
@@ -102,7 +85,6 @@ npm install vite @vitejs/plugin-react --save-dev
 </table>
     </div>
 </details>
-
 <details>
 
 <summary><b> &nbsp Django</b>
@@ -180,18 +162,6 @@ npm install vite @vitejs/plugin-react --save-dev
   </tbody>
 </table>
 </details>
-
-<details>
-<summary><b> &nbsp Docker</b>
-</summary>
-<br/>
-<blockquote>
-to specify python version in docker, use slim build <br/>
-FROM python:3.11-slim
-</blockquote>
-</details>
-
-
 <details>
 <summary><b> &nbsp Github task workflow</b>
 </summary>
@@ -296,7 +266,37 @@ git rebase --continue
 git push --force-with-lease origin <current_branch> 
 ```
 
-![alt text](image.png)
-
-*Example diagram*
 </details>
+
+<details>
+<summary><b> &nbsp Tech stack </b>
+</summary>
+
+| Tool     | Use                                                           |
+|----------|---------------------------------------------------------------|
+| Jira     | Managing individual duties and deadlines            |
+| Overleaf | Real-time collaboration on reports and documentation |
+| Docker   | Hosting and running the application                 |
+| Python   | Programming language used for development               |
+##### Libraries
+| Tool         | Use                                                                                 | Version |
+|--------------|-------------------------------------------------------------------------------------|---------|
+| scikit-learn | Library that provides the machine learning resources used in the application       |         |
+| numpy        | Handling and calculating with various data structures                     |         |
+| pandas       | Handling large data structures and CSV files                              |         |
+| django       | High level web framework used for handling web applications | 3.11    |
+| psycopg2     | Connecting Python to PostgreSQL for database management                   | 2.9.11  |
+| docker       | Connecting Python to Docker                                               |         |
+</details>
+
+
+<details>
+<summary><b> &nbsp Docker</b>
+</summary>
+<br/>
+<blockquote>
+to specify python version in docker, use slim build <br/>
+FROM python:3.11-slim
+</blockquote>
+</details>
+

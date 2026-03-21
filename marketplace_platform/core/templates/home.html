@@ -17,7 +17,10 @@
                         <div class="d-flex justify-content-between align-items-center">
                             <span class="badge bg-success">${{ item.price }}</span>
                             {% if item.allergens %}
-                                <small class="text-danger">⚠️ {{item.allergens|join:", "}}</small>
+                                <small class="text-danger" style="display:flex;align-items:center;gap:4px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                    {{item.allergens|join:", "}}
+                                </small>
                             {% endif %}
                         </div>
                     </div>
@@ -30,55 +33,55 @@
 
 <!-- From Uiverse.io by adamgiebl --> 
 <div class="form-control">
-	<input class="input input-alt" placeholder="Search" required="" type="text">
-	<span class="input-border input-border-alt"></span>
+        <input class="input input-alt" placeholder="Search" required="" type="text">
+        <span class="input-border input-border-alt"></span>
 </div>
 <div>
-	<div class="filters">
-	  <input type="checkbox" id="apple">
-	  <label for="apple">Apple</label>
+        <div class="filters">
+          <input type="checkbox" id="apple">
+          <label for="apple">Apple</label>
 
-	  <input type="checkbox" id="carrot">
-	  <label for="carrot">Carrot</label>
+          <input type="checkbox" id="carrot">
+          <label for="carrot">Carrot</label>
 
-	  <input type="checkbox" id="potatoes">
-	  <label for="potatoes">Potatoes</label>
+          <input type="checkbox" id="potatoes">
+          <label for="potatoes">Potatoes</label>
 
-	</div>
+        </div>
 </div>
 <div class="custom-filters">
 
-	<div class="filters">
+        <div class="filters">
 
-	  <input type="checkbox" id="stock">
-	  <label for="stock">In Stock</label>
+          <input type="checkbox" id="stock">
+          <label for="stock">In Stock</label>
 
-	  <input type="checkbox" id="discount">
-	  <label for="discount">Discounted %</label>
-	</div>
-	{% include "components/widget-food-miles.html" %}
-	{% include "components/widget-tree.html" %}
-	{% include "components/widget-offer.html" %}
-	<br/>
+          <input type="checkbox" id="discount">
+          <label for="discount">Discounted %</label>
+        </div>
+        {% include "components/widget-food-miles.html" %}
+        {% include "components/widget-tree.html" %}
+        {% include "components/widget-offer.html" %}
+        <br/>
 </div>
 
 <div class="home-results"><b>Found 2 matches</b></div>
 
 <div class="widget-card-grid">
 <div class="card">
-	<div class="image">
-		<img src="{% static 'test.jpg' %}" class="card-img-top" style="height: 100%; object-fit: cover;">
-		<!-- <span class="text">This is a chair.</span> -->
-	</div>
+        <div class="image">
+                <img src="{% static 'test.jpg' %}" class="card-img-top" style="height: 100%; object-fit: cover;">
+                <!-- <span class="text">This is a chair.</span> -->
+        </div>
   <span class="title">Chilli (Mexican)</span>
   <span class="price">$1.20</span>
 </div>
 
 <div class="card">
-	<div class="image">
-		<img src="{% static 'test.jpg' %}" class="card-img-top" style="height: 100%; object-fit: cover;">
-		<!-- <span class="text">This is a chair.</span> -->
-	</div>
+        <div class="image">
+                <img src="{% static 'test.jpg' %}" class="card-img-top" style="height: 100%; object-fit: cover;">
+                <!-- <span class="text">This is a chair.</span> -->
+        </div>
   <span class="title">Chilli</span>
   <span class="price">$1.00</span>
 </div>

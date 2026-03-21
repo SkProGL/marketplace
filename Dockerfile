@@ -15,11 +15,16 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # set working directory
 WORKDIR /app
 
-# copy python requirements to container
-COPY marketplace_platform/requirements.txt .
+# old
+# # copy python requirements to container
+# COPY marketplace_platform/requirements.txt .
+#
+# # install dependencies using system python (without virtual environments)
+# RUN uv pip install -r requirements.txt --system
 
-# install dependencies using system python (without virtual environments)
-RUN uv pip install -r requirements.txt --system
+ARG REQUIREMENTS_FILE=requirements.txt
+COPY marketplace_platform/${REQUIREMENTS_FILE} .
+RUN uv pip install -r ${REQUIREMENTS_FILE} --system
 
 # now copy all files
 COPY marketplace_platform/ .
