@@ -7,18 +7,20 @@ from django.utils import timezone
 from typing import Type, Any
 from django.forms import modelform_factory
 from django.utils.safestring import mark_safe
+from django.http import HttpRequest
 
 READONLY_FIELDS = ['id', 'date_joined', 'last_login']
 
-def create_draft_entry(headers, selected_model: Type[models.Model], previous_data=None ) -> dict[str, Any]:
+def create_draft_entry(headers, selected_model: Type[models.Model], cached_update_attempt=None ) -> dict[str, Any]:
     """
     Generates the default data for a blank "Draft" row with default values.
-    Sets id to "NEW" to signal creation of new entry on update.
+    Sets id to "draft" to signal creation of new entry on update.
 
     This allows for modification of the entry before submission to DB, 
     bypassing the need for extensive default value handling.
     """
-    previous_data = previous_data or {}
+    # Convert none to {}
+    # cached_update_attempt = cached_update_attempt or {}
     draft_cells = []
 
     # Define default values for each field type
@@ -38,8 +40,8 @@ def create_draft_entry(headers, selected_model: Type[models.Model], previous_dat
         field = selected_model._meta.get_field(field_name)
 
         # Use data from previous attempt or default as defined in models.py, otherwise defer to default defined above
-        if field_name in previous_data:
-            base_value = previous_data[field_name]
+        if field_name in cached_update_attempt:
+            base_value = cached_update_attempt[field_name]
         elif field.has_default():
             base_value = field.get_default()
         else:
@@ -56,14 +58,15 @@ def create_draft_entry(headers, selected_model: Type[models.Model], previous_dat
             'is_bool': isinstance(field, models.BooleanField),
             'is_date': isinstance(field, (models.DateTimeField, models.DateField)),
             'is_choice': bool(getattr(field, 'choices', None)),
-            'options': [(str(obj.pk), str(obj)) for obj in field.related_model.objects.all()] if isinstance(field, models.ForeignKey) else [],
+            'fk_options': [(str(obj.pk), str(obj)) for obj in field.related_model.objects.all()] if isinstance(field, models.ForeignKey) else [],
             'choice_options': field.choices if hasattr(field, 'choices') else [],
             'is_readonly': field_name in READONLY_FIELDS,
             'is_password': field.name == 'password',
+            'is_new': True,
         })
 
-    # Set id to NEW to flag as new entry on update
-    return {'id': 'NEW', 'cells': draft_cells}
+    # Set id to draft to flag as new entry on update
+    return {'id': 'draft', 'cells': draft_cells}
 
 
 def handle_management_post(request: HttpRequest, app_config: AppConfig, selected_model_name):
@@ -77,26 +80,28 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
     if 'delete' in request.POST:
         delete_id = request.POST.get('delete')
 
-        if delete_id == 'NEW':
-            previous_attempt = request.session.get('previous_attempt', {})
-            previous_attempt.get(selected_model_name, {}).pop('NEW', None)
+        if delete_id == 'draft':
+            # If deleting a draft  entry, simply pop the session update attempt 
+            cached_update_attempt = request.session.get('cached_update_attempt', {})
+            cached_update_attempt.get(selected_model_name, {}).pop('draft', None)
             request.session.modified = True
             messages.info(request, "Draft discarded.")
             return True 
-        try:
-            model.objects.filter(pk=delete_id).delete()
-            messages.warning(request, f"Row {delete_id} deleted.")
-            return True
-        except Exception as e:
-            print(f"FAILED TO DELETE: {e}")
-            return False
-        
+        else:
+            try:
+                model.objects.filter(pk=delete_id).delete()
+                messages.warning(request, f"Row {delete_id} deleted.")
+                return True
+            except Exception as e:
+                print(f"FAILED TO DELETE: {e}")
+                return False
+            
     # UPDATE
     elif 'update' in request.POST:
         try:
             # Create a dynamic form class for current model
             # Exclude ID and 'password' for special handling
-            exclude_fields = ['id', 'password', 'date_joined', 'last_login']
+            exclude_fields = ['id', 'password', 'date_joined', 'last_login', 'products']
             DynamicForm = modelform_factory(model, exclude=exclude_fields)
 
             #Extract unqiue row_ids and iterate through rows
@@ -105,12 +110,14 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
             row_ids = set(key.split('_')[1] for key in request.POST.keys() if key.startswith('cell_'))
             print(f"[handle_management_post: UPDATE] FOUND {len(row_ids)} row ids.")
 
-            previous_attempts = request.session.setdefault('previous_attempt', {})
-            previous_attempts.setdefault(selected_model_name, {})
+            # Grab data if applicable, otherwise initialise store for update attempt
+            # setdefautl here either extracts if key exists; or creates (as empty dict) if it does not.
+            cached_update_attempt = request.session.setdefault('cached_update_attempt', {})
+            cached_update_attempt.setdefault(selected_model_name, {})
             request.session.modified = True
 
             for row_id in row_ids:
-                is_new_record = (row_id == 'NEW') # Flag for creating new entry
+                is_new_record = (row_id == 'draft') # Flag for creating new entry
 
                 # Use record prefix to extract the field names
                 # Append key/values pairs to row_data 
@@ -123,12 +130,13 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                 print(f"\n {row_data}\n")
 
                 if is_new_record:
-                    instance = model()
+                    model_instance = model()
                 else:
-                    instance = model.objects.get(pk=row_id)
+                    model_instance = model.objects.get(pk=row_id)
 
-                # Apply data to form
-                form = DynamicForm(row_data, instance=instance)
+                # Apply data to model form
+                form = DynamicForm(row_data, instance=model_instance)
+
                 # Use built-in data validation
                 if form.is_valid():
                     # Force trigger on pw change
@@ -136,15 +144,16 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                     
                     # Validate if something has changed
                     if form.has_changed() or is_new_record or password_provided:
-                        saved_record = form.save(commit=False)
-                        
-                        # User - Validate password and apply built-in password hashing
+                        saved_record = form.save(commit=False)         
+
+                        # User - Validate entered passwords and apply built-in password hashing
                         if selected_model_name == 'User' and password_provided:
                             if row_data.get('password') == row_data.get('confirm_password'):
                                 saved_record.set_password(row_data.get('password'))
                             else:
                                 messages.error(request, f"Passwords do not match for row {str(row_id)[:8]}.")
-                                request.session['previous_attempt'][selected_model_name][str(row_id)] = row_data
+                                # Store data from update attempt to continue editing
+                                request.session['cached_update_attempt'][selected_model_name][str(row_id)] = row_data
                                 request.session.modified = True 
                                 return False
                         try:
@@ -152,6 +161,7 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                             if is_new_record:
                                 messages.success(request, f"New {selected_model_name} created!")
                             else:
+                                # Signal success field updates
                                 # Manually include 'password' in the text since it's excluded
                                 changed_list = list(form.changed_data)
                                 if password_provided:
@@ -159,20 +169,24 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                                 
                                 changes = ",".join(changed_list)
                                 messages.success(request, f"Updated row {str(row_id)[:8]}: {changes}")
+                            # Clear update attempt on success
+                            cached_update_attempt = request.session.get('cached_update_attempt', {})
+                            cached_update_attempt.pop(selected_model_name, None)
+                            request.session.modified = True
                         except Exception as e:
                             messages.error(request, f"Update error: {e}")
                             return False
                 else:
-                    # use built-in django validation error
-                    # Must mark_safe to render
+                    # Signal unsuccesful field updates using built-in django validation error
+                    # Must mark_safe to render to html
                     error_html = mark_safe(f"<b>Error on row {str(row_id)[:8]}:</b><br>{form.errors}")
                     messages.error(request, error_html)
                     
-                    # Pass data from update attempt back to continue editing
-                    request.session['previous_attempt'][selected_model_name][str(row_id)] = row_data
+                    # Store data from update attempt to continue editing
+                    request.session['cached_update_attempt'][selected_model_name][str(row_id)] = row_data
                     request.session.modified = True 
                     return False
-
+        
             return True
         
         except Exception as e:
@@ -180,11 +194,13 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
             return False
     return False
 
-def get_management_context(request, selected_model: Type[models.Model], selected_model_name, add_new=False) -> dict[str, Any]:
+def get_management_context(request:HttpRequest, selected_model: Type[models.Model], selected_model_name, add_new=False) -> dict[str, Any]:
     """
-    Construct display data for selected model for management view
+    Construct display data for selected model for management view table.
+    Additionally handles row sorting logic.
     """
     
+    # Construct headeres for selected mdoels
     fields = selected_model._meta.fields
     headers = [field.name for field in selected_model._meta.fields]
     if 'id' in headers:
@@ -192,35 +208,51 @@ def get_management_context(request, selected_model: Type[models.Model], selected
         final_headers = ['id'] + headers
     else:
         final_headers = headers
+
+    # Extract all records from model
     records = selected_model.objects.all()
+    print(f"[get_management_context] Found {len(records)} records")
+
+    # Sorting logic  
+    # Extract direction and header to sort by
+    sort_field = request.GET.get('sortby')
+    sort_direction = request.GET.get('direction', 'ascending')
     
-    # Fetch FKs for drop-down selection
+    # Reorder records based on direction and field
+    if sort_field:
+        if sort_direction == 'descending':
+            records = records.order_by(f'-{sort_field}')
+        else:
+            records = records.order_by(sort_field)
+
+    # Fetch FKs for drop-down selection fields
     foreign_key_options = {}
     for field in fields:
         if isinstance(field, models.ForeignKey):
             # Stores as list of tuples: (ID, String)
             foreign_key_options[field.name] = [(str(obj.pk), str(obj)) for obj in field.related_model.objects.all()]
 
-    previous_attempt_store = request.session.get('previous_attempt', {}).get(selected_model_name, {})
+    # Extract previous cached update attempt/s data for model
+    cached_update_attempt = request.session.get('cached_update_attempt', {}).get(selected_model_name, {})
+    
+    # Populate records for display
     rows = []
     for record in records:
+        # If applicable, use cell values stored from previous edit attempt in session
+        # Else fallback to db
         row_id = str(record.pk)
-        previous_attempt = previous_attempt_store.get(row_id, {})
-        row_cells = []
+        cached_row_update_attempt = cached_update_attempt.get(row_id, {})
 
+        row_cells = []
         for field_name in final_headers:
             field = selected_model._meta.get_field(field_name)
-
-            # If applicable, use values entered from previous attempt
-            # Else fallback to db
-            if field_name in previous_attempt:
-                raw_val = previous_attempt[field_name]
+            if field_name in cached_row_update_attempt:
+                raw_val = cached_row_update_attempt[field_name]
             else:
                 raw_val = getattr(record, field_name)
 
             display_val = format_for_display(field, raw_val)
-        
-            # Set flags for display
+            # Set flags for displaying cells in correct format
             cell_data = {
                 'name': field.name,
                 'value': display_val,
@@ -231,11 +263,13 @@ def get_management_context(request, selected_model: Type[models.Model], selected
                 'is_readonly': field.name in READONLY_FIELDS,
                 'is_password': field.name == 'password',
             }
-            
             # Define drop-down options
             if cell_data['is_fk']:
-                cell_data['fk_id'] = str(getattr(record, f"{field.name}_id"))
-                cell_data['options'] = foreign_key_options[field.name]
+                if field_name in cached_row_update_attempt:
+                    cell_data['selected_fk_id'] = str(raw_val)
+                else:
+                    cell_data['selected_fk_id'] = str(getattr(record, f"{field.name}_id"))
+                cell_data['fk_options'] = foreign_key_options[field.name]
             if cell_data['is_choice']:
                 cell_data['choice_options'] = field.choices
 
@@ -243,13 +277,13 @@ def get_management_context(request, selected_model: Type[models.Model], selected
 
         rows.append({'id': record.pk, 'cells': row_cells})
 
-    # Add new draft row
+    # If new row button selected, add draft row
     if add_new:
-        draft_data = create_draft_entry(final_headers, selected_model, previous_attempt_store.get('NEW', {}))
-        # rows.insert(0, draft_data)
+        draft_data = create_draft_entry(final_headers, selected_model, cached_update_attempt.get('draft', {}))
+        # rows.insert(0, draft_data) add to top for visibility?
         rows.append(draft_data)
 
-    return {'headers': final_headers, 'rows': rows}
+    return {'headers': final_headers, 'rows': rows, 'current_sort': sort_field, 'current_dir': sort_direction}
     
 def format_for_display(field, raw_value):
     """
@@ -264,13 +298,12 @@ def format_for_display(field, raw_value):
         display_value =  ",".join(map(str, raw_value))
     
     elif is_date:
-        if isinstance(field, models.DateTimeField):
-            display_value = raw_value.strftime('%Y-%m-%dT%H:%M:%S')
-        else:
-            display_value = raw_value.strftime('%Y-%m-%d')
+        if isinstance(raw_value, str):
+            return raw_value
+        return raw_value.strftime('%Y-%m-%d')
 
     elif field.name == 'password':
-        display_value = raw_value[20:25]  
+        display_value = raw_value[20:29] + "..."  
     else:
         display_value = raw_value
 

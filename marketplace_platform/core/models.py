@@ -200,7 +200,7 @@ class OrderProduct(models.Model):
         unique_together = ("order", "product")
 
     def __str__(self):
-        return f"{str(self.id)[:8]}"
+        return f"{str(self.id)[:8]} - {self.order_status}"
 
 
 class StoryPost(models.Model):
@@ -289,8 +289,4 @@ class OrderPayment(models.Model):
 
     class Meta:
         unique_together = ("order", "payment")
-    title = models.CharField(max_length=128)
-    content = models.TextField()
-    rating = models.IntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(5)])
-    date_posted = models.DateTimeField(auto_now_add=True)
+    date_posted=models.DateTimeField(auto_now_add=True)

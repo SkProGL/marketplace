@@ -1,0 +1,129 @@
+<!-- Management panel: Table for displaying model records -->
+<div class="table-responsive m-1" style="max-height: 75vh; overflow: auto;">
+<table class="table table-sm  table-striped align-middle mb-0">
+    <thead class="table-light sticky-top" style="z-index: 1;">
+        <!-- Construct headers -->
+        <tr > 
+            {% if selected_model_name == "Order" %} 
+            <!-- Expanded order header -->
+            <th></th>
+            {% endif %}
+            {% for header in selected_data.headers %}
+                <!-- Ascending/descending sorting-->
+                <th class="bg-transparent
+                " style="min-width: 50px; ">
+                <!-- Pass the current model, header and current sort method. Selecting the header flips the direction. -->
+                <a href="?model={{ selected_model_name }}&sortby={{ header }}&direction={% if selected_data.current_sort == header and selected_data.current_direction == 'ascending' %}descending{% else %}ascending{% endif %}" 
+                   class="text-decoration-none text-black d-flex  justify-content-between">
+                    {{ header }}
+                    <span>
+                        {% if selected_data.current_sort == header %}
+                            {% if selected_data.current_direction == 'ascending' %}
+                                <i class="bi bi-arrow-down text-success" style="font-size: 0.8em;"></i>
+                            {% else %}
+                                <i class="bi bi-arrow-up text-success" style="font-size: 0.8em;"></i>
+                            {% endif %}
+                        {% else %}
+                            <i class="bi bi-arrows-vertical" style="opacity: 0.5; font-size: 0.8em;"></i>
+                        {% endif %}
+                    </span>
+                </a>
+                </th>
+            {% endfor %}
+            <!-- Delete header -->
+            <th></th>
+        </tr>
+        
+    </thead>
+        <!-- Construct rows -->
+        <!-- Handle input based on type flag -->
+        <tbody>
+            {% for row in selected_data.rows %}
+            <!-- Set draft row to green for emphasis -->
+            <tr data-row-id="{{ row.id }}" class="{% if row.id == 'draft' %}table-success{% endif %}">
+                {% if selected_model_name == "Order" %} 
+                    <td class="text-center">
+                        <!-- Define class for order summary JS script -->
+                        <button type="button" class="btn btn-sm btn-outline-success mx-auto m-2 shadow-sm js-load-order-summary" order-row-id="{{ row.id }}">
+                            <i class="bi bi-info-circle"></i>
+                        </button>
+                    </td>
+                {% endif %}
+                {% for cell in row.cells %}
+                <td>
+                    {% if cell.name == 'id' %}
+                    <!-- Selecting ID copies to clipboard -->
+                        <span class="badge bg-secondary mx-1" style="cursor:pointer"
+                        onclick="navigator.clipboard.writeText('{{ cell.value }}')">
+                        {{ cell.value|stringformat:"s"|slice:":7" }}</span>
+                        <input type="hidden" name="cell_{{ row.id }}_{{ cell.name }}" value="{{ cell.value }}">
+                    {% elif cell.is_readonly %}
+                    <!-- Read-only cells, as defined in utils.py -->
+                    <input type="text" 
+                        name="cell_{{ row.id }}_{{ cell.name }}"
+                        value="{{ cell.value }}" 
+                        class="form-control form-control-sm"
+                        disabled>
+                    {% elif cell.is_password %}
+                    <!-- Forms for password setting -->
+                    <div class="dropdown dropend w-100">
+                            <button class="btn btn-sm btn-outline-success dropdown-toggle align-content-between mx-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                                <i class="bi bi-key-fill" ></i> {% if row.id == 'draft' %}Set Password{% else %}{{ cell.value }}{% endif %}
+                            </button>
+                            
+                            <div class="dropdown-menu p-2 shadow-sm" style="min-width: 300px;">
+                                <div class="d-flex flex-row gap-2">
+                                    <input type="password" name="cell_{{ row.id }}_{{ cell.name }}" placeholder="New Password..." class="form-control form-control-sm">
+                                    <input type="password" name="cell_{{ row.id }}_confirm_password" placeholder="Confirm Password..." class="form-control form-control-sm">
+                                </div>
+                            </div>
+                        </div>
+                    {% elif cell.is_fk %}
+                    <!-- Foreign Key drop-downs -->
+                    <select name="cell_{{ row.id }}_{{ cell.name }}" class="form-select form-select-sm">
+                        <option value="" selected>Select an option</option>
+                        {% for fk_option_id, fk_option_name in cell.fk_options %}
+                        <option value="{{ fk_option_id }}" {% if fk_option_id == cell.selected_fk_id %}selected{% endif %}>
+                            {{ fk_option_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% elif cell.is_bool %}
+                    <!-- Boolean drop-downs -->
+                    <select name="cell_{{ row.id }}_{{ cell.name }}" class="form-select form-select-sm">
+                        <option value="True" {% if cell.value == True or cell.value == "True" %}selected{% endif %}>True</option>
+                        <option value="False" {% if cell.value == False or cell.value == "False" %}selected{% endif %}>False</option>
+                    </select>
+                    {% elif cell.is_date %}
+                    <!-- Calendar selection for date -->
+                    <input type="date" 
+                        name="cell_{{ row.id }}_{{ cell.name }}" 
+                        value="{{ cell.value }}" 
+                        class="form-control form-control-sm">
+                    {% elif cell.is_choice %}
+                    <!-- Choice drop-down - as defined by model enums -->
+                    <select name="cell_{{ row.id }}_{{ cell.name }}" class="form-select form-select-sm">
+                        {% for opt_val, opt_label in cell.choice_options %}
+                            <option value="{{ opt_val }}" {% if opt_val == cell.value %}selected{% endif %}>
+                                {{ opt_label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {% else %}
+                    <input type="text" 
+                        name="cell_{{ row.id }}_{{ cell.name }}"
+                        value="{{ cell.value }}" 
+                        class="form-control form-control-sm">
+                    {% endif %}
+
+                </td>
+                {% endfor %}
+                <!-- Delete button -->
+                <td class="text-center">
+                    <button type="submit" name="delete" value="{{ row.id }}" class="btn btn-sm btn-outline-danger mx-auto m-2 shadow-sm" onclick="return confirm('Are you sure you want to permanently delete this {{ selected_model_name }}?');"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+</table>
+</div>

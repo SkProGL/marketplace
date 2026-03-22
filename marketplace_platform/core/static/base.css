@@ -37,6 +37,11 @@ body {
   margin: 0 0.5rem;
 }
 
+.modal{
+   top: 10%;
+}
+
+
 body {
   background-color: #ededed;
 }
