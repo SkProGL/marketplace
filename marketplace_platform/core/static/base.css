@@ -38,7 +38,7 @@ body {
 }
 
 .modal{
-   z-index: 10000 /* Must be higher than nav-bar for proper display */
+   top: 10%;
 }
 
 
