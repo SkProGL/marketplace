@@ -1,39 +1,57 @@
 // Management panel: Script to lazily load order details for expanded order summary
-const buttons = document.querySelectorAll('.load-receipt-btn');
-const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+//  Select load summary buttons
+const buttons = document.querySelectorAll('.js-load-order-summary');
+// Get modal div
+modal_div = document.getElementById('orderSummaryModal')
+// Create modal object
+const modal = new bootstrap.Modal(modal_div);
 
+// Assign click event listener and callback to each button
 buttons.forEach(button => {
     button.addEventListener('click', function () {
-        const orderId = this.getAttribute('data-order-id');
-
+        // Define callback
+        // Extract row id from selected button element selected
+        const orderId = this.getAttribute('order-row-id');
+        
+        // Disply modal and placeholder data
         modal.show();
-        document.getElementById('modal-order-id').innerText = orderId;
-        document.getElementById('modal-customer-name').innerText = "Loading...";
-        document.getElementById('modal-receipt-table').innerHTML = "<li>Loading items...</li>";
+        document.getElementById('order-id').innerText = orderId;
+        document.getElementById('customer_name').innerText = "Loading...";
+        document.getElementById('receipt-table').innerHTML = "Loading items...";
 
-        fetch(`/management/order/${orderId}/receipt/`)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('modal-status').innerText = data.status || 'Not provided';;
-                document.getElementById('modal-customer-name').innerText = data.customer_name || 'Not provided';;
-                document.getElementById('modal-customer-type').innerText = data.customer_type || 'Not provided';;
-                document.getElementById('modal-email').innerText = data.email || 'Not provided';
-                document.getElementById('modal-phone').innerText = data.phone || 'Not provided';
-                document.getElementById('modal-address').innerText = data.address || 'Not provided';
-                document.getElementById('modal-instructions').innerText = data.instructions || 'Not provided';;
-                document.getElementById('modal-order-date').innerText = data.order_date || 'Not provided';
-                document.getElementById('modal-delivery-date').innerText = data.delivery_date || 'Not provided';
-                document.getElementById('modal-recurrence').innerText = data.recurrence || 'Not provided';
-                document.getElementById('modal-total').innerText = data.total_price || 'Not provided';
+        // Async GET request using orderId as argument for display data
+        // waits for JSON response
+        fetch(`/management/order/${orderId}/order_summary/`)
+            .then(response => response.json()) // Get HTTP response
+            .then(data => { // Parse JSON body and pass details to modal template
+                if (data.error) {
+                    document.getElementById('error').innerText = `Error: ${data.error}`;
+                    return;
+                }
+                Object.keys(data).forEach(key => {
+                    const element = document.getElementById(key);
+                    console.log(element)
+                    if (element) element.innerText = data[key] || 'Not provided';
+                });
+                // Set status badge colour based on status
+                const status = document.getElementById('status');
+                status.innerText = data.status;
+                status.className = `badge ms-2 ${
+                    // JS inline if-else
+                    data.status === 'PENDING'   ? 'bg-warning'  :
+                    data.status === 'CONFIRMED' ? 'bg-primary'  :
+                    data.status === 'DELIVERED' ? 'bg-success'  : 
+                    'bg-danger'
+                }`;
 
-                // Populate the list
-                const list = document.getElementById('modal-receipt-table');
+                // Construct itemised receipt table
+                const list = document.getElementById('receipt-table');
                 list.innerHTML = "";
                 if (data.receipt.length === 0) {
-                    list.innerHTML = "No items attached to this order yet.";
+                    list.innerHTML = "No products attached to this order.";
                 } else {
                     let tableHTML = `
-                        <table class="table table-sm table-bordered">
+                        <table class="table table-sm table-bordered table-striped">
                             <thead class="table-light">
                                 <tr>
                                     <th>Item</th>
@@ -43,7 +61,7 @@ buttons.forEach(button => {
                                 </tr>
                             </thead>
                             <tbody>
-                    `;
+                        `;
                     data.receipt.forEach(item => {
                         tableHTML += `
                             <tr>
@@ -52,15 +70,12 @@ buttons.forEach(button => {
                                 <td class="text-end">£${item.price}</td>
                                 <td class="text-end">£${item.total}</td>
                             </tr>
-                    `;
+                            `;
                     });
-
                     tableHTML += `
                     </tbody>
-                </table>
-            `;
-
-                    // Inject the finished HTML into the modal
+                    </table> `;
+                    // Inject the HTML into the modal
                     list.innerHTML = tableHTML;
                 }
             });

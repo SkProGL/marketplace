@@ -42,7 +42,8 @@
             <tr data-row-id="{{ row.id }}" class="{% if row.id == 'draft' %}table-success{% endif %}">
                 {% if selected_model_name == "Order" %} 
                     <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-success mx-auto m-2 shadow-sm load-receipt-btn" data-order-id="{{ row.id }}">
+                        <!-- Define class for order summary JS script -->
+                        <button type="button" class="btn btn-sm btn-outline-success mx-auto m-2 shadow-sm js-load-order-summary" order-row-id="{{ row.id }}">
                             <i class="bi bi-info-circle"></i>
                         </button>
                     </td>
@@ -63,7 +64,6 @@
                         class="form-control form-control-sm"
                         disabled>
                     {% elif cell.is_password %}
-                    <!-- TODO - Improve visual. Modal? -->
                     <!-- Forms for password setting -->
                     <div class="dropdown dropend w-100">
                             <button class="btn btn-sm btn-outline-success dropdown-toggle align-content-between mx-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
@@ -80,12 +80,13 @@
                     {% elif cell.is_fk %}
                     <!-- Foreign Key drop-downs -->
                     <select name="cell_{{ row.id }}_{{ cell.name }}" class="form-select form-select-sm">
-                        <option value="" selected="selected">Select an option</option>
+                        <option value="" selected>Select an option</option>
                         {% for fk_option_id, fk_option_name in cell.fk_options %}
                         <option value="{{ fk_option_id }}" {% if fk_option_id == cell.selected_fk_id %}selected{% endif %}>
-                            {{ option_name }}
+                            {{ fk_option_name }}
                         </option>
                         {% endfor %}
+                    </select>
                     {% elif cell.is_bool %}
                     <!-- Boolean drop-downs -->
                     <select name="cell_{{ row.id }}_{{ cell.name }}" class="form-select form-select-sm">

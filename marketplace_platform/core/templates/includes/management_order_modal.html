@@ -1,37 +1,43 @@
 <!-- Management panel: modal for expanded order details-->
-    <div class="modal fade" id="receiptModal" tabindex="-1">
+ <!-- Find  -->
+<style>
+    #orderSummaryModal span{
+        color: var(--bs-secondary-color)
+    }
+</style>
+    <div class="modal fade" id="orderSummaryModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        Order Info <span id="modal-status" class="badge bg-secondary ms-2"></span><br>
-                        <small class="text-muted fs-6" id="modal-order-id"></small>
+                    <h5 class="modal-title">Order Info <span id="status"></span><br>
+                        <small class="text-muted" id="order-id"></small>
+                        <br><b class="text-danger" id="error"></b>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <b>Contact details</b><br>
-                    <small class="text-muted fs-6">
-                        Customer: <span id="modal-customer-name">Loading...</span> (Type: <span id="modal-customer-type"></span>)<br>
-                        Email: <span id="modal-email"></span><br>
-                        Phone number: <span id="modal-phone"></span><br> 
+                    <small>
+                        User: <span id="customer_name">Loading...</span> (Type: <span id="customer_type"></span>)<br>
+                        Email: <span id="email"></span><br>
+                        Phone number: <span id="phone"></span><br> 
                     </small><br>
 
                     <b>Delivery details</b><br>
-                    <small class="text-muted fs-6">
-                        Address: <span id="modal-address"></span><br>
-                        Special instructions: <span id="modal-instructions"></span><br>
-                        Order date: <span id="modal-order-date"></span><br>
-                        Delivery date: <span id="modal-delivery-date"></span><br>
-                        Recurrence: <span id="modal-recurrence"></span><br>
+                    <small>
+                        Address: <span id="address"></span><br>
+                        Order date: <span id="order_date"></span><br>
+                        Delivery date: <span id="delivery_date"></span><br>
+                        Recurrence: <span id="recurrence"></span><br>
+                        Special instructions: <span id="instructions"></span><br>
                     </small>
                     <hr>
                     
                     <b>RECEIPT</b><br>
-                    <div id="modal-receipt-table" class="mt-2"></div>
+                    <div id="receipt-table" class="mt-2"></div>
                     <hr>
                     
-                    <b>Total: £<span id="modal-total"></span></b>
+                    <b>Total: £<span id="total_price"></span></b>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
