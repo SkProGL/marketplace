@@ -26,3 +26,38 @@ def ai_generate(request):
 
     except requests.RequestException as e:
         return Response({"error": str(e)}, status=500)
+
+
+@api_view(["GET"])
+def meal_search(request):
+    query = request.query_params.get("q", "chicken")
+
+    try:
+        r = requests.get(
+            "https://www.themealdb.com/api/json/v1/1/search.php",
+            params={"s": query},
+            timeout=5
+        )
+        r.raise_for_status()
+        data = r.json()
+
+        meals = data.get("meals")
+        if not meals:
+            return Response({"results": []})
+
+        # 🔧 Clean response (important)
+        results = []
+        for meal in meals:
+            results.append({
+                "id": meal.get("idMeal"),
+                "name": meal.get("strMeal"),
+                "category": meal.get("strCategory"),
+                "area": meal.get("strArea"),
+                "instructions": meal.get("strInstructions"),
+                "image": meal.get("strMealThumb"),
+            })
+
+        return Response({"results": results})
+
+    except requests.RequestException as e:
+        return Response({"error": str(e)}, status=500)
