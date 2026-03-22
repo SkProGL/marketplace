@@ -126,7 +126,7 @@ textarea {
 
 /* button */
 
-button {
+.form button {
   margin-top: 18px;
   width: 100%;
   padding: var(--padding-button);
