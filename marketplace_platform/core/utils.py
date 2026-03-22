@@ -58,7 +58,7 @@ def create_draft_entry(headers, selected_model: Type[models.Model], cached_updat
             'is_bool': isinstance(field, models.BooleanField),
             'is_date': isinstance(field, (models.DateTimeField, models.DateField)),
             'is_choice': bool(getattr(field, 'choices', None)),
-            'options': [(str(obj.pk), str(obj)) for obj in field.related_model.objects.all()] if isinstance(field, models.ForeignKey) else [],
+            'fk_options': [(str(obj.pk), str(obj)) for obj in field.related_model.objects.all()] if isinstance(field, models.ForeignKey) else [],
             'choice_options': field.choices if hasattr(field, 'choices') else [],
             'is_readonly': field_name in READONLY_FIELDS,
             'is_password': field.name == 'password',
@@ -211,6 +211,7 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
 
     # Extract all records from model
     records = selected_model.objects.all()
+    print(f"[get_management_context] Found {len(records)} records")
 
     # Sorting logic  
     # Extract direction and header to sort by
@@ -251,7 +252,6 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
                 raw_val = getattr(record, field_name)
 
             display_val = format_for_display(field, raw_val)
-        
             # Set flags for displaying cells in correct format
             cell_data = {
                 'name': field.name,
@@ -263,7 +263,6 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
                 'is_readonly': field.name in READONLY_FIELDS,
                 'is_password': field.name == 'password',
             }
-            
             # Define drop-down options
             if cell_data['is_fk']:
                 if field_name in cached_row_update_attempt:

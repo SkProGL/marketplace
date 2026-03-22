@@ -100,6 +100,7 @@ def management_view(request: HttpResponse):
     app_config = apps.get_app_config('core')
     model_names = [model.__name__ for model in app_config.get_models()]
     selected_model_name = request.GET.get('model')
+    print(f"\n[management_view] Selected model is: {selected_model_name}")
 
     # Handle POST actions (Create, Update & Delete)
     if request.method == 'POST' and selected_model_name:
@@ -121,7 +122,7 @@ def management_view(request: HttpResponse):
         selected_model = app_config.get_model(selected_model_name)
         selected_data = get_management_context(request, selected_model, selected_model_name, add_new)
     
-    print(f"[management_view] Selected model is: {selected_model_name}")
+
     return render(
             request, 'management.html', {
             'model_names': model_names,
@@ -138,11 +139,16 @@ def community(request):
     return render(request, 'community.html')
 
 def get_order_summary_json(request, order_id):
+    """
+    For expanded Order view in management panel.
+    Extract order_id from URL parameter as defined in urls.
+    Return Json data contained comprehensive order details.
+    """
     try:
-        # Use select_related to speed up the query
+        # Use select_related to fetch all related fk models for speed
         order = Order.objects.select_related('customer').get(pk=order_id)
         
-        # Get products attached to this order
+        # Get products attached to this order for receipt
         items = order.orderproduct_set.all().select_related('product')
         
         receipt_data = []
@@ -160,14 +166,14 @@ def get_order_summary_json(request, order_id):
             'customer_type': order.customer.category,
             'email': order.customer.email,
             'phone': order.customer.phone,
-            'address': f"{order.customer.address}, {order.customer.postcode}",
+            'address': f"{order.customer.address}, {order.customer.postcode}" if order.customer.address and order.customer.postcode else '',
             'instructions': order.special_instructions,
             'order_date': order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else '',
             'delivery_date': order.delivery_date.strftime('%Y-%m-%d') if order.delivery_date else '',
-            'recurrence': order.recurrence_type,
+            'recurrence': f"{order.get_recurrence_day_display()} ({order.recurrence_type})" if order.recurring else '',
             'total_price': f"{order.total_price:.2f}",
             'receipt': receipt_data
         }
         return JsonResponse(data)
-    except Order.DoesNotExist:
-        return JsonResponse({'error': 'Order not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': e}, status=404)
