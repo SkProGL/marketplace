@@ -9,6 +9,7 @@ from .models import Order, Product
 
 User = get_user_model()
 
+
 def home_view(request):
     items = Product.objects.all()  # Fetch all items from Postgres
     return render(request, 'home.html', {'items': items})
@@ -19,18 +20,18 @@ def login_view(request):
         form = LoginForm(request.POST)
         if form.is_valid():
             login_data = form.cleaned_data
-            username = login_data.get('username')
+            email = login_data.get('email')
             password = login_data.get('password')
 
             # Check if these credentials match a user in the DB
-            user = authenticate(request, username=username, password=password)
+            user = authenticate(request, email=email, password=password)
 
             if user is not None:
                 login(request, user)
-                messages.success(request, f"Welcome back, {username}!")
+                messages.success(request, f"Welcome back, {email}!")
                 return redirect('home')  # Go to the marketplace
             else:
-                messages.error(request, "Invalid username or password.")
+                messages.error(request, "Invalid email or password.")
     else:
         form = LoginForm()
 
@@ -67,7 +68,7 @@ def signup_view(request):
             print(f"\033[42m\033[30msignup success\033[0m")
             print("Created user:", {
                 "id": str(user.id),
-                "username": user.username,
+                "username": getattr(user, "username", ""),
                 "full_name": user.full_name,
                 "email": user.email,
                 "phone": user.phone,
@@ -94,6 +95,7 @@ def signup_view(request):
 def invoice_view(request):
     return render(request, 'invoice.html')
 
+
 def management_view(request: HttpResponse):
     # Construct list of model names
     # Pull specific records for selected model for display
@@ -104,27 +106,31 @@ def management_view(request: HttpResponse):
 
     # Handle POST actions (Create, Update & Delete)
     if request.method == 'POST' and selected_model_name:
-        success = handle_management_post(request, app_config, selected_model_name)
-        if success:        
+        success = handle_management_post(
+            request, app_config, selected_model_name)
+        if success:
             # Draft attempts to update record are cachedin session for continued editing
             # Pop this cached data on successful modification
-            cached_update_attempts = request.session.get('cached_update_attempt', {})
+            cached_update_attempts = request.session.get(
+                'cached_update_attempt', {})
             cached_update_attempts.pop(selected_model_name, None)
             request.session.modified = True
             return redirect(f"{request.path}?model={selected_model_name}")
-        
+
     # Fetch data for Read display
-    # Set flag if new draft row has been created 
-    cached_update_attempt = request.session.get('cached_update_attempt', {}).get(selected_model_name, {})
-    add_new = request.GET.get('draft') == 'true' or 'draft' in cached_update_attempt
+    # Set flag if new draft row has been created
+    cached_update_attempt = request.session.get(
+        'cached_update_attempt', {}).get(selected_model_name, {})
+    add_new = request.GET.get(
+        'draft') == 'true' or 'draft' in cached_update_attempt
     selected_data = None
     if selected_model_name:
         selected_model = app_config.get_model(selected_model_name)
-        selected_data = get_management_context(request, selected_model, selected_model_name, add_new)
-    
+        selected_data = get_management_context(
+            request, selected_model, selected_model_name, add_new)
 
     return render(
-            request, 'management.html', {
+        request, 'management.html', {
             'model_names': model_names,
             'selected_model_name': selected_model_name,
             'selected_data': selected_data,
@@ -138,6 +144,7 @@ def order_history(request):
 def community(request):
     return render(request, 'community.html')
 
+
 def get_order_summary_json(request, order_id):
     """
     For expanded Order view in management panel.
@@ -147,10 +154,10 @@ def get_order_summary_json(request, order_id):
     try:
         # Use select_related to fetch all related fk models for speed
         order = Order.objects.select_related('customer').get(pk=order_id)
-        
+
         # Get products attached to this order for receipt
         items = order.orderproduct_set.all().select_related('product')
-        
+
         receipt_data = []
         for item in items:
             receipt_data.append({
@@ -159,7 +166,7 @@ def get_order_summary_json(request, order_id):
                 'price': f"{item.product.price:.2f}",
                 'total': f"{item.numPurchased * item.product.price:.2f}"
             })
-            
+
         data = {
             'status': order.order_status,
             'customer_name': order.customer.username,
@@ -177,3 +184,4 @@ def get_order_summary_json(request, order_id):
         return JsonResponse(data)
     except Exception as e:
         return JsonResponse({'error': e}, status=404)
+
