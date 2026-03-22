@@ -10,7 +10,8 @@
             {% endif %}
             {% for header in selected_data.headers %}
                 <!-- Ascending/descending sorting-->
-                <th  style="min-width: 50px; ">
+                <th class="bg-transparent
+                " style="min-width: 50px; ">
                 <!-- Pass the current model, header and current sort method. Selecting the header flips the direction. -->
                 <a href="?model={{ selected_model_name }}&sortby={{ header }}&direction={% if selected_data.current_sort == header and selected_data.current_direction == 'ascending' %}descending{% else %}ascending{% endif %}" 
                    class="text-decoration-none text-black d-flex  justify-content-between">
