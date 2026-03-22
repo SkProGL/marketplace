@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+  <h2 style="color: var(--main-color);">Recurring Orders</h2>
+
+  {% if orders_with_next %}
+    {% for entry in orders_with_next %}
+    <div class="widget-account-form-card mb-4" style="max-width: 700px; padding: 2rem;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h5 class="mb-0">{{ entry.order.recurrence_type }} Order</h5>
+          <small class="text-muted">
+            Every 
+            {% for val, label in entry.order.Weekday.choices %}
+              {% if val == entry.order.recurrence_day %}{{ label }}{% endif %}
+            {% endfor %}
+          </small>
+        </div>
+        <span class="badge bg-success fs-6">Next: {{ entry.next_date }}</span>
+      </div>
+
+      <table class="table table-sm">
+        <thead><tr><th>Product</th><th>Qty</th><th>Price each</th></tr></thead>
+        <tbody>
+          {% for op in entry.items %}
+          <tr>
+            <td>{{ op.product.name }}</td>
+            <td>{{ op.numPurchased }}</td>
+            <td>£{{ op.product.price }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <p class="text-muted small mb-2">
+        ⚠️ Modifying will only affect the next delivery on <strong>{{ entry.next_date }}</strong>. Your recurring template stays unchanged.
+      </p>
+      <a href="{% url 'modify_next_occurrence' entry.order.id %}" class="btn btn-outline-success btn-sm">
+        Modify next order
+      </a>
+    </div>
+    {% endfor %}
+
+  {% else %}
+    <p class="text-muted">You have no recurring orders. Set one up at checkout!</p>
+  {% endif %}
+</div>
+{% endblock %}
