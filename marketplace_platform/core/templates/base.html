@@ -36,6 +36,23 @@
                         <span class="navbar-text me-3 text-muted">
                             Logged in as: <strong>{{ user.username }}</strong>
                         </span>
+                        <div class="dropdown me-2">
+                            <button class="position-relative btn btn-sm btn-light" id="alertBellBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-bell-fill"></i>
+                                {% if navbar_alert_count %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem">{{ navbar_alert_count }}</span>{% endif %}
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:300px;max-height:360px;overflow-y:auto" aria-labelledby="alertBellBtn">
+                                <li><h6 class="dropdown-header">Alerts {% if navbar_alert_count %}({{ navbar_alert_count }}){% endif %}</h6></li>
+                                {% if navbar_alerts %}{% for alert in navbar_alerts %}
+                                <li><a class="dropdown-item d-flex gap-2 align-items-start py-2" href="{% url alert.link_url %}">
+                                    <i class="bi bi-{{ alert.icon }} text-{{ alert.colour }} mt-1"></i>
+                                    <span style="font-size:.85rem">{{ alert.message }}<br><small class="text-success">{{ alert.link_label }} →</small></span>
+                                </a></li>
+                                {% endfor %}{% else %}
+                                <li><p class="text-center text-muted py-3 mb-0" style="font-size:.85rem">No alerts right now</p></li>
+                                {% endif %}
+                            </ul>
+                        </div>
                         <a href="{% url 'inventory_upload' %}" class="btn btn-sm btn-success me-2">+ Upload Product</a>
                         <a href="{% url 'management' %}" class="btn btn-sm btn-success me-2">Management panel</a>
                         <form action="{% url 'logout' %}" method="post" style="display:inline;">
