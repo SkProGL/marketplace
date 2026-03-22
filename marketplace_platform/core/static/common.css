@@ -11,10 +11,7 @@
   flex-direction: column;
 }
 
-.container {
-  /* flex-direction: column; */
-}
-/* SIGNUP ---------------------------------------------- */
+/* signup */
 /* From Uiverse.io by JkHuger */
 
 .widget-account-form-row {
@@ -48,7 +45,7 @@
     16px 16px 32px #c8c8c8,
     -16px -16px 32px #fefefe;
   border-radius: 8px;
-  padding: 1rem;
+  padding: 2rem;
 }
 
 .widget-account-form-card h2 {
@@ -66,7 +63,8 @@
 }
 
 .widget-account-form-inputBox input,
-.widget-account-form-inputBox1 input {
+.widget-account-form-inputBox1 input,
+.widget-account-form-dropdown {
   width: 100%;
   padding: 10px;
   outline: none;
@@ -80,7 +78,8 @@
   border-bottom-left-radius: 8px;
 }
 .widget-account-form-inputBox.right input,
-.widget-account-form-inputBox1.right input {
+.widget-account-form-inputBox1.right input,
+.widget-account-form-dropdownBox.right .widget-account-form-dropdown {
   border-left: none;
   border-bottom-left-radius: 0;
   border-right: 2px solid var(--secondary-color);
@@ -126,9 +125,70 @@
 .widget-account-form-inputBox input:valid,
 .widget-account-form-inputBox input:focus,
 .widget-account-form-inputBox1 input:valid,
-.widget-account-form-inputBox1 input:focus {
+.widget-account-form-inputBox1 input:focus,
+.widget-account-form-dropdown:valid,
+.widget-account-form-dropdown:focus {
   border: 2px solid var(--main-color);
   border-radius: 8px;
+}
+
+.widget-account-form-dropdownBox {
+  position: relative;
+  width: fit-content;
+  margin: 1rem 0.5rem;
+  display: flex;
+  align-items: center;
+  width: 250px;
+}
+
+.widget-account-form-dropdown {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+}
+
+/* .widget-account-form-dropdown::-ms-expand { */
+/*   display: none; */
+/* } */
+
+.widget-account-form-dropdown-label {
+  margin-top: 5px;
+  position: absolute;
+  right: 10px;
+  transform: translateY(-4px);
+  margin-left: 10px;
+  padding: 10px;
+  pointer-events: none;
+  font-size: 12px;
+  color: #000;
+  text-transform: uppercase;
+  transition: 0.5s;
+  letter-spacing: 3px;
+  border-radius: 8px;
+}
+
+.widget-account-form-dropdown:valid ~ .widget-account-form-dropdown-label,
+.widget-account-form-dropdown:focus ~ .widget-account-form-dropdown-label {
+  transform: translateX(30px) translateY(-15px);
+  font-size: 0.8em;
+  padding: 5px 10px;
+  background: var(--main-color);
+  white-space: nowrap;
+  letter-spacing: 0.2em;
+  color: #fff;
+  border: 2px;
+}
+
+.widget-account-form-dropdown:valid,
+.widget-account-form-dropdown:focus {
+  border: 2px solid var(--main-color);
+  border-radius: 8px;
+}
+
+.widget-account-form-dropdown option {
+  color: #000;
+  background: #fff;
 }
 
 .widget-account-form-enter {
@@ -146,6 +206,8 @@
   letter-spacing: 2px;
   margin-bottom: 2em;
   margin-top: 0.8rem;
+  display: block;
+  margin: auto;
 }
 
 .widget-account-form-enter:hover {
@@ -156,7 +218,6 @@
 
 /* From Uiverse.io by boryanakrasteva */
 .widget-sign-checkbox-wrapper input[type="checkbox"] {
-  visibility: hidden;
   display: none;
 }
 
@@ -183,7 +244,6 @@
   display: flex;
 }
 .widget-sign-label span {
-  width: 65%;
   white-space: pre-wrap;
 }
 
@@ -212,4 +272,51 @@
 .widget-sign-label g {
   filter: brightness(0) saturate(100%) invert(42%) sepia(18%) saturate(2168%)
     hue-rotate(102deg) brightness(91%) contrast(80%);
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-field,
+.widget-account-form-inputBox:has(input[name="phone"][type="text"]) {
+  margin-bottom: 4rem;
+}
+.password-toggle {
+  position: absolute;
+  bottom: -30px;
+  left: 0;
+  border: none;
+  border-left: 1px solid var(--main-color);
+  border-bottom: 1px solid var(--main-color);
+  background: transparent;
+  color: var(--main-color);
+  cursor: pointer;
+  padding: 0 5px;
+}
+
+.password-match {
+  position: absolute;
+  right: 5px;
+  bottom: -30px;
+  /* padding: 0 5px; */
+  /* font-size: 0.8rem; */
+}
+
+.password-valid {
+  color: var(--main-color);
+}
+
+.password-invalid {
+  color: #cc2323;
+}
+
+.password-hidden {
+  display: none;
+}
+
+.widget-account-form-enter:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
 }

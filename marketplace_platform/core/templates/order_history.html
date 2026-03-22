@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'order_history.css' %}">
+
+<div class="oh-header">
+    <h1>Order History</h1>
+    <p>Your past and current orders from local producers</p>
+</div>
+
+<div class="oh-layout">
+
+    <div class="oh-orders">
+
+        <div class="oh-card">
+            <div class="oh-card-header">
+                <div class="oh-meta">
+                    <span class="oh-num">#A1B2C3D4</span>
+                    <span class="oh-date">15 March 2026</span>
+                    <span class="oh-status oh-status-delivered">DELIVERED</span>
+                </div>
+                <span class="oh-total">£12.50</span>
+            </div>
+            <div class="oh-card-body">
+                <div class="oh-item">
+                    <div>
+                        <div class="oh-item-name">Organic Carrots × 2</div>
+                        <div class="oh-item-farm">Bristol Valley Farm</div>
+                    </div>
+                    <span class="oh-item-price">£12.50</span>
+                </div>
+                <div class="oh-actions">
+                    <a href="{% url 'invoice' %}" class="oh-btn-outline">View Invoice</a>
+                    <a href="#" class="oh-btn-outline">Write Review</a>
+                    <a href="{% url 'home' %}" class="oh-btn-primary">Reorder</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="oh-card">
+            <div class="oh-card-header">
+                <div class="oh-meta">
+                    <span class="oh-num">#E5F6A7B8</span>
+                    <span class="oh-date">10 March 2026</span>
+                    <span class="oh-status oh-status-confirmed">CONFIRMED</span>
+                </div>
+                <span class="oh-total">£8.00</span>
+            </div>
+            <div class="oh-card-body">
+                <div class="oh-item">
+                    <div>
+                        <div class="oh-item-name">Fresh Milk × 3</div>
+                        <div class="oh-item-farm">Hillside Dairy</div>
+                    </div>
+                    <span class="oh-item-price">£8.00</span>
+                </div>
+                <p class="oh-instructions">📝 Please leave at the door</p>
+                <div class="oh-actions">
+                    <a href="{% url 'invoice' %}" class="oh-btn-outline">View Invoice</a>
+                    <a href="{% url 'home' %}" class="oh-btn-primary">Reorder</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="oh-card">
+            <div class="oh-card-header">
+                <div class="oh-meta">
+                    <span class="oh-num">#C9D0E1F2</span>
+                    <span class="oh-date">2 March 2026</span>
+                    <span class="oh-status oh-status-pending">PENDING</span>
+                </div>
+                <span class="oh-total">£5.75</span>
+            </div>
+            <div class="oh-card-body">
+                <div class="oh-item">
+                    <div>
+                        <div class="oh-item-name">Sourdough Loaf × 1</div>
+                        <div class="oh-item-farm">The Clifton Bakery</div>
+                    </div>
+                    <span class="oh-item-price">£5.75</span>
+                </div>
+                <div class="oh-actions">
+                    <a href="{% url 'invoice' %}" class="oh-btn-outline">View Invoice</a>
+                    <a href="{% url 'home' %}" class="oh-btn-primary">Reorder</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="oh-ai-panel">
+        <div class="oh-ai-card">
+            <div class="oh-ai-header">
+                <span class="oh-ai-icon">🔄</span>
+                <div>
+                    <div class="oh-ai-title">Quick Re-order</div>
+                    <div class="oh-ai-sub">Based on your purchase history</div>
+                </div>
+            </div>
+            <div class="oh-xai-toggle" onclick="toggleXAI('xai1')">● Why these recommendations?</div>
+            <div class="oh-xai-box" id="xai1">
+                These items were identified from your last orders.
+                The model uses <strong>order frequency</strong> and
+                <strong>weekly patterns</strong> to suggest what you likely need next.
+            </div>
+
+            <div class="oh-rec-item">
+                <div class="oh-rec-info">
+                    <div class="oh-rec-name">Organic Carrots</div>
+                    <div class="oh-rec-farm">Bristol Valley Farm</div>
+                    <div class="oh-rec-reason">Ordered 3× recently</div>
+                </div>
+                <span class="oh-rec-price">£6.25</span>
+                <a href="{% url 'home' %}" class="oh-add-btn">+</a>
+            </div>
+
+            <div class="oh-rec-item">
+                <div class="oh-rec-info">
+                    <div class="oh-rec-name">Fresh Milk</div>
+                    <div class="oh-rec-farm">Hillside Dairy</div>
+                    <div class="oh-rec-reason">Ordered 2× recently</div>
+                </div>
+                <span class="oh-rec-price">£2.50</span>
+                <a href="{% url 'home' %}" class="oh-add-btn">+</a>
+            </div>
+
+            <div class="oh-rec-item">
+                <div class="oh-rec-info">
+                    <div class="oh-rec-name">Sourdough Loaf</div>
+                    <div class="oh-rec-farm">The Clifton Bakery</div>
+                    <div class="oh-rec-reason">Ordered 1× recently</div>
+                </div>
+                <span class="oh-rec-price">£5.75</span>
+                <a href="{% url 'home' %}" class="oh-add-btn">+</a>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+function toggleXAI(id) {
+    document.getElementById(id).classList.toggle('visible');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'community.css' %}">
+
+<div class="ch-header">
+    <h1>Community Hub</h1>
+    <p>Seasonal recipes and farm stories from local producers</p>
+</div>
+
+{% if request.user.is_authenticated %}
+<div class="ch-producer-actions">
+    <a href="{% url 'add_recipe' %}" class="ch-btn-primary">+ Add Recipe</a>
+    <a href="{% url 'add_story' %}" class="ch-btn-outline">+ Add Farm Story</a>
+</div>
+{% endif %}
+
+<div class="ch-tabs">
+    <button class="ch-tab active" onclick="switchTab(this, 'recipes')">Recipes</button>
+    <button class="ch-tab" onclick="switchTab(this, 'stories')">Farm Stories</button>
+</div>
+
+<div id="tab-recipes" class="ch-section">
+    <div class="ch-season-filter">
+        <a href="#" class="ch-season-btn active" onclick="filterSeason(this, 'all')">All</a>
+        <a href="#" class="ch-season-btn" onclick="filterSeason(this, 'spring')">Spring</a>
+        <a href="#" class="ch-season-btn" onclick="filterSeason(this, 'summer')">Summer</a>
+        <a href="#" class="ch-season-btn" onclick="filterSeason(this, 'autumn')">Autumn</a>
+        <a href="#" class="ch-season-btn" onclick="filterSeason(this, 'winter')">Winter</a>
+    </div>
+    <div class="ch-grid">
+
+        <div class="ch-card" data-season="spring">
+            <div class="ch-card-img ch-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+            </div>
+            <div class="ch-card-body">
+                <div class="ch-producer">bristolvalleyfarm</div>
+                <span class="ch-season-tag ch-season-spring">Spring</span>
+                <h3 class="ch-title">Spring Carrot Soup</h3>
+                <p class="ch-desc">A warming soup using fresh spring carrots from the farm.</p>
+                <div class="ch-ingredients">
+                    <span class="ch-chip">Carrots</span>
+                    <span class="ch-chip">Onion</span>
+                    <span class="ch-chip">Ginger</span>
+                </div>
+                <div class="ch-card-footer">
+                    <a href="#" class="ch-save-btn">Save</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="ch-card" data-season="summer">
+            <div class="ch-card-img ch-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+            </div>
+            <div class="ch-card-body">
+                <div class="ch-producer">hillsidedairy</div>
+                <span class="ch-season-tag ch-season-summer">Summer</span>
+                <h3 class="ch-title">Strawberry Cheesecake</h3>
+                <p class="ch-desc">A light and creamy cheesecake using fresh summer strawberries.</p>
+                <div class="ch-ingredients">
+                    <span class="ch-chip">Strawberries</span>
+                    <span class="ch-chip">Cream Cheese</span>
+                    <span class="ch-chip">Honey</span>
+                </div>
+                <div class="ch-card-footer">
+                    <a href="#" class="ch-save-btn">Save</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="ch-card" data-season="autumn">
+            <div class="ch-card-img ch-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+            </div>
+            <div class="ch-card-body">
+                <div class="ch-producer">cliftonbakery</div>
+                <span class="ch-season-tag ch-season-autumn">Autumn</span>
+                <h3 class="ch-title">Roasted Root Vegetable Medley</h3>
+                <p class="ch-desc">A hearty autumn dish with seasonal root vegetables roasted to perfection.</p>
+                <div class="ch-ingredients">
+                    <span class="ch-chip">Parsnips</span>
+                    <span class="ch-chip">Beetroot</span>
+                    <span class="ch-chip">Potatoes</span>
+                </div>
+                <div class="ch-card-footer">
+                    <a href="#" class="ch-save-btn">Save</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="tab-stories" class="ch-section" style="display:none">
+    <div class="ch-grid">
+
+        <div class="ch-card">
+            <div class="ch-card-img ch-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="ch-card-body">
+                <div class="ch-producer">bristolvalleyfarm</div>
+                <div class="ch-date">10 March 2026</div>
+                <p class="ch-desc">Spring has arrived and we are busy planting our first carrots and potatoes of the season. Come visit us at the farmers market this Saturday!</p>
+            </div>
+        </div>
+
+        <div class="ch-card">
+            <div class="ch-card-img ch-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="ch-card-body">
+                <div class="ch-producer">hillsidedairy</div>
+                <div class="ch-date">5 March 2026</div>
+                <p class="ch-desc">Our cows are back out in the fields after winter. Fresh milk production is up and we have some lovely new cheese varieties coming soon.</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+function switchTab(btn, tab) {
+    document.querySelectorAll(".ch-tab").forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".ch-section").forEach(s => s.style.display = "none");
+    document.getElementById("tab-" + tab).style.display = "block";
+}
+
+function filterSeason(btn, season) {
+    document.querySelectorAll(".ch-season-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".ch-card[data-season]").forEach(card => {
+        card.style.display = (season === 'all' || card.dataset.season === season) ? 'block' : 'none';
+    });
+}
+</script>
+{% endblock %}
