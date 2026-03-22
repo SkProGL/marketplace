@@ -69,8 +69,16 @@ textarea {
   margin-top: 6px;
 }
 
-.price-row input {
+.price-row input,
+.price-row select {
   flex: 1;
+}
+.price-row select {
+  width: 100%;
+  padding: var(--padding-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
 }
 
 /* toggle buttons */

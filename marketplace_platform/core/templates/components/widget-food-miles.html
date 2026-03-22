@@ -61,11 +61,20 @@
     user-select: none;
     /* border: 1px solid rgba(53, 52, 52, 0.226); */
 
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); */
+    box-shadow:
+      1px 1px 2px -1px #fff inset,
+      0 2px 1px #00000010,
+      0 4px 2px #00000010,
+      0 8px 4px #00000010,
+      0 16px 8px #00000010,
+      0 32px 16px #00000010;
   }
 
   .radio-input label {
-    width: 100%;
+    /* width: 100%; */
+    flex: 1; /* evenly distributes space */
+    min-width: 0; /* allows shrinking properly */
     padding: 10px;
     cursor: pointer;
     display: flex;
@@ -74,13 +83,15 @@
     z-index: 1;
     letter-spacing: 2px;
     font-size: 14px;
+    white-space: nowrap;
   }
 
   .selection {
     display: none;
     position: absolute;
     height: 100%;
-    width: calc(var(--container_width) / 4);
+    /* width: calc(var(--container_width) / 4); */
+    width: 25%;
     z-index: 0;
     left: 0;
     top: 0;
@@ -97,19 +108,36 @@
   }
 
   .radio-input label:nth-child(1):has(input:checked) ~ .selection {
-    transform: translateX(calc(var(--container_width) * 0 / 4));
+    /* transform: translateX(calc(var(--container_width) * 0 / 4)); */
+
+    transform: translateX(0%);
   }
 
   .radio-input label:nth-child(2):has(input:checked) ~ .selection {
-    transform: translateX(calc(var(--container_width) * 1 / 4));
+    /* transform: translateX(calc(var(--container_width) * 1 / 4)); */
+
+    transform: translateX(100%);
   }
 
   .radio-input label:nth-child(3):has(input:checked) ~ .selection {
-    transform: translateX(calc(var(--container_width) * 2 / 4));
+    /* transform: translateX(calc(var(--container_width) * 2 / 4)); */
+
+    transform: translateX(200%);
   }
 
   .radio-input label:nth-child(4):has(input:checked) ~ .selection {
-    transform: translateX(calc(var(--container_width) * 3 / 4));
+    /* transform: translateX(calc(var(--container_width) * 3 / 4)); */
+    transform: translateX(300%);
+  }
+  .input-alt,
+  label {
+    box-shadow:
+      1px 1px 2px -1px #fff inset,
+      0 2px 1px #00000010,
+      0 4px 2px #00000010,
+      0 8px 4px #00000010,
+      0 16px 8px #00000010,
+      0 32px 16px #00000010;
   }
 </style>
 <!-- From Uiverse.io by Javierrocadev -->

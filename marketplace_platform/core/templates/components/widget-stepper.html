@@ -57,7 +57,6 @@
 
       <input
         class="widget-stepper-input"
-        id="widget-stepper-input"
         type="number"
         value="2"
         min="0"
@@ -69,19 +68,33 @@
     </div>
 
     <script>
-      const widgetStepperInput = document.getElementById(
-        "widget-stepper-input",
-      );
+      document
+        .querySelectorAll(".widget-stepper-container")
+        .forEach((container) => {
+          const input = container.querySelector(".widget-stepper-input");
+          const plus = container.querySelector(".widget-stepper-plus");
+          const minus = container.querySelector(".widget-stepper-minus");
 
-      document.querySelector(".widget-stepper-plus").onclick = () =>
-        widgetStepperInput.stepUp();
+          plus.onclick = () => input.stepUp();
+          minus.onclick = () => input.stepDown();
 
-      document.querySelector(".widget-stepper-minus").onclick = () =>
-        widgetStepperInput.stepDown();
-
-      /* prevent manual typing above 99 */
-      widgetStepperInput.oninput = () =>
-        (widgetStepperInput.value = Math.min(widgetStepperInput.value, 99));
+          input.oninput = () => {
+            input.value = Math.min(input.value, 99);
+          };
+        });
+      // const widgetStepperInput = document.getElementById(
+      //   "widget-stepper-input",
+      // );
+      //
+      // document.querySelector(".widget-stepper-plus").onclick = () =>
+      //   widgetStepperInput.stepUp();
+      //
+      // document.querySelector(".widget-stepper-minus").onclick = () =>
+      //   widgetStepperInput.stepDown();
+      //
+      // /* prevent manual typing above 99 */
+      // widgetStepperInput.oninput = () =>
+      //   (widgetStepperInput.value = Math.min(widgetStepperInput.value, 99));
     </script>
   </body>
 </html>

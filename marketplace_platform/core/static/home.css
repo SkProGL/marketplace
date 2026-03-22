@@ -27,12 +27,13 @@
   padding: 6px 12px;
   margin: 4px;
   border-radius: 20px;
-
+  /* width: 120px; */
   max-height: 30px;
   /* border: 1px solid var(--link-color); */
   cursor: pointer;
   transition: 0.2s;
   background: white;
+  white-space: nowrap;
 }
 
 .filters input:checked + label {
@@ -93,6 +94,11 @@
   position: absolute;
   top: 4%;
   left: 4%;
+  color: black;
+  text-shadow: 0 0 white;
+  background: white;
+  padding: 8px;
+  border-radius: 1rem;
 }
 
 .cart {
@@ -101,6 +107,7 @@
 }
 .allergens svg {
   background: none;
+  margin-bottom: 2px;
 }
 
 .card:hover img {

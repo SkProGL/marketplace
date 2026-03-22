@@ -1,0 +1,41 @@
+.oh-header { padding: 32px 0 16px; }
+.oh-header h1 { font-size: 1.8rem; font-weight: 600; margin-bottom: 4px; }
+.oh-header p { color: #888; font-size: 0.9rem; }
+.oh-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; margin-top: 24px; }
+.oh-card { background: white; border: 1.5px solid #e0e0e0; border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+.oh-card-header { padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; }
+.oh-meta { display: flex; align-items: center; gap: 12px; }
+.oh-num { font-size: 0.75rem; color: #888; text-transform: uppercase; }
+.oh-date { font-size: 0.85rem; }
+.oh-total { font-weight: 600; }
+.oh-status { font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+.oh-status-pending { background: #fff3e0; color: #e65100; }
+.oh-status-confirmed { background: #e3f2fd; color: #1565c0; }
+.oh-status-ready { background: #f3e5f5; color: #6a1b9a; }
+.oh-status-delivered { background: #e8f5e9; color: #2e7d32; }
+.oh-card-body { padding: 14px 18px; }
+.oh-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
+.oh-item-name { font-size: 0.875rem; font-weight: 500; }
+.oh-item-farm { font-size: 0.78rem; color: #888; margin-top: 2px; }
+.oh-item-price { font-weight: 500; }
+.oh-instructions { font-size: 0.8rem; color: #888; margin-top: 8px; }
+.oh-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #f5f5f5; }
+.oh-btn-outline { padding: 7px 16px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.82rem; text-decoration: none; color: #333; }
+.oh-btn-primary { padding: 7px 16px; background: #333; color: white; border-radius: 6px; font-size: 0.82rem; text-decoration: none; }
+.oh-empty { padding: 32px; text-align: center; color: #888; }
+.oh-ai-card { background: #f0f4e8; border: 1.5px solid #c8d9b8; border-radius: 10px; padding: 20px; position: sticky; top: 24px; }
+.oh-ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.oh-ai-icon { font-size: 1.4rem; }
+.oh-ai-title { font-weight: 600; font-size: 0.95rem; }
+.oh-ai-sub { font-size: 0.75rem; color: #888; }
+.oh-xai-toggle { font-size: 0.75rem; color: #4a6741; cursor: pointer; margin-bottom: 10px; padding: 4px 8px; background: white; border: 1px solid #c8d9b8; border-radius: 4px; display: inline-block; }
+.oh-xai-box { display: none; background: white; border: 1px solid #c8d9b8; border-radius: 6px; padding: 10px 12px; font-size: 0.8rem; line-height: 1.5; margin-bottom: 12px; }
+.oh-xai-box.visible { display: block; }
+.oh-rec-item { background: white; border: 1px solid #d8e8c8; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.oh-rec-info { flex: 1; }
+.oh-rec-name { font-size: 0.875rem; font-weight: 500; }
+.oh-rec-farm { font-size: 0.75rem; color: #888; }
+.oh-rec-reason { font-size: 0.72rem; color: #4a6741; margin-top: 2px; }
+.oh-rec-price { font-weight: 500; font-size: 0.9rem; white-space: nowrap; }
+.oh-add-btn { width: 28px; height: 28px; background: #4a6741; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 1.1rem; flex-shrink: 0; }
+.oh-ai-empty { font-size: 0.82rem; color: #888; text-align: center; padding: 12px 0; }
