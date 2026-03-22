@@ -17,10 +17,13 @@ urlpatterns = [
     path('orders/<uuid:order_id>/reorder/', views.reorder, name='reorder'),
     # Checkout URLs
     path('add-to-cart/<uuid:product_id>/', views.add_to_cart, name='add_to_cart'),
+    path('cart/clear/', views.clear_cart, name='clear_cart'),
     path('checkout/', views.checkout, name='checkout'),
     
     # Management URLs
     path('management/', views.management_view, name="management"),
     path('management/order/<uuid:order_id>/order_summary/', views.get_order_summary_json, name='order_summary'),
 
+    path('orders/recurring/', views.recurring_orders, name='recurring_orders'),
+    path('orders/recurring/<uuid:order_id>/modify/', views.modify_next_occurrence, name='modify_next_occurrence'),
 ] 
