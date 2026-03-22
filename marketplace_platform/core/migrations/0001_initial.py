@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 ('date_joined', models.DateTimeField(default=django.utils.timezone.now, verbose_name='date joined')),
                 ('full_name', models.CharField(blank=True, default='', max_length=128)),
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('category', models.CharField(choices=[('Customer', 'Customer'), ('Producer', 'Producer'), ('Community group', 'Community'), ('Restaurant', 'Restaurant'), ('Admin', 'Admin')], default='Customer', max_length=20)),
+                ('category', models.CharField(choices=[('Customer', 'Customer'), ('Producer', 'Producer'), ('Community', 'Community Group'), ('Restaurant', 'Restaurant'), ('Admin', 'Admin')], default='Customer', max_length=20)),
                 ('phone', models.CharField(blank=True, max_length=20)),
                 ('address', models.CharField(blank=True, max_length=256)),
                 ('postcode', models.CharField(blank=True, max_length=20)),
@@ -110,6 +110,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('numPurchased', models.IntegerField()),
+                ('product_price_at_purchase', models.DecimalField(decimal_places=2, max_digits=10)),
                 ('order', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.order')),
                 ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.product')),
             ],

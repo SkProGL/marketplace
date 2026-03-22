@@ -10,7 +10,7 @@ class User(AbstractUser):
     class Category(models.TextChoices):
         CUSTOMER = "Customer"
         PRODUCER = "Producer"
-        COMMUNITY = "Community group"
+        COMMUNITY = "Community","Community Group"
         RESTAURANT = "Restaurant"
         ADMIN = "Admin"
 
@@ -195,7 +195,7 @@ class OrderProduct(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     numPurchased = models.IntegerField()
-
+    product_price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)
     class Meta:
         unique_together = ("order", "product")
 
