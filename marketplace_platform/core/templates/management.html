@@ -4,6 +4,15 @@
 {% block container_class %}container-fluid px-5 {% endblock %}
 
 {% block content %}
+
+<style>
+/* Copy button hover effect for model selection group */
+.btn-check + .btn-outline-success:hover {
+    background-color: #198754;
+    color: white;
+}
+</style>
+
 <link rel="stylesheet" href="{% static 'management.css' %}">
 <div class="row justify-content-center">
     <div class="col-11">
@@ -14,10 +23,10 @@
             <!-- Primary card -->
             <div class="card shadow">
                 <!-- Model selection button group -->
-                <div class="flex-wrap gap-1 btn-group card-header border-0" role="group">
+                <div class="flex-wrap gap-2 btn-group card-header border-0" role="group">
                     {% for model_name in model_names %}
                         <input  type="radio" 
-                                class="btn-check" 
+                                class="btn-check " 
                                 name="btnradio" 
                                 id="btnradio{{ forloop.counter }}"
                                 onchange="location.href='?model={{ model_name }}'"
@@ -53,7 +62,9 @@
         </form>
     </div>
 </div>
+{% endblock %}
 
+{% block modals %}
 <!-- Order modal window for expanded order view -->
 {% if selected_model_name == "Order" %}
     {% include 'includes/management_order_modal.html' %}     
@@ -61,5 +72,3 @@
     <script defer src="{% static 'js/management_order_modal.js' %}"></script>
 {% endif %}
 {% endblock %}
-
-
