@@ -25,5 +25,7 @@ urlpatterns = [
     path('checkout/', views.checkout, name='checkout'),
     # Management URLs
     path('management/', views.management_view, name="management"),
+    path('profile/', views.profile_view, name='profile'),
+    path('terms/', views.terms_view, name='terms'),
     path('management/order/<uuid:order_id>/order_summary/', views.get_order_summary_json, name='order_summary'),
 ] 
