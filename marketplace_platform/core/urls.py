@@ -11,5 +11,7 @@ urlpatterns = [
     path('invoice/', views.invoice_view, name='invoice'),
     path('order_history/', views.order_history, name='order_history'),
     path('community/', views.community, name='community'),
-    path('management/', views.management_view, name="management")
+    # Management URLs
+    path('management/', views.management_view, name="management"),
+    path('management/order/<uuid:order_id>/order_summary/', views.get_order_summary_json, name='order_summary'),
 ] 
