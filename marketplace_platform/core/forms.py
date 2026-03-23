@@ -59,15 +59,7 @@ class SignupForm(forms.ModelForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.full_name = self.cleaned_data.get("full_name", "").strip()
-        user.username = user.full_name or user.email
-        if User.objects.filter(username__iexact=user.username).exists():
-            base_name = user.full_name or user.email.split("@")[0]
-            username = base_name
-            suffix = 1
-            while User.objects.filter(username__iexact=username).exists():
-                username = f"{base_name}{suffix}"
-                suffix += 1
-            user.username = username
+        user.email = self.cleaned_data.get("email", "").strip().lower()
         organization_name = self.cleaned_data.get("organization_name", "").strip()
         user.organisation_name = organization_name
         user.set_password(self.cleaned_data["password"])
@@ -77,9 +69,9 @@ class SignupForm(forms.ModelForm):
 
 
 class LoginForm(forms.Form):
-    username = forms.CharField(
-        widget=forms.TextInput(
-            attrs={'class': 'form-control', 'placeholder': 'Username'})
+    email = forms.EmailField(
+        widget=forms.EmailInput(
+            attrs={'class': 'form-control', 'placeholder': 'Email'})
     )
     password = forms.CharField(
         widget=forms.PasswordInput(

@@ -13,6 +13,10 @@ class User(AbstractUser):
         RESTAURANT = "Restaurant"
         ADMIN = "Admin"
 
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
+    email = models.EmailField(unique=True)
+
     # Primary key as UUID
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -46,7 +50,7 @@ class User(AbstractUser):
 
 
     def __str__(self):
-        return self.username
+        return self.email
 
 
 class Product(models.Model):
