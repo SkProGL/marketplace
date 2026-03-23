@@ -40,6 +40,45 @@
   background: var(--link-color);
   color: white;
 }
+.widget-stepper-container {
+  display: inline-flex;
+  align-items: center;
+  height: 3rem;
+  gap: 8px;
+  border-radius: 40px;
+}
+
+.widget-stepper-btn {
+  border: none;
+  background: transparent;
+  font-size: 2.2rem;
+  cursor: pointer;
+  padding: 8px;
+  color: #f5ddb7;
+  text-shadow: 1px 1px 1px black;
+}
+
+.widget-stepper-input {
+  width: fit-content;
+  text-align: center;
+  font-style: italic;
+  font-size: 2rem;
+  border: none;
+  outline: none;
+  background: none;
+  color: #f5ddb7;
+  text-shadow: 1px 1px 1px black;
+}
+
+.widget-stepper-input::-webkit-outer-spin-button,
+.widget-stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.widget-stepper-input {
+  -moz-appearance: textfield;
+}
 
 /*CARD ---------------------------------*/
 /* From Uiverse.io by dovatgabriel */
@@ -56,13 +95,14 @@
   cursor: pointer;
   transition: all 120ms;
   display: flex;
+  flex-direction: column; 
   align-items: center;
   justify-content: center;
   background: #fff;
   /* padding: 0.5em; */
   /* padding-bottom: 3.4em; */
 
-  padding: 0 0 3.4rem;
+  /* padding: 0 0 3.4rem; */
   overflow: hidden;
 }
 
@@ -75,18 +115,11 @@
   /*   background 1.7s ease; */
 }
 .card .title {
-  position: absolute;
-  left: 0.625em;
-  bottom: 2em;
-  /* color: #000; */
   font-weight: 700;
   color: #198754;
 }
 
 .card .price {
-  position: absolute;
-  left: 0.625em;
-  bottom: 0.625em;
   color: #000;
   letter-spacing: 3px;
 }
@@ -104,6 +137,62 @@
 .cart {
   position: absolute;
   top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.cart-widget {
+    display: flex;
+    align-items: center;
+}
+
+.add-to-cart-btn {
+    background: #198754;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+    font-family: monospace;
+}
+
+.add-to-cart-btn:hover {
+    background: #157347;
+}
+
+.cart-stepper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 2px;
+}
+
+.cart-stepper .widget-stepper-btn {
+    background: white;
+    border: 1.5px solid #198754;
+    color: #198754;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cart-stepper .widget-stepper-btn:hover {
+    background: #f0fff4;
+}
+
+.stepper-qty {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #198754;
+    min-width: 20px;
+    text-align: center;
 }
 .allergens svg {
   background: none;

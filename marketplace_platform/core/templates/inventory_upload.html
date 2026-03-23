@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
 {% load static %}
-
 {% block content %}
 <link rel="stylesheet" href="{% static 'inventory_upload.css' %}">
 
@@ -93,10 +92,15 @@
     <label>Image</label>
     <label class="upload">
       <input type="file" name="image" />
-      Select image
+      <span class="upload-label">Select image</span>
     </label>
 
     <button type="submit">Upload Product</button>
   </form>
-
+<script>
+  document.querySelector('input[type="file"]').addEventListener('change', function() {
+    const span = this.closest('label.upload').querySelector('.upload-label');
+    span.textContent = this.files && this.files[0] ? this.files[0].name : 'Select image';
+});
+</script>
 {% endblock %}
