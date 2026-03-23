@@ -4,15 +4,17 @@ from django.contrib.auth import authenticate, get_user_model, login
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from core.forms import LoginForm, ProductForm, SignupForm
-from core.utils import get_management_context, handle_management_post
+from core.utils import get_low_stock_products, get_management_context, handle_management_post
+from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
+from django.db import models
 from .models import Order, Product
+from django.contrib.auth.decorators import login_required
 
 User = get_user_model()
 
 def home_view(request):
     items = Product.objects.all()  # Fetch all items from Postgres
     return render(request, 'home.html', {'items': items})
-
 
 def login_view(request):
     if request.method == 'POST':
@@ -27,6 +29,15 @@ def login_view(request):
 
             if user is not None:
                 login(request, user)
+                user_category = getattr(request.user, 'category', None)
+                # For producers, get all products where stock is below defined threshold
+                if user_category == 'Producer':
+                    low_stock_products = get_low_stock_products(user)
+                    for product in low_stock_products:
+                        if product.stock == 0:
+                            messages.error(request, f"No stock: {product.name} has {product.stock} remaining.")
+                        else:
+                            messages.warning(request, f"Low stock: {product.name} has {product.stock} remaining.")
                 messages.success(request, f"Welcome back, {username}!")
                 return redirect('home')  # Go to the marketplace
             else:
@@ -36,7 +47,7 @@ def login_view(request):
 
     return render(request, 'login.html', {'form': form})
 
-
+@login_required
 def upload_item(request):
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES)
@@ -94,12 +105,36 @@ def signup_view(request):
 def invoice_view(request):
     return render(request, 'invoice.html')
 
+@management_access_required
+# Equivalent to: 
+# management_view = management_access_required(management_view)
 def management_view(request: HttpResponse):
     # Construct list of model names
     # Pull specific records for selected model for display
+    
     app_config = apps.get_app_config('core')
-    model_names = [model.__name__ for model in app_config.get_models()]
-    selected_model_name = request.GET.get('model')
+    selected_model_name = request.GET.get('model')  
+    is_superuser = request.user.is_superuser
+    # RBAC - Control access base on user category
+    if is_superuser:
+        allowed_models = get_all_models()
+        user_category = "superuser"
+    else:
+        user_category = getattr(request.user, 'category', None)
+        allowed_models = MANAGE_MODEL_ACCESS.get(user_category, [])
+        if callable(allowed_models):
+            allowed_models = allowed_models()
+
+        # Ensure that user cnanot bypass filtering via URL
+        if selected_model_name and selected_model_name not in allowed_models:
+            messages.error(request, f"Access denied.\n {user_category} cannot access this model.")
+            return redirect('management')
+    
+    # Filter returned models based on allowed_models
+    model_names = [model.__name__ for model in app_config.get_models() if model.__name__ in allowed_models]
+    print(model_names)
+    print(f"{user_category} - {allowed_models}")
+
     print(f"\n[management_view] Selected model is: {selected_model_name}")
 
     # Handle POST actions (Create, Update & Delete)
@@ -118,11 +153,32 @@ def management_view(request: HttpResponse):
     cached_update_attempt = request.session.get('cached_update_attempt', {}).get(selected_model_name, {})
     add_new = request.GET.get('draft') == 'true' or 'draft' in cached_update_attempt
     selected_data = None
+    row_filter = {}
+    distinct = False
+    readonly_fields = set()
     if selected_model_name:
-        selected_model = app_config.get_model(selected_model_name)
-        selected_data = get_management_context(request, selected_model, selected_model_name, add_new)
-    
+        # Producer specific handling
+        if not is_superuser and user_category == 'Producer' :
+            # Get producer account specific rows for selected model
+            row_filter = {
+                'Product':   {'producer': request.user},
+                'Order':     {'orderproduct__product__producer': request.user}, # Order ownership identified via bridging Order => OrderProduct => Product => Producer
+                'StoryPost': {'user': request.user},
+                'Recipe':    {'user': request.user},
+            }.get(selected_model_name, {})
+            distinct = selected_model_name == 'Order' # Only need one product
+            # Specify Order as read-only, excludiong order_status for Producers
+            if selected_model_name == 'Order':
+                order_model = app_config.get_model('Order')
+                readonly_fields = {field.name for field in order_model._meta.fields if field.name != 'order_status'}
+            # Remove id selection fields for producer
+            elif selected_model_name in ('Product', 'StoryPost', 'Recipe'): 
+                owner_field = 'producer' if selected_model_name == 'Product' else 'user'
+                readonly_fields = {owner_field}
 
+        selected_model = app_config.get_model(selected_model_name)
+        selected_data = get_management_context(request, selected_model, selected_model_name, add_new, row_filter, distinct, readonly_fields)
+        
     return render(
             request, 'management.html', {
             'model_names': model_names,
@@ -130,14 +186,15 @@ def management_view(request: HttpResponse):
             'selected_data': selected_data,
         })
 
-
+@login_required
 def order_history(request):
     return render(request, 'order_history.html')
 
-
+@login_required
 def community(request):
     return render(request, 'community.html')
 
+@login_required
 def get_order_summary_json(request, order_id):
     """
     For expanded Order view in management panel.
