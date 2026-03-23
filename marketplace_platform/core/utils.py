@@ -12,7 +12,7 @@ from core.forms import PASSWORD_STRENGTH_ERROR, SignupForm
 from core.models import Order, Product
 
 # Management
-##  Universal readonly fields
+## Universal readonly fields
 READONLY_FIELDS = ['id', 'date_joined', 'last_login']
 ## Producer specific fields
 PRODUCER_ID_FIELDS = {'Product': 'producer', 'StoryPost': 'user', 'Recipe': 'user'} 
@@ -112,7 +112,6 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
             except Exception as e:
                 print(f"FAILED TO DELETE: {e}")
                 return False
-
     # UPDATE
     elif 'update' in request.POST:
         error_msg = None
@@ -215,7 +214,7 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                     messages.error(request, error_html)
                     _cache_attempt(request, selected_model_name, row_id, row_data)
                     return False
-
+        
             return True
         
         except Exception as e:
@@ -234,7 +233,6 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
     Construct display data for selected model for management view table.
     Additionally handles row sorting logic.
     """
-
     # Construct headeres for selected mdoels
     fields = selected_model._meta.fields
     headers = [field.name for field in selected_model._meta.fields]

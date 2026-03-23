@@ -1,7 +1,5 @@
 
 from core.utils import get_low_stock_products, get_pending_orders
-from django.urls import reverse
-
 
 def navbar_alerts(request):
     """
@@ -27,13 +25,11 @@ def navbar_alerts(request):
     # Iterate through all assigned orders and append pending order alerts
     for order in get_pending_orders(request.user):
         items = order.orderproduct_set.select_related("product")
-        # if not items:
-        #     continue
         item_summary = ", ".join(f"{item.product.name} x {item.numPurchased}" for item in items)
         alerts.append({
             "icon": "bag-check-fill",
             "colour": "success",
-            "message": f"New order: {item_summary} from {order.customer.email}",
+            "message": f"New order {order.customer.email}: {item_summary}",
             "link_url": '/management/?model=Order',
             "link_label": "View orders",
         })
@@ -56,3 +52,12 @@ def get_producer_alerts(request):
 
     return {'stock_alert': {'warning_count': warning_count, 'error_count': error_count, 'pending_orders': pending_orders}}
 
+def cart_processor(request):
+    """Calculates the total number of individual items in the cart."""
+    cart = request.session.get('cart', {})
+    
+    # Sum up all the quantities (the values in the dictionary)
+    total_items = sum(cart.values())
+    
+    # This makes 'cart_total_items' available 
+    return {'cart_total_items': total_items}

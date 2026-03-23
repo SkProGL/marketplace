@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5 d-flex justify-content-center">
+    <div class="widget-account-form-card" style="width: 100%; max-width: 900px; padding: 3rem; align-items: flex-start;">
+        <h2 style="color: var(--main-color); margin-bottom: 1.5rem;">Secure Checkout</h2>
+
+        <form action="{% url 'checkout' %}" method="POST" class="w-100">
+            {% csrf_token %}
+            <input type="hidden" name="quantity" value="{{ quantity }}">
+
+            <div class="row w-100">
+                <div class="col-md-6 border-end">
+                    <h5>1. Review Order Summary</h5>
+                    <div class="card mb-3 shadow-sm">
+                        <div class="card-body">
+
+                            {% for item in cart_items %}
+                                <div class="mb-3 border-bottom pb-2">
+                                    <h6 class="text-muted mb-0" style="font-size: 0.85rem;">
+                                        Producer: {{ item.product.producer.organisation_name|default:"Local Farm" }}
+                                    </h6>
+                                    <p class="mb-0"><strong>{{ item.product.name }}</strong></p>
+                                    <p class="mb-0 text-muted">
+                                        Qty: {{ item.quantity }} @ £{{ item.product.price }} each
+                                    </p>
+                                </div>
+                            {% endfor %}
+
+                            <p class="h5 text-success mt-3">Total: £{{ total_price }}</p>
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4">2. Delivery Details</h5>
+                    <div class="mb-3">
+                        <label class="form-label">Delivery Address (Pre-filled)</label>
+                        <textarea class="form-control" readonly rows="2">{{ user_address }}&#10;{{ user_postcode }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Select Delivery Date</label>
+                        <input type="datetime-local" name="delivery_date" class="form-control" min="{{ min_delivery_date }}" required>
+                        {% if form.delivery_date.errors %}
+                            <div class="text-danger mt-2 small">{{ form.delivery_date.errors|join:", " }}</div>
+                        {% endif %}
+                        <small class="text-muted">Note: Earliest delivery is 48 hours from now.</small>
+                    </div>
+                </div>
+
+                <div class="col-md-6 ps-md-4">
+                    <h5>3. Payment Information</h5>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Method</label>
+                        <select class="form-select">
+                            <option>Credit/Debit Card</option>
+                        </select>
+                    </div>
+
+                    <div class="p-3 bg-light rounded border border-secondary-subtle">
+                        <p class="small text-uppercase fw-bold text-muted">Stripe Test Sandbox</p>
+                        <div class="mb-3">
+                            <input type="text" class="form-control" placeholder="Card Number: 4242 4242 4242 4242">
+                        </div>
+                        <div class="row">
+                            <div class="col-6"><input type="text" class="form-control" placeholder="MM/YY"></div>
+                            <div class="col-6"><input type="text" class="form-control" placeholder="CVC: 123"></div>
+                        </div>
+                    </div>
+                    <div class="mt-4 p-3 bg-light rounded border border-secondary-subtle">
+                      <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="recurringToggle" name="recurring" value="true">
+                        <label class="form-check-label fw-bold" for="recurringToggle">Make this a recurring order</label>
+                      </div>
+                      <div id="recurringOptions" style="display: none;">
+                        <div class="mb-2">
+                          <label class="form-label small text-muted">Repeat</label>
+                          <select class="form-select form-select-sm" name="recurrence_type">
+                            <option value="Weekly">Weekly</option>
+                            <option value="Fortnightly">Fortnightly</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label class="form-label small text-muted">On</label>
+                          <select class="form-select form-select-sm" name="recurrence_day">
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                            <option value="7">Sunday</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 py-3 mt-4 fw-bold">
+                        CONFIRM & PAY £{{ total_price }}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+  document.getElementById('recurringToggle').addEventListener('change', function() {
+    document.getElementById('recurringOptions').style.display = this.checked ? 'block' : 'none';
+  });
+</script>
+{% endblock %}
