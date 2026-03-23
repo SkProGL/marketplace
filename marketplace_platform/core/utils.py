@@ -373,6 +373,10 @@ def get_low_stock_products(user):
     )
 
 def get_pending_orders(user):
+    """
+    Get all pending orders for given producers.
+    User for alerts and notifications. 
+    """
     return  Order.objects.filter(
         orderproduct__product__producer=user,
         order_status='PENDING'
