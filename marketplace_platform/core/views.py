@@ -1,8 +1,10 @@
 from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login
 from django.http import HttpResponse, JsonResponse
+from core.forms import LoginForm, ProductForm, SignupForm, CheckoutForm
 from core.forms import LoginForm, ProductForm, SignupForm, CheckoutForm
 from core.utils import get_management_context, handle_management_post
 from django.contrib.auth import authenticate, login, get_user_model
