@@ -40,34 +40,58 @@
   <b>Found {{ items|length }} matches</b>
 </div>
 
+<!--This is the product image styling and positioning-->
 <div class="widget-card-grid">
   {% for item in items %}
-    <div class="card">
+    <div class="card" style="display: flex; flex-direction: column; height:300px; width:190px;overflow: hidden;">
 
-      <div class="image">
+      <div class="image" style="height: 65%; width: 100%; flex-shrink: 0;">
         {% if item.image %}
-          <img src="{{ item.image.url }}" class="card-img-top" style="height: 100%; object-fit: cover;">
+          <img src="{{ item.image.url }}" style="height: 100%; width: 100%; object-fit: cover;">
         {% else %}
-          <img src="{% static 'test.jpg' %}" class="card-img-top" style="height: 100%; object-fit: cover;">
+          <img src="{% static 'test.jpg' %}" style="height: 100%; width: 100%; object-fit: cover;">
         {% endif %}
       </div>
 
-      {% if item.allergens %}
-      <span class="allergens">
+      <div style="display: flex; flex-direction: column; padding: 15px; flex-grow: 1;">
 
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle-warning-icon lucide-message-circle-warning" transform="scale(-1,1)"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-         {{ item.allergens|join:", " }}
-      </span>
-      {% endif %}
+        {% if item.allergens %}
+        <span class="allergens">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle-warning-icon lucide-message-circle-warning" transform="scale(-1,1)"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+            {{ item.allergens|join:", " }}
+        </span>
+        {% endif %}
+<!-- Plus and minus controls, needs to be here so the count would work correctly-->
+        <span class="cart">
+          <div class="widget-stepper-container">
+            <button type="button" class="widget-stepper-btn widget-stepper-minus">−</button>
+            <input class="widget-stepper-input" type="number" value="1" min="1" max="99" step="1">
+            <button type="button" class="widget-stepper-plus widget-stepper-btn">+</button>
+          </div>
+        </span>
+<!-- Replaced widget-stepper.html with css -->
+        {% comment %}
+        <span class="cart">
+          {% include "components/widget-stepper.html" %}
+        </span>
+        {% endcomment %}
+<!--This is the name, price and add to cart-->
+        <form action="{% url 'add_to_cart' item.id %}" method="POST" style="margin: 0;">
+          {% csrf_token %}
+<!--Quantity input-->
+          <input type="hidden" name="quantity" value="1" class="quantity-input">
 
-      <span class="cart">
-        {% include "components/widget-stepper.html" %}
-      </span>
-
-      <span class="title">{{ item.name }}</span>
-      <span class="price">£{{ item.price }}</span>
-
-    </div>
+          <div style="display: flex !important; align-items: center; justify-content: space-between; gap: 8px;">
+            <div style="display: flex; flex-direction: column;">
+              <span class="title">{{ item.name }}</span>
+              <span class="price">£{{ item.price }}</span>
+            </div>
+            <button type="submit" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;">
+              Add to Cart
+            </button>
+          </div>
+        </form>
+      </div> </div>
   {% empty %}
     <p>No items found. Go to 
       <a href="{% url 'inventory_upload' %}">Inventory page</a>
@@ -79,4 +103,50 @@
 <br/>
 <br/>
 <br/>
+<div class="floating-container">
+    <a href="{% url 'clear_cart' %}" style="color: red;">Clear Cart</a>
+    <a href="{% url 'checkout' %}" class="floating-button" style="text-decoration: none;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-cart-fill" viewBox="0 0 16 16">
+          <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L1.01 1.5H.5a.5.5 0 0 1-.5-.5zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+      </svg>
+      <span>Go to Checkout ({{ cart_total_items }} items)</span>
+    </a>
+</div>
+<!--Quantity input sync with stepper-->
+<script>
+  document.querySelectorAll('.card').forEach(card => {
+    const stepperInput = card.querySelector('.widget-stepper-input');
+    const hiddenInput = card.querySelector('.quantity-input');
+
+    if (stepperInput && hiddenInput) {
+      stepperInput.addEventListener('input', () => {
+        hiddenInput.value = stepperInput.value;
+      });
+    }
+  });
+</script>
+<script>
+  document.querySelectorAll('.card').forEach(card => {
+    const stepperInput = card.querySelector('.widget-stepper-input');
+    const hiddenInput = card.querySelector('.quantity-input');
+    const plus = card.querySelector('.widget-stepper-plus');
+    const minus = card.querySelector('.widget-stepper-minus');
+
+    if (plus) plus.onclick = () => {
+      stepperInput.stepUp();
+      if (hiddenInput) hiddenInput.value = stepperInput.value;
+    };
+
+    if (minus) minus.onclick = () => {
+      stepperInput.stepDown();
+      if (hiddenInput) hiddenInput.value = stepperInput.value;
+    };
+
+    if (stepperInput && hiddenInput) {
+      stepperInput.addEventListener('input', () => {
+        hiddenInput.value = stepperInput.value;
+      });
+    }
+  });
+</script>
 {% endblock %}

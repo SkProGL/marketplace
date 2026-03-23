@@ -98,5 +98,14 @@
 
     <button type="submit">Upload Product</button>
   </form>
-
+<script>
+  document.querySelector('input[type="file"]').addEventListener('change', function() {
+    const label = this.closest('label.upload');
+    if (this.files && this.files[0]) {
+      label.textContent = this.files[0].name;
+    } else {
+      label.textContent = 'Select image';
+    }
+  });
+</script>
 {% endblock %}
