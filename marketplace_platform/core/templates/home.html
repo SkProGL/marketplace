@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load cart_tags %}
 {% block content %}
     <link rel="stylesheet" href="{% static 'home.css' %}">
 
@@ -43,17 +44,17 @@
 <!--This is the product image styling and positioning-->
 <div class="widget-card-grid">
   {% for item in items %}
-    <div class="card" style="display: flex; flex-direction: column; height:300px; width:190px;overflow: hidden;">
+    <div class="card" style="display: flex; flex-direction: column; height:280px; width:190px;overflow: hidden;">
 
-      <div class="image" style="height: 65%; width: 100%; flex-shrink: 0;">
+      <div class="image" style="height: 65%; width: 100%; flex-shrink: 0;  overflow: hidden; position: relative;">
         {% if item.image %}
-          <img src="{{ item.image.url }}" style="height: 100%; width: 100%; object-fit: cover;">
+          <img src="{{ item.image.url }}" style="height: 100%; width: 100%; object-fit: cover; display: block;">
         {% else %}
           <img src="{% static 'test.jpg' %}" style="height: 100%; width: 100%; object-fit: cover;">
         {% endif %}
       </div>
 
-      <div style="display: flex; flex-direction: column; padding: 15px; flex-grow: 1;">
+      <div style="display: flex; padding: 15px; flex-grow: 1;">
 
         {% if item.allergens %}
         <span class="allergens">
@@ -62,36 +63,31 @@
         </span>
         {% endif %}
 <!-- Plus and minus controls, needs to be here so the count would work correctly-->
-        <span class="cart">
-          <div class="widget-stepper-container">
-            <button type="button" class="widget-stepper-btn widget-stepper-minus">−</button>
-            <input class="widget-stepper-input" type="number" value="1" min="1" max="99" step="1">
-            <button type="button" class="widget-stepper-plus widget-stepper-btn">+</button>
-          </div>
-        </span>
-<!-- Replaced widget-stepper.html with css -->
-        {% comment %}
-        <span class="cart">
-          {% include "components/widget-stepper.html" %}
-        </span>
-        {% endcomment %}
-<!--This is the name, price and add to cart-->
-        <form action="{% url 'add_to_cart' item.id %}" method="POST" style="margin: 0;">
-          {% csrf_token %}
-<!--Quantity input-->
-          <input type="hidden" name="quantity" value="1" class="quantity-input">
-
-          <div style="display: flex !important; align-items: center; justify-content: space-between; gap: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
             <div style="display: flex; flex-direction: column;">
-              <span class="title">{{ item.name }}</span>
-              <span class="price">£{{ item.price }}</span>
+                <span class="title">{{ item.name }}</span>
+                <span class="price">£{{ item.price }}</span>
             </div>
-            <button type="submit" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;">
-              Add to Cart
-            </button>
-          </div>
-        </form>
-      </div> </div>
+<!--This is the name, price and add to cart-->
+            <!-- Cart widget: shows button OR stepper depending on cart state -->
+            <div class="cart-widget" data-product-id="{{ item.id }}">
+                {% if item.id|stringformat:"s" in cart_items %}
+                    <!-- Already in cart — show stepper -->
+                    <div class="cart-stepper">
+                        <button class="widget-stepper-btn" onclick="updateCart('{{ item.id }}', -1, this)">−</button>
+                        <span class="stepper-qty">{{ cart_items|get_item:item.id }}</span>
+                        <button class="widget-stepper-btn" onclick="updateCart('{{ item.id }}', 1, this)">+</button>
+                    </div>
+                {% else %}
+                    <!-- Not in cart — show Add button -->
+                    <button class="add-to-cart-btn" onclick="addToCart('{{ item.id }}', this)">
+                        Add to Cart
+                      </button>
+                {% endif %}
+            </div>
+        </div> 
+    </div>  
+</div>
   {% empty %}
     <p>No items found. Go to 
       <a href="{% url 'inventory_upload' %}">Inventory page</a>
@@ -103,15 +99,6 @@
 <br/>
 <br/>
 <br/>
-<div class="floating-container">
-    <a href="{% url 'clear_cart' %}" style="color: red;">Clear Cart</a>
-    <a href="{% url 'checkout' %}" class="floating-button" style="text-decoration: none;">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-cart-fill" viewBox="0 0 16 16">
-          <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L1.01 1.5H.5a.5.5 0 0 1-.5-.5zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
-      </svg>
-      <span>Go to Checkout ({{ cart_total_items }} items)</span>
-    </a>
-</div>
 <!--Quantity input sync with stepper-->
 <script>
   document.querySelectorAll('.card').forEach(card => {
@@ -149,4 +136,5 @@
     }
   });
 </script>
+<script src="{% static 'cart.js' %}"></script>
 {% endblock %}
