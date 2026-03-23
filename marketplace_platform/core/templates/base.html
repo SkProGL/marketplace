@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Marketplace</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -36,24 +37,25 @@
                             Logged in as: <strong>{{ user.username }}</strong>
                         </span>
                         <a class="nav-link" href="">Community</a>
-                        <a class="nav-link" href="">Cart</a>
                         <a class="nav-link" href="">Profile</a>
                         <a class="nav-link" href="{% url 'order_history' %}" >Order history</a>
                         <a class="nav-link" href="{% url 'invoice' %}">Invoice</a>
-                        <a href="{% url 'inventory_upload' %}" class="btn btn-sm btn-success me-2">
-                            + Upload Product
-                        </a>
-                         <a href="{% url 'management' %}" class="btn btn-sm btn-success me-2">
-                            Management panel
-                         <a href="{% url 'inventory_upload' %}" class="btn btn-sm btn-success me-2">
-                            Inventory
-                         </a>
+                        <a href="{% url 'inventory_upload' %}" class="btn btn-sm btn-success me-2">+ Upload Product</a>
+                        <a href="{% url 'management' %}" class="btn btn-sm btn-success me-2">Management panel</a>
+                        <div class="cart-icon-wrapper" id="cartToggle" onclick="openCart()">
+                            <i class="bi bi-basket2"></i>
+                            <span class="cart-bubble">£{{ cart_total_price|default:"0.00" }}</span>
+                        </div>
+
+
                         <form action="{% url 'logout' %}" method="post">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-outline-danger me-2">Logout</button>
                         </form>
                     {% else %}
-                        <a class="nav-link" href="">Cart</a>
+                        <a class="cart-icon-wrapper" href="{% url 'login' %}">
+                            <i class="bi bi-basket2"></i>
+                        </a>
                         <a class="nav-link" href="{% url 'invoice' %}">Invoice</a>
                         <a class="nav-link" href="{% url 'login' %}">Log in</a>
                         <a class="nav-link" href="{% url 'signup' %}">Sign up</a>
@@ -89,5 +91,24 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- To cause modal windows to respect base template (nav bar, etc.) -->
     {% block modals %}{% endblock %}
+    <!-- Cart Drawer -->
+    <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
+    <div class="cart-drawer" id="cartDrawer">
+        <div class="cart-drawer-header">
+            <h5>Your Cart</h5>
+            <button class="cart-close-btn" onclick="closeCart()">✕</button>
+        </div>
+        <div class="cart-drawer-items" id="cartDrawerItems">
+            <p class="cart-empty-msg">Your cart is empty</p>
+        </div>
+        <div class="cart-drawer-footer" id="cartDrawerFooter" style="display:none;">
+            <div class="cart-drawer-total">
+                <span>Total</span>
+                <span id="cartDrawerTotal">£0.00</span>
+            </div>
+            <a href="/checkout/" class="cart-checkout-btn">Go to Checkout</a>
+            <a href="/cart/clear/" class="cart-clear-btn">Clear Cart</a>
+        </div>
+    </div>
 </body>
 </html>
