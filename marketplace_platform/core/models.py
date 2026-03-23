@@ -5,7 +5,6 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import AbstractUser
 import uuid
 
-
 class User(AbstractUser):
     class Category(models.TextChoices):
         CUSTOMER = "Customer"
@@ -44,6 +43,7 @@ class User(AbstractUser):
         help_text='Specific permissions for this user.',
         verbose_name='user permissions',
     )
+
 
     def __str__(self):
         return self.username
@@ -125,8 +125,10 @@ class Product(models.Model):
     # Stock quantity
     stock = models.IntegerField()
     # Percentage to indicate how much stock is left before an alert is sent
-    stock_alert_threshold = models.DecimalField(
-        max_digits=5, decimal_places=2, default=0)
+    # stock_alert_threshold = models.DecimalField(
+        # max_digits=5, decimal_places=2, default=0)
+    # Replace with absolute number as perecentage needs max stock
+    stock_alert_threshold = models.IntegerField()
     # List of food allergens
     allergens = ArrayField(models.CharField(
         max_length=128, blank=True), default=list)
@@ -281,7 +283,6 @@ class Payment(models.Model):
         max_length=20, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
-
 
 class OrderPayment(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
