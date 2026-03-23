@@ -12,11 +12,12 @@ urlpatterns = [
     path('community/', views.community, name='community'),
     # Order URLs
     path('order_history/', views.order_history, name='order_history'),
-    path('orders/', views.order_history, name='order'),
     path('orders/<uuid:order_id>/', views.order_detail, name='order_detail'),
     path('orders/<uuid:order_id>/reorder/', views.reorder, name='reorder'),
     # Checkout URLs
     path('add-to-cart/<uuid:product_id>/', views.add_to_cart, name='add_to_cart'),
+    path('cart/contents/', views.cart_contents, name='cart_contents'),
+    path('cart/update/<uuid:product_id>/', views.update_cart_ajax, name='update_cart_ajax'),
     path('cart/clear/', views.clear_cart, name='clear_cart'),
     path('checkout/', views.checkout, name='checkout'),
     
