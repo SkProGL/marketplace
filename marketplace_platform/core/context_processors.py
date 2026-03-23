@@ -52,12 +52,20 @@ def get_producer_alerts(request):
 
     return {'stock_alert': {'warning_count': warning_count, 'error_count': error_count, 'pending_orders': pending_orders}}
 
+# core/context_processors.py
+from .models import Product
 def cart_processor(request):
-    """Calculates the total number of individual items in the cart."""
     cart = request.session.get('cart', {})
-    
-    # Sum up all the quantities (the values in the dictionary)
+    # cart is assumed to be {product_id: {'price': x, 'quantity': y}}
     total_items = sum(cart.values())
-    
-    # This makes 'cart_total_items' available 
-    return {'cart_total_items': total_items}
+    total_price = 0
+    if cart:
+        products = Product.objects.filter(id__in=cart.keys())
+        for product in products:
+            quantity = cart.get(str(product.id), 0)
+            total_price += product.price * quantity
+
+    return {
+        'cart_total_items': total_items,
+        'cart_total_price': f"{total_price:.2f}"
+    }

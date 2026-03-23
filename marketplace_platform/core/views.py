@@ -1,21 +1,86 @@
 from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from core.forms import LoginForm, ProductForm, SignupForm, CheckoutForm
-from core.utils import get_low_stock_products, get_management_context, handle_management_post
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
-from django.db import models
+from core.utils import get_management_context, handle_management_post
 from .models import User, Product, Order, OrderProduct
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from datetime import timedelta,date
+from datetime import timedelta
 
 # Create your views here.
 User = get_user_model()
+import json
 
+@login_required
+def update_cart_ajax(request, product_id):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        delta = int(data.get('delta', 1))
+        cart = request.session.get('cart', {})
+        pid = str(product_id)
+
+        cart[pid] = cart.get(pid, 0) + delta
+        if cart[pid] <= 0:
+            del cart[pid]
+
+        request.session['cart'] = cart
+        request.session.modified = True
+
+        # Build full cart item list for the drawer
+        cart_items_data = []
+        total_price = 0
+        if cart:
+            products = Product.objects.filter(id__in=cart.keys())
+            for product in products:
+                qty = cart.get(str(product.id), 0)
+                subtotal = float(product.price) * qty
+                total_price += subtotal
+                cart_items_data.append({
+                    'id': str(product.id),
+                    'name': product.name,
+                    'price': float(product.price),
+                    'quantity': qty,
+                    'subtotal': round(subtotal, 2),
+                    'image': product.image.url if product.image else None,
+                })
+
+        return JsonResponse({
+            'quantity': cart.get(pid, 0),
+            'total_items': sum(cart.values()),
+            'total_price': round(total_price, 2),
+            'cart_items': cart_items_data,
+        })
+@login_required   
+def cart_contents(request):
+    cart = request.session.get('cart', {})
+    cart_items_data = []
+    total_price = 0
+    if cart:
+        products = Product.objects.filter(id__in=cart.keys())
+        for product in products:
+            qty = cart.get(str(product.id), 0)
+            subtotal = float(product.price) * qty
+            total_price += subtotal
+            cart_items_data.append({
+                'id': str(product.id),
+                'name': product.name,
+                'price': float(product.price),
+                'quantity': qty,
+                'subtotal': round(subtotal, 2),
+                'image': product.image.url if product.image else None,
+            })
+    return JsonResponse({
+        'total_items': sum(cart.values()),
+        'total_price': round(total_price, 2),
+        'cart_items': cart_items_data,
+    })
+    
 def get_next_occurrence(order):
     """Calculate the next delivery date based on recurrence type."""
     today = timezone.now().date()
@@ -92,7 +157,7 @@ def modify_next_occurrence(request, order_id):
 def order_history(request):
     # Fetch orders for the logged-in user, sorted by most recent first
     orders = Order.objects.filter(customer=request.user).order_by('-order_date')
-    return render(request, 'order_management.html', {'orders': orders})
+    return render(request, 'order_history.html', {'orders': orders})
 
 @login_required
 def order_detail(request, order_id):
@@ -104,7 +169,7 @@ def reorder(request, order_id):
     old_order = get_object_or_404(Order, id=order_id, customer=request.user)
     # Logic to add items to cart would go here
     # Check availability and add to session or Cart model
-    return redirect('cart')
+    return redirect('checkout')
 
 @login_required
 def checkout(request):
@@ -170,9 +235,23 @@ def checkout(request):
     })
     
 def home_view(request):
-    items = Product.objects.all()  # Fetch all items from Postgres
-    return render(request, 'home.html', {'items': items})
+    cart = request.session.get('cart', {})
+    
+    # Calculate total price
+    total_price = 0
+    if cart:
+        products = Product.objects.filter(id__in=cart.keys())
+        for product in products:
+            qty = cart.get(str(product.id), 0)
+            total_price += float(product.price) * qty
 
+    return render(request, 'home.html', {
+        'items': Product.objects.all(),
+        'cart_items': cart,
+        'cart_total_price': round(total_price, 2),  
+    })
+
+    
 def add_to_cart(request, product_id):
     if request.method == 'POST':
         # Get the current memory, or start a blank dictionary
@@ -224,6 +303,7 @@ def login_view(request):
 def upload_item(request):
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES)
+        print(request.FILES,request.POST)
         if form.is_valid():
             print(f"\033[42m\033[30mform valid\033[0m")
             product = form.save(commit=False)
@@ -363,10 +443,6 @@ def management_view(request: HttpResponse):
             'selected_data': selected_data,
         })
 
-
-@login_required
-def order_history(request):
-    return render(request, 'order_history.html')
 
 @login_required
 def community(request):
