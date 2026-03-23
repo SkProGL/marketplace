@@ -1,6 +1,6 @@
 <!-- Management panel: Table for displaying model records -->
 <div class="table-responsive m-1" style="max-height: 75vh; overflow: auto;">
-<table class="table table-sm  table-striped align-middle mb-0">
+<table class="table table-sm align-middle mb-0">
     <thead class="table-light sticky-top" style="z-index: 1;">
         <!-- Construct headers -->
         <tr > 
@@ -40,7 +40,7 @@
         <tbody>
             {% for row in selected_data.rows %}
             <!-- Set draft row to green for emphasis -->
-            <tr data-row-id="{{ row.id }}" class="{% if row.id == 'draft' %}table-success{% endif %}">
+            <tr data-row-id="{{ row.id }}" class="{% if row.id == 'draft' %}table-success{% elif row.row_class %}{{ row.row_class }}{% endif %}">
                 {% if selected_model_name == "Order" %} 
                     <td class="text-center">
                         <!-- Define class for order summary JS script -->
@@ -118,10 +118,13 @@
 
                 </td>
                 {% endfor %}
+                <!-- Disable deletion for Producer for Order mlde -->
+                {% if not user.category == 'Producer' or not selected_model_name == 'Order' or user.is_superuser%}
                 <!-- Delete button -->
                 <td class="text-center">
                     <button type="submit" name="delete" value="{{ row.id }}" class="btn btn-sm btn-outline-danger mx-auto m-2 shadow-sm" onclick="return confirm('Are you sure you want to permanently delete this {{ selected_model_name }}?');"><i class="bi bi-trash"></i></button>
                 </td>
+                {% endif %}
             </tr>
             {% endfor %}
         </tbody>

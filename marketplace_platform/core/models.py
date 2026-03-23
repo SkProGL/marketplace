@@ -2,9 +2,20 @@ from django.db import models
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 import uuid
 
+# Define Custom UserManager to set emial as username
+class UserManager(BaseUserManager):
+    # Override to remove emial requirement
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
 
 class User(AbstractUser):
     class Category(models.TextChoices):
@@ -13,6 +24,17 @@ class User(AbstractUser):
         COMMUNITY = "Community group"
         RESTAURANT = "Restaurant"
         ADMIN = "Admin"
+
+    # Aplly custom UserManager for email-based superuser creation
+    objects = UserManager()
+    # Disable default AbstractUser fields
+    username = None
+    first_name = None
+    last_name = None
+    #  Set email as default for authentication
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
+    email = models.EmailField(unique=True)
 
     # Primary key as UUID
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -45,8 +67,9 @@ class User(AbstractUser):
         verbose_name='user permissions',
     )
 
+
     def __str__(self):
-        return self.username
+        return self.email
 
 
 class Product(models.Model):
@@ -125,8 +148,10 @@ class Product(models.Model):
     # Stock quantity
     stock = models.IntegerField()
     # Percentage to indicate how much stock is left before an alert is sent
-    stock_alert_threshold = models.DecimalField(
-        max_digits=5, decimal_places=2, default=0)
+    # stock_alert_threshold = models.DecimalField(
+        # max_digits=5, decimal_places=2, default=0)
+    # Replace with absolute number as perecentage needs max stock
+    stock_alert_threshold = models.IntegerField()
     # List of food allergens
     allergens = ArrayField(models.CharField(
         max_length=128, blank=True), default=list)
@@ -286,7 +311,6 @@ class Payment(models.Model):
         max_length=20, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
-
 
 class OrderPayment(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
