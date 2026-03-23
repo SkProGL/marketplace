@@ -2,8 +2,20 @@ from django.db import models
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 import uuid
+
+# Define Custom UserManager to set emial as username
+class UserManager(BaseUserManager):
+    # Override to remove emial requirement
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
 
 class User(AbstractUser):
     class Category(models.TextChoices):
@@ -13,6 +25,13 @@ class User(AbstractUser):
         RESTAURANT = "Restaurant"
         ADMIN = "Admin"
 
+    # Aplly custom UserManager for email-based superuser creation
+    objects = UserManager()
+    # Disable default AbstractUser fields
+    username = None
+    first_name = None
+    last_name = None
+    #  Set email as default for authentication
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
     email = models.EmailField(unique=True)
