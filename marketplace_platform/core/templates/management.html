@@ -32,6 +32,21 @@
                                 {% if model_name == selected_model_name %}checked{% endif %}>
                         <label class="btn btn-outline-success" for="btnradio{{ forloop.counter }}">
                             {{ model_name }}
+                            <!-- Producers - Show alert badges indicating stock and pending order counts -->
+                            {% if model_name == "Product" %}
+                                {% if stock_alert.warning_count > 0 %}
+                                <span class="badge bg-warning">{{ stock_alert.warning_count }}</span>
+                                {% endif %}
+                                {% if stock_alert.error_count > 0 %}
+                                <span class="badge bg-danger">{{ stock_alert.error_count }}</span>
+                                {% endif %}
+
+                            {% endif %}
+                            {% if model_name == "Order" %}
+                                {% if stock_alert.pending_orders > 0 %}
+                                <span class="badge bg-info">{{ stock_alert.pending_orders }}</span>
+                                {% endif %}
+                            {% endif %}
                         </label>
                     {% endfor %}
                     </div> 
