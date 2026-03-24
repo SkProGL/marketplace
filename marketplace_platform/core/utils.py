@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.apps import AppConfig
 from django.db import models
 from django.contrib import messages
@@ -380,3 +381,28 @@ def get_pending_orders(user):
         order_status='PENDING'
     ).distinct()
     
+def get_next_occurrence(order):
+    """Calculate the next delivery date based on recurrence type."""
+    today = timezone.now().date()
+    base = order.delivery_date.date()
+    
+    if order.recurrence_type == 'Weekly':
+        delta = 7
+    elif order.recurrence_type == 'Fortnightly':
+        delta = 14
+    else:
+        return None
+
+    # Keep adding delta until we get a future date
+    next_date = base
+    while next_date <= today:
+        next_date += timedelta(days=delta)
+    return next_date
+
+
+def get_recurring_orders_context(user):
+    orders = Order.objects.filter(
+        customer=user,
+        recurring=True,
+    ).prefetch_related('orderproduct_set__product')
+    return [ {'order': order, 'next_date': get_next_occurrence(order), 'items': order.orderproduct_set.all()} for order in orders ]

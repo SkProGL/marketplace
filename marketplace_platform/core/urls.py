@@ -12,9 +12,11 @@ urlpatterns = [
     path('community/', views.community, name='community'),
     # Recurring order URLS
     path('orders/recurring/', views.recurring_orders, name='recurring_orders'),
-    path('orders/recurring/<uuid:order_id>/modify/', views.modify_next_occurrence, name='modify_next_occurrence'),
+    path('orders/recurring/<uuid:order_id>/modify/', views.modify_recurring_order, name='modify_recurring_order'),
+    path('orders/recurring/<uuid:order_id>/pause/', views.pause_recurring_order, name='pause_recurring_order'),
+    path('orders/recurring/<uuid:order_id>/delete/', views.delete_recurring_order, name='delete_recurring_order'),
     # Order URLs
-    path('order_history/', views.order_history, name='order_history'),
+    path('order_management/', views.order_management, name='order_management'),
     path('orders/<uuid:order_id>/', views.order_detail, name='order_detail'),
     path('orders/<uuid:order_id>/reorder/', views.reorder, name='reorder'),
     # Checkout URLs

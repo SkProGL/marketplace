@@ -7,7 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from core.forms import LoginForm, ProductForm, SignupForm, CheckoutForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
-from core.utils import get_management_context, handle_management_post
+from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from .models import User, Product, Order, OrderProduct
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -16,6 +16,8 @@ from datetime import timedelta
 # Create your views here.
 User = get_user_model()
 import json
+
+
 
 @login_required
 def update_cart_ajax(request, product_id):
@@ -119,45 +121,78 @@ def recurring_orders(request):
     })
 
 @login_required
-def modify_next_occurrence(request, order_id):
-    order = get_object_or_404(Order, id=order_id, customer=request.user)
+def modify_recurring_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id, customer=request.user, recurring=True)
 
     if request.method == 'POST':
-        # Create a brand new one-off order for next occurrence only
-        next_date = get_next_occurrence(order)
-        new_order = Order.objects.create(
-            customer=request.user,
-            total_price=order.total_price,
-            delivery_date=timezone.make_aware(
-                timezone.datetime.combine(next_date, timezone.datetime.min.time())
-            ),
-            order_status='PENDING',
-            recurring=False,  # This is a one-off modification, not a template
-        )
-
-        # Copy items with updated quantities from POST
-        for op in order.orderproduct_set.all():
-            new_qty = int(request.POST.get(f'qty_{op.id}', op.numPurchased))
-            OrderProduct.objects.create(
-                order=new_order,
-                product=op.product,
-                numPurchased=new_qty,
-            )
-
-        messages.success(request, "Next occurrence updated. The recurring template is unchanged.")
-        return redirect('recurring_orders')
-
-    return render(request, 'modify_occurrence.html', {
+        for order_product in order.orderproduct_set.all():
+            new_quantity = int(request.POST.get(f'qty_{order_product.id}', order_product.numPurchased))
+            order_product.numPurchased = new_quantity
+            order_product.save()
+        messages.success(request, "Recurring order updated for all future deliveries.")
+        return redirect('order_management')
+    return render(request, 'modify_recurring.html', {
         'order': order,
         'next_date': get_next_occurrence(order),
         'items': order.orderproduct_set.all(),
     })
+    # if request.method == 'POST':
+    #     # Create a brand new one-off order for next occurrence only
+    #     next_date = get_next_occurrence(order)
+    #     new_order = Order.objects.create(
+    #         customer=request.user,
+    #         total_price=order.total_price,
+    #         delivery_date=timezone.make_aware(
+    #             timezone.datetime.combine(next_date, timezone.datetime.min.time())
+    #         ),
+    #         order_status='PENDING',
+    #         recurring=False,  # This is a one-off modification, not a template
+    #     )
+
+    #     # Copy items with updated quantities from POST
+    #     for op in order.orderproduct_set.all():
+    #         new_qty = int(request.POST.get(f'qty_{op.id}', op.numPurchased))
+    #         OrderProduct.objects.create(
+    #             order=new_order,
+    #             product=op.product,
+    #             numPurchased=new_qty,
+    #         )
+
+    #     messages.success(request, "Next occurrence updated. The recurring template is unchanged.")
+    #     return redirect('recurring_orders')
+
+    # return render(request, 'modify_occurrence.html', {
+    #     'order': order,
+    #     'next_date': get_next_occurrence(order),
+    #     'items': order.orderproduct_set.all(),
+    # })
     
 @login_required
-def order_history(request):
-    # Fetch orders for the logged-in user, sorted by most recent first
+def pause_recurring_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id, customer=request.user, recurring=True)
+    if request.method == 'POST':
+        order.paused = not order.paused
+        order.save()
+        state = "paused" if order.paused else "resumed"
+        messages.success(request, f"Recurring order {state}.")
+    return redirect('order_management')
+
+@login_required
+def delete_recurring_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id, customer=request.user, recurring=True)
+    if request.method == 'POST':
+        order.delete()
+        messages.success(request, "Recurring order deleted.")
+    return redirect('order_management')
+
+@login_required
+def order_management(request):
     orders = Order.objects.filter(customer=request.user).order_by('-order_date')
-    return render(request, 'order_history.html', {'orders': orders})
+    print(orders)
+    return render(request, 'order_management.html', {
+        'orders': orders,
+        'orders_with_next': get_recurring_orders_context(request.user)
+    })
 
 @login_required
 def order_detail(request, order_id):
@@ -165,6 +200,7 @@ def order_detail(request, order_id):
     return render(request, 'order_detail.html', {'order': order})
 
 @login_required
+# TODO
 def reorder(request, order_id):
     old_order = get_object_or_404(Order, id=order_id, customer=request.user)
     # Logic to add items to cart would go here
@@ -221,7 +257,7 @@ def checkout(request):
             request.session['cart'] = {}
             
             messages.success(request, "Order placed successfully!")
-            return redirect('order_history')
+            return redirect('order_management')
     else:
         form = CheckoutForm()
 
