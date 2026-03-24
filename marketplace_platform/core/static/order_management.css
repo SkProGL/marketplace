@@ -2,7 +2,7 @@
 .oh-header h1 { font-size: 1.8rem; font-weight: 600; margin-bottom: 4px; }
 .oh-header p { color: #888; font-size: 0.9rem; }
 .oh-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; margin-top: 24px; }
-.oh-card { background: white; border: 1.5px solid #e0e0e0; border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+.oh-card { background: white; border: 1.5px solid #e0e0e0; border-radius: 10px; margin-bottom: 16px; overflow: hidden; padding:0.5em }
 .oh-card-header { padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; }
 .oh-meta { display: flex; align-items: center; gap: 12px; }
 .oh-num { font-size: 0.75rem; color: #888; text-transform: uppercase; }

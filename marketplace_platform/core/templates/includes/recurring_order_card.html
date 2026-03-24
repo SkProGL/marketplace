@@ -1,0 +1,51 @@
+<div class="oh-card">
+  {% if orders_with_next %}
+    {% for entry in orders_with_next %}
+    <div class="widget-account-form-card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h5 class="mb-0">{{ entry.order.recurrence_type }} Order</h5>
+          <small class="text-muted">
+            Every 
+            {% for val, label in entry.order.Weekday.choices %}
+              {% if val == entry.order.recurrence_day %}{{ label }}{% endif %}
+            {% endfor %}
+          </small>
+        </div>
+      </div>
+      <span class="badge bg-success">Next: {{ entry.next_date }}</span>
+      <table class="table table-sm">
+        <thead><tr><th>Product</th><th>Qty</th><th>Price each</th></tr></thead>
+        <tbody>
+          {% for op in entry.items %}
+          <tr>
+            <td>{{ op.product.name }}</td>
+            <td>{{ op.numPurchased }}</td>
+            <td>£{{ op.product.price }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <!-- <p class="text-muted small">
+        <i class="bi bi-exclamation-triangle-fill " style="color: orange;"></i> Modifying will only affect the next delivery on <strong>{{ entry.next_date }}</strong>. Your recurring template stays unchanged.
+      </p> -->
+  <a href="{% url 'modify_recurring_order' entry.order.id %}" class="btn btn-outline-success btn-sm">
+    Modify
+  </a>
+  <form action="{% url 'pause_recurring_order' entry.order.id %}" method="POST" class="d-inline">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-warning btn-sm">{% if entry.order.paused %} Unpause {% else %} Pause {% endif %}</button>
+  </form>
+  <form action="{% url 'delete_recurring_order' entry.order.id %}" method="POST" class="d-inline">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-danger btn-sm"
+      onclick="return confirm('Delete this recurring order?')">Delete</button>
+  </form>
+    </div>
+    {% endfor %}
+
+  {% else %}
+    <p class="text-muted">You have no recurring orders. Set one up at checkout!</p>
+  {% endif %}
+</div>
+</div>
