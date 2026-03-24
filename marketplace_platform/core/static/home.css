@@ -93,8 +93,13 @@
 /* From Uiverse.io by dovatgabriel */
 
 .widget-card-grid {
-  display: inline-flex;
-  gap: 4rem;
+  /* display: inline-flex; */
+  /* gap: 4rem; */
+
+  display: grid;
+  width: 100%;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 .card {
   position: relative;
