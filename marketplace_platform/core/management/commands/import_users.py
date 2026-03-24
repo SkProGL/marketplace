@@ -12,9 +12,7 @@ class Command(BaseCommand):
             reader=csv.DictReader(file)
             for row in reader:
                 try:
-                    first_name=row.get("first_name")
-                    last_name=row.get("last_name")
-                    username=first_name.lower()+"_"+last_name.lower()
+                    name=row.get("name")
                     category_map={
                         "customer":"Customer",
                         "producer":"Producer",
@@ -25,14 +23,12 @@ class Command(BaseCommand):
                     category=category_map.get(raw_category,"Customer")
 
 
-                    if User.objects.filter(username=username).first():
+                    if User.objects.filter(full_name=name).first():
                         continue
 
                     user=User.objects.create_user(
-                        username=username,
                         password=row.get("password_hash"),
-                        first_name=first_name,
-                        last_name=last_name,
+                        full_name=row.get("name"),
                         email=row.get("email",""),
                         category=category,
                         phone=row.get("phone",""),
@@ -40,7 +36,7 @@ class Command(BaseCommand):
                         postcode=row.get("postcode",""),
                         organisation_name=row.get("organisation_name","")
                     )
-                    print(f"Created: {username}")
+                    print(f"Created: {user.full_name}")
                 except Exception as e:
                     print(f"Error with row {row}: {e}")
             print("done")

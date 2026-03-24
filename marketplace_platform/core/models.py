@@ -16,6 +16,15 @@ class UserManager(BaseUserManager):
         user.set_password(password)
         user.save(using=self._db)
         return user
+    
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError("The Email field must be set")
+        email=self.normalize_email(email)
+        user=self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return User
 
 class User(AbstractUser):
     class Category(models.TextChoices):
@@ -38,6 +47,8 @@ class User(AbstractUser):
 
     # Primary key as UUID
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    full_name = models.CharField(max_length=128, blank=True, default="")
     # User category
     category = models.CharField(
         max_length=20, choices=Category.choices, default=Category.CUSTOMER)
