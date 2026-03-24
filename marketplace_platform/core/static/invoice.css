@@ -9,6 +9,7 @@
   font-family: "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;
   color: #555;
   display: block;
+  background: white;
 }
 
 .invoice-box table {
@@ -117,18 +118,18 @@
 .nav-home span:last-child {
   color: black;
 }
-.title a span:last-child{
+.title a span:last-child {
   margin-right: 5rem;
 }
 
-button,
-a {
+#invoice-download-pdf,
+#invoice-back-home {
   display: flex;
   justify-content: center;
   align-items: center;
   margin: 10px auto;
 }
-button {
+#invoice-download-pdf {
   background: var(--main-color);
   border: 1px solid var(--main-color);
   color: white;

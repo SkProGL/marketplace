@@ -30,12 +30,12 @@
     </div>
 
     <div class="ch-season-filter" style="margin-top: 12px; gap: 10px; flex-wrap: wrap;">
-        <input id="apiMealQuery" type="text" value="" placeholder="Search recipes" style="padding:10px 12px; border:1px solid #d1d5db; border-radius:10px; min-width:220px; flex:1;">
-        <button id="apiMealSearchBtn" type="button" class="ch-season-btn" style="border:none; cursor:pointer;">Search</button>
+        <input id="community-api-meal-query" type="text" value="" placeholder="Search recipes" style="padding:10px 12px; border:1px solid #d1d5db; border-radius:10px; min-width:220px; flex:1;">
+        <button id="community-api-meal-search-btn" type="button" class="ch-season-btn" style=" padding: 10px 16px; border-radius: 10px; color: rgb(0 0 0 / 75%); cursor: pointer; background: rgb(245 222 179 / 40%); border: 1px solid #b59a66;">Search</button>
     </div>
-    <div id="apiMealStatus" style="margin: 12px 0; color: #6b7280;"></div>
-    <div class="ch-grid" id="recipesGrid">
-        <div class="ch-card" id="recipesLoadingCard">
+    <div id="community-api-meal-status" style="margin: 12px 0; color: #6b7280;"></div>
+    <div class="ch-grid" id="community-recipes-grid">
+        <div class="ch-card" id="community-recipes-loading-card">
             <div class="ch-card-img ch-placeholder">
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
             </div>
@@ -106,11 +106,11 @@ function toggleRecipeText(id, fullText) {
 }
 
 (function () {
-    const queryInput = document.getElementById('apiMealQuery');
-    const searchBtn = document.getElementById('apiMealSearchBtn');
-    const status = document.getElementById('apiMealStatus');
-    const grid = document.getElementById('recipesGrid');
-    const loadingCard = document.getElementById('recipesLoadingCard');
+    const queryInput = document.getElementById('community-api-meal-query');
+    const searchBtn = document.getElementById('community-api-meal-search-btn');
+    const status = document.getElementById('community-api-meal-status');
+    const grid = document.getElementById('community-recipes-grid');
+    const loadingCard = document.getElementById('community-recipes-loading-card');
 
     function pickSeason(area, category) {
         const text = `${area || ''} ${category || ''}`.toLowerCase();

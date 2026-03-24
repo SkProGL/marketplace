@@ -16,7 +16,7 @@
     html2pdf(element);
   }
 </script>
-{% include "components/widget-order-validated.html" %}
+{# {% include "components/widget-order-validated.html" %} #}
 <div class="invoice-box">
   <table cellpadding="0" cellspacing="0">
     <tr class="top">
@@ -95,9 +95,9 @@
     </tr>
   </table>
 
-  <button onclick="download_pdf()" type="button">Download .PDF</button>
+  <button onclick="download_pdf()" type="button" id="invoice-download-pdf">Download .PDF</button>
   <a href="/" style="font-family: monospace; color: var(--secondary-color)"
-    >Back to marketplace</a
+    id="invoice-back-home">Back to marketplace</a
   >
 </div>
 
