@@ -36,7 +36,7 @@ class Command(BaseCommand):
                         postcode=row.get("postcode",""),
                         organisation_name=row.get("organisation_name","")
                     )
-                    print(f"Created: {user.full_name}")
+                    #print(f"Created: {name}")
                 except Exception as e:
                     print(f"Error with row {row}: {e}")
             print("done")

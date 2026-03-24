@@ -142,6 +142,7 @@ def modify_next_occurrence(request, order_id):
                 order=new_order,
                 product=op.product,
                 numPurchased=new_qty,
+                product_price_at_purchase=op.product.price
             )
 
         messages.success(request, "Next occurrence updated. The recurring template is unchanged.")
@@ -214,7 +215,8 @@ def checkout(request):
                 OrderProduct.objects.create(
                     order=new_order,
                     product=item['product'],
-                    numPurchased=item['quantity']
+                    numPurchased=item['quantity'],
+                    product_price_at_purchase=item['product'].price
                 )
             
             # Clear the memory now that the order is placed!

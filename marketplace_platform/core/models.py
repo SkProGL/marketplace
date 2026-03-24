@@ -226,6 +226,7 @@ class Order(models.Model):
 
 
 class OrderProduct(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     numPurchased = models.IntegerField()
@@ -275,6 +276,7 @@ class Recipe(models.Model):
 
 
 class RecipeIngredients(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.CharField(max_length=30)
@@ -322,6 +324,7 @@ class Payment(models.Model):
     processed_at = models.DateTimeField(null=True, blank=True)
 
 class OrderPayment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     payment = models.ForeignKey(Payment, on_delete=models.CASCADE)
     class Meta:
