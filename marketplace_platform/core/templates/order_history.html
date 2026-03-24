@@ -33,7 +33,7 @@
                 {% endfor %}
 
                 <div class="oh-actions">
-                    <a href="{% url 'invoice' %}" class="oh-btn-outline">View Invoice</a>
+                    <a href="{% url 'invoice' order.id|stringformat:'s'|slice:':8' %}" class="oh-btn-outline">View Invoice</a>
                     <a href="#" class="oh-btn-outline">Write Review</a>
                     <form action="{% url 'reorder' order.id %}" method="POST" class="oh-reorder-form">
                         {% csrf_token %}

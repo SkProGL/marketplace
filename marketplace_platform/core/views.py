@@ -12,6 +12,7 @@ from .models import User, Product, Order, OrderProduct
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import timedelta
+from decimal import Decimal
 
 # Create your views here.
 User = get_user_model()
@@ -355,8 +356,44 @@ def signup_view(request):
     return render(request, "signup.html", {"form": form})
 
 
-def invoice_view(request):
-    return render(request, 'invoice.html')
+def invoice_view(request, order_code=None):
+    order_qs = Order.objects.filter(customer=request.user).prefetch_related('orderproduct_set__product', 'customer')
+    if order_code:
+        order = order_qs.filter(id__startswith=order_code).order_by('order_date').first()
+    else:
+        order = order_qs.order_by('order_date').first()
+
+    invoice_items = []
+    subtotal = Decimal('0.00')
+    commission_rate = Decimal('5.00')
+    commission_amount = Decimal('0.00')
+    total = Decimal('0.00')
+
+    if order:
+        items = order.orderproduct_set.all()
+        for item in items:
+            line_total = item.numPurchased * item.product.price
+            subtotal += line_total
+            invoice_items.append({
+                'name': item.product.name,
+                'producer': item.product.producer,
+                'quantity': item.numPurchased,
+                'price': item.product.price,
+                'line_total': line_total,
+                'details': item.product.description,
+                'best_before': item.product.best_before,
+            })
+        commission_amount = subtotal * (commission_rate / Decimal('100.00'))
+        total = subtotal + commission_amount
+
+    return render(request, 'invoice.html', {
+        'order': order,
+        'invoice_items': invoice_items,
+        'subtotal': subtotal,
+        'commission_rate': commission_rate,
+        'commission_amount': commission_amount,
+        'total': total,
+    })
 
 @management_access_required
 # Equivalent to: 

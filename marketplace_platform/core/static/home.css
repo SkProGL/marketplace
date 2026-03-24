@@ -13,7 +13,14 @@
   margin-bottom: var(--row-gap);
 }
 
-/*FILTER ---------------------------------*/
+/*filter */
+
+.home-filter-group {
+  box-shadow: inset 0 0 10px #959595;
+  border-radius: 20px;
+  padding: 10px 15px;
+  margin: 30px 0;
+}
 .filters {
   user-select: none;
   margin: var(--row-gap) 0;
@@ -128,7 +135,8 @@
   position: absolute;
   top: 4%;
   left: 4%;
-  color: black;
+  /* color: black; */
+  color: #ff0000e3;
   text-shadow: 0 0 white;
   background: white;
   /* padding: 8px; */
@@ -199,6 +207,7 @@
 .allergens svg {
   background: none;
   margin-bottom: 2px;
+  color: #ff0000e3;
 }
 
 .card:hover img {
