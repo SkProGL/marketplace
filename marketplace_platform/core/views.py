@@ -488,3 +488,17 @@ def get_order_summary_json(request, order_id):
     except Exception as e:
         return JsonResponse({'error': e}, status=404)
 
+
+
+@login_required
+def profile_view(request):
+    """Display the logged-in user's profile page."""
+    product_count = None
+    if request.user.category == 'Producer':
+        product_count = Product.objects.filter(producer=request.user).count()
+    return render(request, 'profile.html', {'product_count': product_count})
+
+
+def terms_view(request):
+    """Display the terms and conditions / cookie policy page."""
+    return render(request, 'terms.html')
