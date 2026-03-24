@@ -206,6 +206,7 @@ class Order(models.Model):
         max_length=20, choices=Status.choices, default=Status.PENDING)
     special_instructions = models.TextField(blank=True)
     recurring = models.BooleanField(default=False)
+    paused = models.BooleanField(default=False)  
     recurrence_type = models.CharField(
         max_length=20, choices=Recurrence.choices, default=Recurrence.NONE)
     recurrence_day = models.IntegerField(
