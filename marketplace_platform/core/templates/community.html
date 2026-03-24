@@ -28,68 +28,27 @@
         <a href="#" class="ch-season-btn" onclick="filterSeason(this, 'autumn')">Autumn</a>
         <a href="#" class="ch-season-btn" onclick="filterSeason(this, 'winter')">Winter</a>
     </div>
-    <div class="ch-grid">
 
-        <div class="ch-card" data-season="spring">
+    <div class="ch-season-filter" style="margin-top: 12px; gap: 10px; flex-wrap: wrap;">
+        <input id="community-api-meal-query" type="text" value="" placeholder="Search recipes" style="padding:10px 12px; border:1px solid #d1d5db; border-radius:10px; min-width:220px; flex:1;">
+        <button id="community-api-meal-search-btn" type="button" class="ch-season-btn" style=" padding: 10px 16px; border-radius: 10px; color: rgb(0 0 0 / 75%); cursor: pointer; background: rgb(245 222 179 / 40%); border: 1px solid #b59a66;">Search</button>
+    </div>
+    <div id="community-api-meal-status" style="margin: 12px 0; color: #6b7280;"></div>
+    <div class="ch-grid" id="community-recipes-grid">
+        <div class="ch-card" id="community-recipes-loading-card">
             <div class="ch-card-img ch-placeholder">
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
             </div>
             <div class="ch-card-body">
-                <div class="ch-producer">bristolvalleyfarm</div>
-                <span class="ch-season-tag ch-season-spring">Spring</span>
-                <h3 class="ch-title">Spring Carrot Soup</h3>
-                <p class="ch-desc">A warming soup using fresh spring carrots from the farm.</p>
+                <div class="ch-producer">Loading...</div>
+                <span class="ch-season-tag ch-season-spring">API</span>
+                <h3 class="ch-title">Search recipes</h3>
+                <p class="ch-desc">Use the search bar to load meals.</p>
                 <div class="ch-ingredients">
-                    <span class="ch-chip">Carrots</span>
-                    <span class="ch-chip">Onion</span>
-                    <span class="ch-chip">Ginger</span>
-                </div>
-                <div class="ch-card-footer">
-                    <a href="#" class="ch-save-btn">Save</a>
+                    <span class="ch-chip">Ready</span>
                 </div>
             </div>
         </div>
-
-        <div class="ch-card" data-season="summer">
-            <div class="ch-card-img ch-placeholder">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-            </div>
-            <div class="ch-card-body">
-                <div class="ch-producer">hillsidedairy</div>
-                <span class="ch-season-tag ch-season-summer">Summer</span>
-                <h3 class="ch-title">Strawberry Cheesecake</h3>
-                <p class="ch-desc">A light and creamy cheesecake using fresh summer strawberries.</p>
-                <div class="ch-ingredients">
-                    <span class="ch-chip">Strawberries</span>
-                    <span class="ch-chip">Cream Cheese</span>
-                    <span class="ch-chip">Honey</span>
-                </div>
-                <div class="ch-card-footer">
-                    <a href="#" class="ch-save-btn">Save</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="ch-card" data-season="autumn">
-            <div class="ch-card-img ch-placeholder">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-            </div>
-            <div class="ch-card-body">
-                <div class="ch-producer">cliftonbakery</div>
-                <span class="ch-season-tag ch-season-autumn">Autumn</span>
-                <h3 class="ch-title">Roasted Root Vegetable Medley</h3>
-                <p class="ch-desc">A hearty autumn dish with seasonal root vegetables roasted to perfection.</p>
-                <div class="ch-ingredients">
-                    <span class="ch-chip">Parsnips</span>
-                    <span class="ch-chip">Beetroot</span>
-                    <span class="ch-chip">Potatoes</span>
-                </div>
-                <div class="ch-card-footer">
-                    <a href="#" class="ch-save-btn">Save</a>
-                </div>
-            </div>
-        </div>
-
     </div>
 </div>
 
@@ -136,5 +95,102 @@ function filterSeason(btn, season) {
         card.style.display = (season === 'all' || card.dataset.season === season) ? 'block' : 'none';
     });
 }
+
+function toggleRecipeText(id, fullText) {
+    const desc = document.getElementById('desc-' + id);
+    if (!desc) return;
+    const isOpen = desc.dataset.open === '1';
+    desc.textContent = isOpen ? (desc.dataset.short || '') : fullText;
+    desc.style.whiteSpace = isOpen ? 'normal' : 'pre-line';
+    desc.dataset.open = isOpen ? '0' : '1';
+}
+
+(function () {
+    const queryInput = document.getElementById('community-api-meal-query');
+    const searchBtn = document.getElementById('community-api-meal-search-btn');
+    const status = document.getElementById('community-api-meal-status');
+    const grid = document.getElementById('community-recipes-grid');
+    const loadingCard = document.getElementById('community-recipes-loading-card');
+
+    function pickSeason(area, category) {
+        const text = `${area || ''} ${category || ''}`.toLowerCase();
+        if (text.includes('spring')) return 'spring';
+        if (text.includes('summer')) return 'summer';
+        if (text.includes('autumn') || text.includes('fall')) return 'autumn';
+        if (text.includes('winter')) return 'winter';
+        return 'all';
+    }
+
+    function render(items) {
+        if (loadingCard) loadingCard.remove();
+        const cards = (items || []).map(item => {
+            const season = pickSeason(item.area, item.category);
+            const fullText = item.instructions || '';
+            const shortText = fullText.slice(0, 160) + (fullText.length > 160 ? '...' : '');
+            return `
+                <div class="ch-card" data-season="${season}">
+                    <div class="ch-card-img ch-placeholder">
+                        ${item.image ? `<img src="${item.image}" alt="${item.name || ''}" style="width:100%;height:100%;object-fit:cover;">` : `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>`}
+                    </div>
+                    <div class="ch-card-body">
+                        <div class="ch-producer">TheMealDB</div>
+                        ${season !== 'all' ? `<span class="ch-season-tag ch-season-${season}">${season.charAt(0).toUpperCase() + season.slice(1)}</span>` : ''}
+                        <h3 class="ch-title">${item.name || ''}</h3>
+                        <p class="ch-desc" id="desc-${item.id || ''}" data-short="${shortText.replace(/"/g, '&quot;').replace(/\n/g, ' ')}" data-open="0">${shortText}</p>
+                        <div class="ch-ingredients">
+                            ${item.category ? `<span class="ch-chip">${item.category}</span>` : ''}
+                            ${item.area ? `<span class="ch-chip">${item.area}</span>` : ''}
+                        </div>
+                        <div class="ch-card-footer">
+                            <button type="button" class="ch-save-btn" onclick='toggleRecipeText("${item.id || ''}", ${JSON.stringify(fullText)})'>Read</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        grid.innerHTML = cards || '<div class="ch-card"><div class="ch-card-body"><p class="ch-desc">No recipes found.</p></div></div>';
+    }
+
+    async function loadRecipes() {
+        const q = queryInput.value.trim() || 'carrot';
+        console.log('community search:', q);
+        status.textContent = 'Loading...';
+        const response = await fetch(`/api/meals/?q=${encodeURIComponent(q)}`);
+        const data = await response.json();
+        render(data.results || []);
+        status.textContent = `Found ${(data.results || []).length} matches`;
+    }
+
+    async function loadRandomRecipe() {
+        status.textContent = 'Loading...';
+        try {
+            const response = await fetch('https://www.themealdb.com/api/json/v1/1/random.php');
+            const data = await response.json();
+            const meal = data && data.meals ? data.meals.map(item => ({
+                id: item.idMeal,
+                name: item.strMeal,
+                category: item.strCategory,
+                area: item.strArea,
+                instructions: item.strInstructions,
+                image: item.strMealThumb,
+            })) : [];
+            render(meal);
+            status.textContent = meal.length ? 'Found 1 match' : 'No recipes found.';
+        } catch (error) {
+            status.textContent = 'API error: ' + error.message;
+        }
+    }
+
+    if (searchBtn) searchBtn.addEventListener('click', loadRecipes);
+    if (queryInput) queryInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            loadRecipes();
+        }
+    });
+
+    loadRandomRecipe();
+})();
 </script>
 {% endblock %}

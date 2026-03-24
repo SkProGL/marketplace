@@ -8,7 +8,7 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('signup/', views.signup_view, name='signup'),
     path('inventory_upload/', views.upload_item, name='inventory_upload'),
-    path('invoice/', views.invoice_view, name='invoice'),
+    path('invoice/<str:order_code>/', views.invoice_view, name='invoice'),
     path('community/', views.community, name='community'),
     # Recurring order URLS
     path('orders/recurring/', views.recurring_orders, name='recurring_orders'),
