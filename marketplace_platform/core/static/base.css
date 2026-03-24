@@ -293,9 +293,9 @@ body {
   }
 
   .navbar-nav {
-    align-items: flex-start !important;
+    /* align-items: flex-start !important; */
     width: 100%;
-    gap: 0.25rem;
+    gap: 1rem;
   }
 
   .navbar-nav .nav-link {
@@ -349,7 +349,18 @@ body {
 .btn-icon {
   padding: 0;
   border: none;
+  /* width: 24px; */
+  height: fit-content;
 }
+
+.btn-icon button {
+  /* display: block; */
+  margin: 0;
+  /* padding-top: 5px; */
+  /* width: 24px; */
+  /* height: 24px; */
+}
+
 .btn-icon a {
   padding: 0;
   margin: 0;
@@ -360,7 +371,7 @@ body {
 }
 
 .btn-logout {
-  color: #ff0000c9;
+  color: grey;
   border: none;
   background: none;
   padding: 0;
@@ -400,6 +411,7 @@ body {
   text-decoration: none;
   color: white;
   margin: 0 0.5rem;
+  text-wrap-mode: nowrap;
 }
 
 #alert-bell-btn {

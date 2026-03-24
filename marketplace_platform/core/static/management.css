@@ -4,18 +4,17 @@
 }
 
 .table-sm td {
-    padding: 0;
-    margin: 0;
-    padding: 0.1em; 
-    border: none;
-    
+  padding: 0;
+  margin: 0;
+  padding: 0.1em;
+  border: none;
 }
 
 .table-sm .form-control,
-.table-sm .form-select{
-    margin: 0;
-    display: block;
-    width: -webkit-fill-available;
+.table-sm .form-select {
+  margin: 0;
+  display: block;
+  width: -webkit-fill-available;
 }
 
 .table-sm .form-control:focus,
@@ -31,4 +30,18 @@
 
 .table-sm input[type="date"] {
   padding-right: 0;
+}
+
+.management-topbar {
+    margin-bottom: 2.5rem;
+}
+.management-btns {
+  display: inline-flex;
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+
+.management-btns button,
+.management-btns a {
+  width: 50%;
 }

@@ -39,17 +39,17 @@
                             <div>{{ user.email }} ({% if user.is_superuser %}superuser{% else %}{{ user.category }}{% endif %})</div>
                         </span>
 
-                        <a class="nav-link" href="{% url 'invoice' %}">Invoice</a>
+			{#<a class="nav-link" href="{% url 'invoice' %}">Invoice</a>#}
 
                         {% if user.is_superuser or user.category == 'Admin' or user.category == 'Producer' %}
 			        <!-- alert icon -->
                          <div class="dropdown me-2">
-                            <button class="position-relative btn btn-sm btn-light" id="alert-bell-btn" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="position-relative btn btn-sm btn-light" id="alert-bell-btn" data-bs-toggle="dropdown" aria-expanded="false" title="Show notifications">
                                 <!-- <i class="bi bi-bell-fill"></i> -->
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bell-icon lucide-bell"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
                                 {% if navbar_alert_count %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem">{{ navbar_alert_count }}</span>{% endif %}
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:300px;max-height:360px;overflow-y:auto" aria-labelledby="alertBellBtn">
+                            <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:300px;max-height:360px;overflow-y:auto" aria-labelledby="alert-bell-btn">
                                 <li><h6 class="dropdown-header">Alerts {% if navbar_alert_count %}({{ navbar_alert_count }}){% endif %}</h6></li>
                                 {% if navbar_alerts %}{% for alert in navbar_alerts %}
                                 <li><a class="dropdown-item d-flex gap-2 align-items-start py-2" href="{{ alert.link_url }}">
@@ -61,8 +61,8 @@
                                 {% endif %}
                             </ul>
                         </div>
-                        <a href="{% url 'inventory_upload' %}" class="base-manage" style="text-wrap-mode: nowrap;">+ Product</a>
-                        <a href="{% url 'management' %}" class="base-manage">⚙ Manage</a>
+                        <a href="{% url 'inventory_upload' %}" class="base-manage" style="text-wrap-mode: nowrap;" title="Add new product">+ Product</a>
+                        <a href="{% url 'management' %}" class="base-manage" title="View stored data">⚙ Manage</a>
                          {% endif %}
                         <!-- <a class="nav-link" href="">Community</a> -->
 
@@ -82,7 +82,7 @@
                         <div class="base-btn-group" onclick="openCart()" id="base-cart">
 				<span class="cart-bubble" title="View cart">
 				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shopping-cart-icon lucide-shopping-cart"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-				<span style="padding: 0;"> £{{ cart_total_price|default:"0.00" }} </span>
+				<span style="padding: 0;padding-left: 3px; font-weight: 600; letter-spacing: 2px; }"> £{{ cart_total_price|default:"0.00" }} </span>
 				</span>
                         </div>
 
@@ -97,7 +97,7 @@
 
 				<div class="btn-icon">
 				    <button type="submit" class="btn-logout" title="Logout">
-	<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out-icon lucide-log-out"><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg> </button>
+	<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out-icon lucide-log-out"><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg> </button>
 
 				</div>
                         </form>

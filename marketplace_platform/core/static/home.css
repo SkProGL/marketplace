@@ -131,7 +131,9 @@
   color: black;
   text-shadow: 0 0 white;
   background: white;
-  padding: 8px;
+  /* padding: 8px; */
+  background: #ff000029;
+  padding: 4px 8px;
   border-radius: 1rem;
 }
 

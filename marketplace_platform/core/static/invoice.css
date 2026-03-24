@@ -117,6 +117,9 @@
 .nav-home span:last-child {
   color: black;
 }
+.title a span:last-child{
+  margin-right: 5rem;
+}
 
 button,
 a {
