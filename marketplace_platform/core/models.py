@@ -5,7 +5,6 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import AbstractUser
 import uuid
 
-
 class User(AbstractUser):
     class Category(models.TextChoices):
         CUSTOMER = "Customer"
@@ -16,8 +15,6 @@ class User(AbstractUser):
 
     # Primary key as UUID
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    full_name = models.CharField(max_length=128, blank=True, default="")
     # User category
     category = models.CharField(
         max_length=20, choices=Category.choices, default=Category.CUSTOMER)
@@ -121,9 +118,9 @@ class Product(models.Model):
     # Best before date
     best_before = models.DateField(default="2026-04-04")
     # Food miles - distance food travels from producer to customer
-    food_miles = models.IntegerField()
+    food_miles = models.IntegerField(default=0)
     # Stock quantity
-    stock = models.IntegerField()
+    stock = models.IntegerField(default=50)
     # Percentage to indicate how much stock is left before an alert is sent
     stock_alert_threshold = models.DecimalField(
         max_digits=5, decimal_places=2, default=0)
@@ -291,7 +288,6 @@ class Payment(models.Model):
 class OrderPayment(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     payment = models.ForeignKey(Payment, on_delete=models.CASCADE)
-
     class Meta:
         unique_together = ("order", "payment")
     date_posted=models.DateTimeField(auto_now_add=True)
