@@ -46,7 +46,7 @@
   {% for item in items %}
     <div class="card" style="display: flex; flex-direction: column; height:280px; width:190px;overflow: hidden;">
 
-      <div class="image" style="height: 65%; width: 100%; flex-shrink: 0;  overflow: hidden; position: relative;">
+      <div class="image" style="height: 75%; width: 100%; flex-shrink: 0;  overflow: hidden; position: relative;">
         {% if item.image %}
           <img src="{{ item.image.url }}" style="height: 100%; width: 100%; object-fit: cover; display: block;">
         {% else %}
@@ -55,7 +55,7 @@
         {% endif %}
       </div>
 
-      <div style="display: flex; padding: 15px; flex-grow: 1;">
+      <div style="display: flex; padding: 0 15px; flex-grow: 1;">
 
         {% if item.allergens %}
         <span class="allergens">
@@ -65,7 +65,8 @@
         {% endif %}
 <!-- Plus and minus controls, needs to be here so the count would work correctly-->
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <div style="display: flex; flex-direction: column;">
+            <!-- <div style="display: flex; flex-direction: column;"> -->
+            <div style="">
                 <span class="title">{{ item.name }}</span>
                 <span class="price">£{{ item.price }}</span>
             </div>
@@ -82,7 +83,7 @@
                 {% else %}
                     <!-- Not in cart — show Add button -->
                     <button class="add-to-cart-btn" onclick="addToCart('{{ item.id }}', this)">
-                        Add to Cart
+                        Add
                       </button>
                 {% endif %}
             </div>
