@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="container py-5" style="max-width: 580px;">
+    <a href="{% url 'order_history' %}" class="btn btn-link ps-0 mb-3" style="color: #1a7a4a;">← Back to orders</a>
+    <h2 class="mb-1">Review Product</h2>
+    <p class="text-muted mb-4">{{ product.name }} &mdash; {{ product.producer.name }}</p>
+
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.rating }}
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Rating</label>
+            <div class="d-flex gap-2 fs-2" id="starInput">
+                {% for i in "12345" %}
+                <span class="star" data-val="{{ forloop.counter }}" style="cursor:pointer; color:#ccc;">★</span>
+                {% endfor %}
+            </div>
+            {% if form.rating.errors %}<div class="text-danger small mt-1">Please select a star rating.</div>{% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Title</label>
+            {{ form.title }}
+            {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors }}</div>{% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Review</label>
+            {{ form.content }}
+            {% if form.content.errors %}<div class="text-danger small">{{ form.content.errors }}</div>{% endif %}
+        </div>
+
+        <div class="mb-4 form-check">
+            {{ form.anonymous }}
+            <label class="form-check-label" for="{{ form.anonymous.id_for_label }}">Post anonymously</label>
+        </div>
+
+        <button type="submit" class="btn w-100 text-white" style="background:#1a7a4a;">Submit Review</button>
+    </form>
+</div>
+
+<script>
+const stars = document.querySelectorAll('.star');
+const ratingInput = document.getElementById('{{ form.rating.id_for_label }}');
+stars.forEach(star => {
+    star.addEventListener('click', () => {
+        const val = star.dataset.val;
+        ratingInput.value = val;
+        stars.forEach(s => s.style.color = s.dataset.val <= val ? '#f5a623' : '#ccc');
+    });
+    star.addEventListener('mouseover', () => {
+        stars.forEach(s => s.style.color = s.dataset.val <= star.dataset.val ? '#f5a623' : '#ccc');
+    });
+    star.addEventListener('mouseout', () => {
+        const cur = ratingInput.value;
+        stars.forEach(s => s.style.color = cur && s.dataset.val <= cur ? '#f5a623' : '#ccc');
+    });
+});
+</script>
+{% endblock %}
