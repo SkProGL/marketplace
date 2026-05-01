@@ -22,7 +22,7 @@
             <!-- Primary card -->
             <div class="card shadow p-4 ">
                 <!-- Model selection button group -->
-                <div class="flex-wrap gap-2 btn-group card-header  border-0 bg-transparent" role="group">
+                <div class="flex-wrap gap-2 btn-group card-header  border-0 bg-transparent management-topbar" role="group">
                     {% for model_name in model_names %}
                         <input  type="radio" 
                                 class="btn-check " 
@@ -62,9 +62,9 @@
                 {% if selected_model_name %}
                     {% if not user.category == 'Producer' or not selected_model_name == 'Order' or user.is_superuser%}
                 <!-- Actions for update and new entry creation -->
-                <div class="d-grid gap-1 m-2">
-                    <button type="submit" name="update"  class="btn btn-outline-primary" onclick="return confirm('Are you sure you want to save all changes {{ selected_model_name }}?');"><i class="bi bi-floppy-fill"></i></button>
-                    <a href="?model={{ selected_model_name }}&draft=true" class="btn btn-outline-success" >
+                <div class="management-btns">
+                    <button type="submit" name="update"  class="btn btn-outline-primary" onclick="return confirm('Are you sure you want to save all changes {{ selected_model_name }}?');" title="Save changes"><i class="bi bi-floppy-fill"></i></button>
+                    <a href="?model={{ selected_model_name }}&draft=true" class="btn btn-outline-success" title="Add new entry">
                         <i class="bi bi-plus-square-fill"></i>
                     </a>
                 </div>            

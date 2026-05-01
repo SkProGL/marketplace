@@ -34,3 +34,4 @@ EXPOSE 8000
 
 # default command
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+

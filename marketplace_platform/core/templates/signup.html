@@ -100,7 +100,8 @@
 		></path>
 	      </g>
 	    </svg>
-	    <span>Accept terms, conditions &amp; cookie policy</span>
+	    <!-- <span>Accept terms, conditions &amp; cookie policy</span> -->
+    	    <a href="{% url 'terms' %}" style="color:#198754;">Accept terms, conditions &amp; cookie policy</a>
 	  </label>
 	</div>
 	<div class="text-danger">{{ form.accept_policy.errors }}</div>

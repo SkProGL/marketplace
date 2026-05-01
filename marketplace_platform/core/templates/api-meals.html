@@ -1,0 +1,174 @@
+<style>
+  .api-meals-section {
+    margin-top: 10rem;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0px 1px 13px rgba(0, 0, 0, 0.1);
+    background: rgb(245 222 179 / 30%);
+    border: 1px solid #b59a66;
+  }
+  .api-meals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    /* gap: 16px; */
+    gap: 2.5rem;
+    margin-top: 16px;
+  }
+  .api-meal-card {
+    /* border: 1px solid #e5e7eb; */
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fafafa;
+    border: 1px solid #b59a66;
+    box-shadow:
+      1px 1px 2px -1px #fff inset,
+      0 2px 1px #00000010,
+      0 4px 2px #00000010,
+      0 8px 4px #00000010,
+      0 16px 8px #00000010,
+      0 32px 16px #00000010;
+  }
+  .api-meal-card img {
+    width: 100%;
+    /* height: 160px; */
+    height: 200px;
+    object-fit: cover;
+    display: block;
+  }
+  .api-meal-body {
+    padding: 14px;
+    background: rgb(245 222 179 / 60%);
+    height: -webkit-fill-available;
+  }
+  .api-meal-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 8px 0;
+    font-size: 12px;
+  }
+  .api-meal-meta span {
+    /* background: #eef2ff; */
+    /* padding: 4px 8px; */
+    /* border-radius: 999px; */
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid #b59a66;
+    background: rgb(245 222 179 / 60%);
+  }
+  .api-meal-instructions {
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.45;
+    max-height: 180px;
+    overflow: auto;
+    white-space: pre-line;
+  }
+  .api-meal-instructions::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  /* Track */
+  .api-meal-instructions::-webkit-scrollbar-track {
+    -webkit-border-radius: 10px;
+    border-radius: 10px;
+  }
+
+  /* Handle */
+  .api-meal-instructions::-webkit-scrollbar-thumb {
+    -webkit-border-radius: 10px;
+    border-radius: 10px;
+    background: grey;
+  }
+</style>
+
+<div class="api-meals-section">
+  <form id="apiMealForm" style="display: flex; gap: 10px; flex-wrap: wrap">
+    <input
+      id="apiMealQuery"
+      type="text"
+      value="carrot"
+      placeholder="Search API meals"
+      style="
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        flex: 1;
+        min-width: 220px;
+        background: rgb(245 222 179 / 40%);
+        border: 1px solid #b59a66;
+      "
+    />
+    <button
+      type="submit"
+      style="
+        padding: 10px 16px;
+        /* border: 0; */
+        border-radius: 10px;
+        /* background: #198754; */
+        color: rgb(0 0 0 / 75%);
+        cursor: pointer;
+        background: rgb(245 222 179 / 40%);
+        border: 1px solid #b59a66;
+      "
+    >
+      Load recipes
+    </button>
+  </form>
+  <div id="apiMealStatus" style="margin-top: 12px; color: #6b7280"></div>
+  <div id="apiMealGrid" class="api-meals-grid"></div>
+</div>
+
+<script>
+  (function () {
+    const form = document.getElementById("apiMealForm");
+    const queryInput = document.getElementById("apiMealQuery");
+    const status = document.getElementById("apiMealStatus");
+    const grid = document.getElementById("apiMealGrid");
+
+    function render(items) {
+      if (!items || !items.length) {
+        grid.innerHTML = "<p>No recipes found.</p>";
+        return;
+      }
+
+      grid.innerHTML = items
+        .map(
+          (item) => `
+        <article class="api-meal-card">
+          <img src="${item.image || ""}" alt="${item.name || ""}">
+          <div class="api-meal-body">
+            <h3 style="margin:0;">${item.name || ""}</h3>
+            <div class="api-meal-meta">
+              ${item.category ? `<span>${item.category}</span>` : ""}
+              ${item.area ? `<span>${item.area}</span>` : ""}
+            </div>
+            <div class="api-meal-instructions">${item.instructions || ""}</div>
+          </div>
+        </article>
+      `,
+        )
+        .join("");
+    }
+
+    async function loadRecipes(q) {
+      status.textContent = "Loading...";
+      grid.innerHTML = "";
+      try {
+        const response = await fetch(`/api/meals/?q=${encodeURIComponent(q)}`);
+        const data = await response.json();
+        render(data.results || []);
+        status.textContent = `Found ${(data.results || []).length} matches`;
+      } catch (error) {
+        status.textContent = "API error: " + error.message;
+      }
+    }
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      loadRecipes(queryInput.value.trim() || "carrot");
+    });
+
+    loadRecipes(queryInput.value.trim() || "carrot");
+  })();
+</script>
