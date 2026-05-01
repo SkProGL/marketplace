@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container mt-5 d-flex justify-content-center">
-    <div class="widget-account-form-card" style="width: 100%; max-width: 900px; padding: 3rem; align-items: flex-start;">
+    <div class="widget-account-form-card" style="width: 100%; padding: 3rem; align-items: flex-start;">
         <h2 style="color: var(--main-color); margin-bottom: 1.5rem;">Secure Checkout</h2>
 
         <form action="{% url 'checkout' %}" method="POST" class="w-100">
@@ -26,14 +26,14 @@
                                 </div>
                             {% endfor %}
 
-                            <p class="h5 text-success mt-3">Total: £{{ total_price }}</p>
+                            <p class="h5 text-success mt-3">Total: £{{ total_price|floatformat:2 }} (including 5% service fee)</p>
                         </div>
                     </div>
 
                     <h5 class="mt-4">2. Delivery Details</h5>
                     <div class="mb-3">
                         <label class="form-label">Delivery Address (Pre-filled)</label>
-                        <textarea class="form-control" readonly rows="2">{{ user_address }}&#10;{{ user_postcode }}</textarea>
+                        <textarea class="form-control" readonly rows="2" disabled>{{ user_address }}&#10;{{ user_postcode }}</textarea>
                     </div>
                     
                     <div class="mb-3">
@@ -48,27 +48,20 @@
 
                 <div class="col-md-6 ps-md-4">
                     <h5>3. Payment Information</h5>
+
                     <div class="mb-3">
-                        <label class="form-label">Payment Method</label>
+                        <!-- <label class="form-label">Payment Method</label> -->
                         <select class="form-select">
                             <option>Credit/Debit Card</option>
+                            <option disabled="disabled">Pay on collection (currently unavailable)</option>
                         </select>
                     </div>
 
-                    <div class="p-3 bg-light rounded border border-secondary-subtle">
-                        <p class="small text-uppercase fw-bold text-muted">Stripe Test Sandbox</p>
-                        <div class="mb-3">
-                            <input type="text" class="form-control" placeholder="Card Number: 4242 4242 4242 4242">
-                        </div>
-                        <div class="row">
-                            <div class="col-6"><input type="text" class="form-control" placeholder="MM/YY"></div>
-                            <div class="col-6"><input type="text" class="form-control" placeholder="CVC: 123"></div>
-                        </div>
-                    </div>
+			{% include "components/widget-card.html" %}
                     <div class="mt-4 p-3 bg-light rounded border border-secondary-subtle">
                       <div class="form-check form-switch mb-2">
                         <input class="form-check-input" type="checkbox" id="recurringToggle" name="recurring" value="true">
-                        <label class="form-check-label fw-bold" for="recurringToggle">Make this a recurring order</label>
+                        <label class="form-check-label" for="recurringToggle">Make this a recurring order</label>
                       </div>
                       <div id="recurringOptions" style="display: none;">
                         <div class="mb-2">
@@ -92,17 +85,74 @@
                         </div>
                       </div>
                     </div>
-                    <button type="submit" class="btn btn-success w-100 py-3 mt-4 fw-bold">
-                        CONFIRM & PAY £{{ total_price }}
-                    </button>
+			<!-- From Uiverse.io by vinodjangid07 --> 
+			<button class="checkout-pay" type="submit"> Pay
+			  <svg class="svgIcon" viewBox="0 0 576 512"><path d="M512 80c8.8 0 16 7.2 16 16v32H48V96c0-8.8 7.2-16 16-16H512zm16 144V416c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V224H528zM64 32C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64H512c35.3 0 64-28.7 64-64V96c0-35.3-28.7-64-64-64H64zm56 304c-13.3 0-24 10.7-24 24s10.7 24 24 24h48c13.3 0 24-10.7 24-24s-10.7-24-24-24H120zm128 0c-13.3 0-24 10.7-24 24s10.7 24 24 24H360c13.3 0 24-10.7 24-24s-10.7-24-24-24H248z"></path></svg>
+			</button>
+			{#<button type="submit" class="btn btn-success w-100 py-3 mt-4 fw-bold"> CONFIRM & PAY £{{ total_price }} </button>#}
                 </div>
             </div>
         </form>
     </div>
 </div>
 <script>
+
   document.getElementById('recurringToggle').addEventListener('change', function() {
     document.getElementById('recurringOptions').style.display = this.checked ? 'block' : 'none';
   });
 </script>
+<style>
+
+/* From Uiverse.io by vinodjangid07 */ 
+.checkout-pay {
+  width: 130px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: black;
+  border: none;
+  color: white;
+  font-weight: 600;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.103);
+  position: relative;
+  overflow: hidden;
+  transition-duration: .3s;
+  margin-top:2rem;
+}
+
+.svgIcon {
+  width: 16px;
+}
+
+.svgIcon path {
+  fill: white;
+}
+
+.checkout-pay::before {
+  width: 130px;
+  height: 130px;
+  position: absolute;
+  content: "";
+  background-color: white;
+  border-radius: 50%;
+  left: -100%;
+  top: 0;
+  transition-duration: .3s;
+  mix-blend-mode: difference;
+}
+
+.checkout-pay:hover::before {
+  transition-duration: .3s;
+  transform: translate(100%,-50%);
+  border-radius: 0;
+}
+
+.checkout-pay:active {
+  transform: translate(5px,5px);
+  transition-duration: .3s;
+}
+</style>
 {% endblock %}
