@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<style>
+:root {
+  --green: #198754;
+  --green-light: #d1e7dd;
+  --green-mid: #00ac7c;
+  --text: #1a1a1a;
+  --muted: #6c757d;
+  --border: #dee2e6;
+  --card-bg: #ffffff;
+}
+.profile-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--green-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--green);
+  flex-shrink: 0;
+  border: 3px solid var(--green);
+}
+.profile-header-info h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  color: var(--text);
+}
+.profile-badge {
+  display: inline-block;
+  padding: 0.2rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.badge-Customer        { background: #cfe2ff; color: #084298; }
+.badge-Producer        { background: #d1e7dd; color: #0f5132; }
+.badge-Restaurant      { background: #fff3cd; color: #664d03; }
+.badge-Community-group { background: #f8d7da; color: #842029; }
+.badge-Admin,
+.badge-superuser       { background: #e2e3e5; color: #383d41; }
+.profile-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+.profile-card-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 2rem;
+}
+@media (max-width: 600px) {
+  .profile-grid { grid-template-columns: 1fr; }
+  .profile-header { flex-direction: column; text-align: center; }
+}
+.profile-field label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.2rem;
+}
+.profile-field p {
+  font-size: 0.95rem;
+  color: var(--text);
+  margin: 0;
+  word-break: break-word;
+}
+.profile-field p.empty {
+  color: #adb5bd;
+  font-style: italic;
+}
+.profile-superuser-note {
+  background: #fff3cd;
+  border: 1px solid #ffe69c;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: #664d03;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+</style>
+<div class="profile-wrapper">
+  <div class="profile-header">
+    <div class="profile-avatar">
+      {{ user.full_name|default:user.email|first|upper }}
+    </div>
+    <div class="profile-header-info">
+      <h1>{{ user.full_name|default:"No name set" }}</h1>
+      {% if user.is_superuser %}
+        <span class="profile-badge badge-superuser">Superuser / Admin</span>
+      {% else %}
+        <span class="profile-badge badge-{{ user.category|cut:' ' }}">{{ user.category }}</span>
+      {% endif %}
+    </div>
+  </div>
+  {% if user.is_superuser %}
+  <div class="profile-superuser-note">
+    <i class="bi bi-shield-lock-fill"></i>
+    You have full admin access. Manage the platform via the
+    <a href="/admin/" style="color:inherit;font-weight:700;">Django Admin panel</a>.
+  </div>
+  {% endif %}
+  <div class="profile-card">
+    <div class="profile-card-title">Account information</div>
+    <div class="profile-grid">
+      <div class="profile-field">
+        <label>Full name</label>
+        <p {% if not user.full_name %}class="empty"{% endif %}>{{ user.full_name|default:"Not set" }}</p>
+      </div>
+      <div class="profile-field">
+        <label>Email address</label>
+        <p>{{ user.email }}</p>
+      </div>
+      <div class="profile-field">
+        <label>Phone</label>
+        <p {% if not user.phone %}class="empty"{% endif %}>{{ user.phone|default:"Not set" }}</p>
+      </div>
+      <div class="profile-field">
+        <label>Account type</label>
+        <p>{% if user.is_superuser %}Superuser / Admin{% else %}{{ user.category }}{% endif %}</p>
+      </div>
+    </div>
+  </div>
+  <div class="profile-card">
+    <div class="profile-card-title">Address</div>
+    <div class="profile-grid">
+      <div class="profile-field">
+        <label>Address</label>
+        <p {% if not user.address %}class="empty"{% endif %}>{{ user.address|default:"Not set" }}</p>
+      </div>
+      <div class="profile-field">
+        <label>Postcode</label>
+        <p {% if not user.postcode %}class="empty"{% endif %}>{{ user.postcode|default:"Not set" }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="profile-card">
+    <div class="profile-card-title">Account details</div>
+    <div class="profile-grid">
+      <div class="profile-field">
+        <label>Member since</label>
+        <p>{{ user.date_joined|date:"d M Y" }}</p>
+      </div>
+      <div class="profile-field">
+        <label>Last login</label>
+        <p>{{ user.last_login|date:"d M Y, H:i"|default:"Never" }}</p>
+      </div>
+      <div class="profile-field">
+        <label>Account status</label>
+        <p>{% if user.is_active %}Active{% else %}Inactive{% endif %}</p>
+      </div>
+      {% if user.is_superuser %}
+      <div class="profile-field">
+        <label>Staff status</label>
+        <p>{% if user.is_staff %}Staff member{% else %}Not staff{% endif %}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% if user.category == 'Producer' and not user.is_superuser %}
+  <div class="profile-card">
+    <div class="profile-card-title">Producer tools</div>
+    <div class="profile-grid">
+      <div class="profile-field">
+        <label>Products listed</label>
+        <p>{{ product_count|default:"0" }}</p>
+      </div>
+      <div class="profile-field">
+        <label>Management panel</label>
+        <p><a href="{% url 'management' %}" style="color:var(--green);font-weight:600;">Go to panel →</a></p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

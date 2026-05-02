@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<style>
+*, html { scroll-behavior: smooth !important;}
+.terms-wrapper { max-width: 760px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.terms-wrapper h1 { font-size: 1.75rem; font-weight: 700; color: #1a1a1a; margin-bottom: 0.25rem; }
+.terms-meta { font-size: 0.82rem; color: #6c757d; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #dee2e6; }
+.terms-toc { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 10px; padding: 1.25rem 2rem; margin-bottom: 2rem; }
+.terms-toc p { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #6c757d; margin-bottom: 0.5rem; }
+.terms-toc ol { margin: 0; padding-left: 1.2rem; }
+.terms-toc li { margin-bottom: 0.2rem; margin-left: 1.1rem; }
+.terms-toc a { color: #198754; font-size: 0.875rem; text-decoration: none; }
+.terms-toc a:hover { text-decoration: underline; }
+.terms-section { margin-bottom: 2rem; }
+.terms-section h2 { font-size: 1.1rem; font-weight: 700; color: #1a1a1a; margin-bottom: 0.75rem; padding-top: 0.5rem; }
+.terms-section p, .terms-section li { font-size: 0.92rem; color: #343a40; line-height: 1.7; }
+.terms-section ul { padding-left: 1.3rem; margin-bottom: 0.75rem; }
+.terms-section li { margin-bottom: 0.3rem; }
+.terms-divider { border: none; border-top: 1px solid #dee2e6; margin: 2rem 0; }
+.cookie-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 0.75rem; }
+.cookie-table th { background: #f8f9fa; font-weight: 700; text-align: left; padding: 0.5rem 0.75rem; border: 1px solid #dee2e6; color: #495057; }
+.cookie-table td { padding: 0.5rem 0.75rem; border: 1px solid #dee2e6; color: #343a40; vertical-align: top; }
+.terms-back { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; color: #198754; text-decoration: none; margin-bottom: 1.5rem; }
+.terms-back:hover { text-decoration: underline; color: #146c43; }
+</style>
+<div class="terms-wrapper">
+  <a href="{% url 'home' %}" class="terms-back"><i class="bi bi-arrow-left"></i> Back to home</a>
+  <h1>Terms &amp; Conditions</h1>
+  <p class="terms-meta">Bristol Regional Food Network Digital Marketplace &nbsp;·&nbsp; Last updated: March 2026</p>
+  <div class="terms-toc">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#acceptance">Acceptance of Terms</a></li>
+      <li><a href="#platform">About the Platform</a></li>
+      <li><a href="#accounts">User Accounts</a></li>
+      <li><a href="#producers">Producer Obligations</a></li>
+      <li><a href="#customers">Customer Obligations</a></li>
+      <li><a href="#payments">Payments &amp; Commission</a></li>
+      <li><a href="#food-safety">Food Safety &amp; Quality</a></li>
+      <li><a href="#liability">Liability</a></li>
+      <li><a href="#privacy">Privacy &amp; Data</a></li>
+      <li><a href="#cookies">Cookie Policy</a></li>
+      <li><a href="#changes">Changes to Terms</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ol>
+  </div>
+  <div class="terms-section" id="acceptance">
+    <h2>1. Acceptance of Terms</h2>
+    <p>By registering for or using the Bristol Regional Food Network Digital Marketplace ("the Platform"), you agree to be bound by these Terms &amp; Conditions. If you do not agree, you must not use the Platform.</p>
+  </div>
+  <hr class="terms-divider">
+  <div class="terms-section" id="platform">
+    <h2>2. About the Platform</h2>
+    <p>The Platform connects local food producers within a twenty-mile radius of Bristol city centre with consumers including individual customers, community groups, and independent restaurants. It is operated by the Bristol Regional Food Network ("the Network").</p>
+  </div>
+  <hr class="terms-divider">
+  <div class="terms-section" id="accounts">
+    <h2>3. User Accounts</h2>
+    <ul>
+      <li>You must provide accurate and complete information when registering.</li>
+      <li>You are responsible for maintaining the confidentiality of your account credentials.</li>
+      <li>You must notify us immediately of any unauthorised use of your account.</li>
+      <li>Accounts are non-transferable.</li>
+      <li>We reserve the right to suspend or terminate accounts that violate these terms.</li>
+    </ul>
+  </div>
+  <hr class="terms-divider">
+  <div class="terms-section" id="producers">
+    <h2>4. Producer Obligations</h2>
+    <ul>
+      <li>Producers must ensure all product listings are accurate, including descriptions, allergen information, pricing, and availability.</li>
+      <li>Producers are responsible for the quality and safety of their products.</li>
+      <li>Producers must provide a minimum 48-hour lead time for order fulfilment.</li>
+      <li>Producers must maintain up-to-date stock levels to avoid unfulfillable orders.</li>
+      <li>Producers must comply with all applicable food safety and labelling legislation.</li>
+    </ul>
+  </div>
+  <hr class="terms-divider">
+  <div class="terms-section" id="customers">
+    <h2>5. Customer Obligations</h2>
+    <ul>
+      <li>Customers must provide accurate delivery address and contact information.</li>
+      <li>Customers are responsible for checking allergen information before placing orders.</li>
+      <li>Orders must be placed in good faith and with genuine intent to purchase.</li>
+    </ul>
+  </div>
+  <hr class="terms-divider">
+  <div class="terms-section" id="payments">
+    <h2>6. Payments &amp; Commission</h2>
+    <ul>
+      <li>All payments are processed securely through the Platform's payment system.</li>
+      <li>The Network charges a 5% commission on all transactions.</li>
+      <li>Producers receive 95% of the order value, settled weekly.</li>
+      <li>Payment settlements include a transparent audit trail suitable for tax and accounting purposes.</li>
+    </ul>
+  </div>
+  <hr class="terms-divider">
+  <div class="terms-section" id="food-safety">
+    <h2>7. Food Safety &amp; Quality</h2>
+    <ul>
+      <li>The Network is not liable for the accuracy of producer-supplied product information.</li>
+      <li>Customers with allergies or dietary requirements must verify product suitability directly with producers.</li>
+      <li>The Network may remove listings that fail to meet food safety standards.</li>
+    </ul>
+  </div>
+  <hr class="terms-divider">
+  <div class="terms-section" id="liability">
+    <h2>8. Liability</h2>
+    <ul>
+      <li>The Network acts as a facilitator and is not a party to the sale contract.</li>
+      <li>The Network is not liable for the quality, safety, or legality of products listed by producers.</li>
+      <li>Nothing in these terms excludes liability for death or personal injury caused by negligence.</li>
+    </ul>
+  </div>
+  <hr class="terms-divider">
+  <div class="terms-section" id="privacy">
+    <h2>9. Privacy &amp; Data</h2>
+    <p>We collect and process personal data in accordance with UK GDPR. Data we collect includes account registration details, order history, and usage data. We do not sell your personal data to third parties.</p>
+  </div>
+  <hr class="terms-divider">
+  <div class="terms-section" id="cookies">
+    <h2>10. Cookie Policy</h2>
+    <p>The Platform uses cookies to ensure it functions correctly. By using the Platform, you consent to their use.</p>
+    <table class="cookie-table">
+      <thead>
+        <tr><th>Cookie</th><th>Type</th><th>Purpose</th><th>Duration</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>sessionid</code></td><td>Essential</td><td>Maintains your login session.</td><td>2 weeks</td></tr>
+        <tr><td><code>csrftoken</code></td><td>Essential</td><td>Protects against CSRF attacks on form submissions.</td><td>1 year</td></tr>
+        <tr><td><code>django_language</code></td><td>Functional</td><td>Stores your preferred language setting.</td><td>Session</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:1rem;">We do not use advertising or tracking cookies. Essential cookies cannot be disabled as they are required for the Platform to function.</p>
+  </div>
+  <hr class="terms-divider">
+  <div class="terms-section" id="changes">
+    <h2>11. Changes to Terms</h2>
+    <p>We reserve the right to update these terms at any time. Continued use of the Platform after changes are posted constitutes acceptance of the revised terms.</p>
+  </div>
+  <hr class="terms-divider">
+  <div class="terms-section" id="contact">
+    <h2>12. Contact</h2>
+    <p>For questions about these terms, please contact the Bristol Regional Food Network via the platform's support channels.</p>
+  </div>
+</div>
+{% endblock %}

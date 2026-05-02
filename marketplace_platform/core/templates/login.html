@@ -18,18 +18,32 @@
             <h2>LOG IN</h2>
 
             <div class="widget-account-form-inputBox">
-                <input type="text" name="username" required>
-                <span class="widget-account-form-user">Username</span>
+                <input type="email" name="email" required >
+                <span class="widget-account-form-user">Email</span>
             </div>
 
             <div class="widget-account-form-inputBox">
                 <input type="password" name="password" required>
-                <span>Password</span>
+                <span >Password</span>
+
+<button type="button" class="password-toggle" aria-label="Show password" onclick="const i=this.parentElement.querySelector('[name=password]'); i.type = i.type === 'password' ? 'text' : 'password'; this.textContent = i.type === 'password' ? 'show' : 'hide'">show</button>
             </div>
+	    <br>
 
             <button type="submit" class="widget-account-form-enter">
                 Enter
             </button>
+            <!-- [DEV] Quick login buttons for different user types-->     
+             <hr>
+             [DEV] Quick-login
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px">
+                <button type="button" onclick="document.querySelector('[name=email]').value='root@example.com'; document.querySelector('[name=password]').value='password123'; this.closest('form').submit();">superuser</button>
+                <button type="button" onclick="document.querySelector('[name=email]').value='producer@example.com'; document.querySelector('[name=password]').value='password123'; this.closest('form').submit();">producer</button>
+                <button type="button" onclick="document.querySelector('[name=email]').value='restaurant@example.com'; document.querySelector('[name=password]').value='password123'; this.closest('form').submit();">restaurant</button>
+                <button type="button" onclick="document.querySelector('[name=email]').value='community@example.com'; document.querySelector('[name=password]').value='password123'; this.closest('form').submit();">community</button>
+                <button type="button" onclick="document.querySelector('[name=email]').value='customer@example.com'; document.querySelector('[name=password]').value='password123'; this.closest('form').submit();">customer</button>
+            </div>
+            <!--  -->
         </div>
     </div>
 </form>

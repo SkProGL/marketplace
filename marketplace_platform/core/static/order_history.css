@@ -25,7 +25,7 @@
 .oh-empty { padding: 32px; text-align: center; color: #888; }
 .oh-ai-card { background: #f0f4e8; border: 1.5px solid #c8d9b8; border-radius: 10px; padding: 20px; position: sticky; top: 24px; }
 .oh-ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.oh-ai-icon { font-size: 1.4rem; }
+.oh-ai-header svg { filter: brightness(0) saturate(100%) invert(29%) sepia(78%) saturate(5443%) hue-rotate(149deg) brightness(94%) contrast(80%);}
 .oh-ai-title { font-weight: 600; font-size: 0.95rem; }
 .oh-ai-sub { font-size: 0.75rem; color: #888; }
 .oh-xai-toggle { font-size: 0.75rem; color: #4a6741; cursor: pointer; margin-bottom: 10px; padding: 4px 8px; background: white; border: 1px solid #c8d9b8; border-radius: 4px; display: inline-block; }

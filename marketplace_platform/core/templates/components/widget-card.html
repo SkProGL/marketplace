@@ -1,0 +1,174 @@
+<div class="widget-card-visa-card">
+  <div class="widget-card-logoContainer">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      x="0px"
+      y="0px"
+      width="23"
+      height="23"
+      viewBox="0 0 48 48"
+      class="widget-card-svgLogo"
+    >
+      <path
+        fill="#ff9800"
+        d="M32 10A14 14 0 1 0 32 38A14 14 0 1 0 32 10Z"
+      ></path>
+      <path
+        fill="#d50000"
+        d="M16 10A14 14 0 1 0 16 38A14 14 0 1 0 16 10Z"
+      ></path>
+      <path
+        fill="#ff3d00"
+        d="M18,24c0,4.755,2.376,8.95,6,11.48c3.624-2.53,6-6.725,6-11.48s-2.376-8.95-6-11.48 C20.376,15.05,18,19.245,18,24z"
+      ></path>
+    </svg>
+  </div>
+  <div class="widget-card-number-container">
+    <label class="widget-card-input-label" for="cardNumber">CARD NUMBER</label>
+    <input
+      class="widget-card-inputstyle"
+      id="widget-card-cardNumber"
+      placeholder="XXXX XXXX XXXX XXXX"
+      name="cardNumber"
+      type="number"
+      maxlength="16"
+      oninput="javascript: if (this.value.length > this.maxLength) this.value = this.value.slice(0, this.maxLength);"
+    />
+  </div>
+
+  <div class="widget-card-name-date-cvv-container">
+    <div class="widget-card-name-wrapper">
+      <label class="widget-card-input-label" for="holderName"
+        >CARD HOLDER</label
+      >
+      <input
+        class="widget-card-inputstyle"
+        id="widget-card-holderName"
+        placeholder="NAME"
+        type="text"
+      />
+    </div>
+
+    <div class="widget-card-expiry-wrapper">
+      <label class="widget-card-input-label" for="expiry">VALID THRU</label>
+      <input
+        class="widget-card-inputstyle"
+        id="widget-card-expiry"
+        placeholder="MM/YY"
+        type="text"
+        maxlength="4"
+        oninput="javascript: if (this.value.length > this.maxLength) this.value = this.value.slice(0, this.maxLength);"
+      />
+    </div>
+    <div class="widget-card-cvv-wrapper">
+      <label class="widget-card-input-label" for="cvv">CVV</label>
+      <input
+        class="widget-card-inputstyle"
+        placeholder="***"
+        maxlength="3"
+        id="widget-card-cvv"
+        type="password"
+      />
+    </div>
+  </div>
+</div>
+<style>
+  .widget-card-visa-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    width: 300px;
+    height: 180px;
+    background-image: radial-gradient(
+      circle 897px at 9% 80.3%,
+      rgba(55, 60, 245, 1) 0%,
+      rgba(234, 161, 15, 0.9) 100.2%
+    );
+    border-radius: 10px;
+    padding: 20px;
+    font-family: Arial, Helvetica, sans-serif;
+    position: relative;
+    gap: 15px;
+  }
+  .widget-card-logoContainer {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: fit-content;
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 18px;
+  }
+  .widget-card-svgLogo {
+    height: 40px;
+    width: auto;
+  }
+  .widget-card-inputstyle::placeholder {
+    color: #ffffff;
+  }
+  .widget-card-inputstyle {
+    background-color: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    caret-color: red;
+    font-size: 13px;
+    height: 25px;
+    letter-spacing: 1.5px;
+  }
+  .widget-card-number-container {
+    width: 100%;
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+  }
+  #widget-card-cardNumber {
+    width: 100%;
+    height: 25px;
+  }
+  .widget-card-name-date-cvv-container {
+    width: 100%;
+    height: 25px;
+    display: flex;
+    gap: 10px;
+  }
+  .widget-card-name-wrapper {
+    width: 55%;
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+  }
+  .widget-card-expiry-wrapper,
+  .widget-card-cvv-wrapper {
+    width: 25%;
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+  }
+  .widget-card-cvv-wrapper {
+    width: 15%;
+  }
+  #widget-card-expiry,
+  #widget-card-cvv {
+    width: 100%;
+  }
+  .widget-card-input-label {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: #e2e2e2;
+    width: 100%;
+  }
+
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield; /* Firefox */
+  }
+</style>
