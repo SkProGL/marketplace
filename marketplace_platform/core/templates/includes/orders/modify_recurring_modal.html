@@ -1,0 +1,78 @@
+<!-- Pause form lives outside the modal to avoid nested <form> (invalid HTML) -->
+<form id="pause-form-{{ entry.order.id }}" action="{% url 'pause_recurring_order' entry.order.id %}" method="POST" style="display:none">
+    {% csrf_token %}
+</form>
+
+<div class="modal fade" id="modify-{{ entry.order.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modify Recurring Order
+                    {% if entry.order.paused %}
+                        <span class="badge bg-warning text-dark ms-1">Paused</span>
+                    {% else %}
+                        <span class="badge bg-success ms-1">Next: {{ entry.next_date|date:"D d M" }}</span>
+                    {% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{% url 'modify_recurring_order' entry.order.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        {% include 'includes/orders/recurrence_selects.html' with selected_type=entry.order.recurrence_type selected_day=entry.order.recurrence_day %}
+                    </div>
+                    <table class="table table-sm" id="modal-table-{{ entry.order.id }}">
+                        <thead><tr><th>Product</th><th>Qty</th><th>Price each</th><th>Total</th></tr></thead>
+                        <tbody>
+                            {% for op in entry.items %}
+                            <tr>
+                                <td>{{ op.product.name }}</td>
+                                <td><input type="number" name="qty_{{ op.id }}" value="{{ op.numPurchased }}" min="1" max="99"
+                                           class="form-control form-control-sm modal-qty-input" style="width:80px"
+                                           data-price="{{ op.product.price }}"></td>
+                                <td>£{{ op.product.price }}</td>
+                                <td class="row-total">£{{ op.get_total_item_price }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="fw-bold">
+                                <td>Order Total</td><td></td><td></td>
+                                <td class="grand-total">£{{ entry.order.calculated_total }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success"
+                                onclick="return confirm('Save changes to this recurring order?')">Save changes</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Updates totals dynamically -->
+<script>
+(function () {
+    const table = document.getElementById('modal-table-{{ entry.order.id }}');
+    if (!table) return;
+    table.addEventListener('input', function (e) {
+        if (!e.target.classList.contains('modal-qty-input')) return;
+        let grand = 0;
+        table.querySelectorAll('tbody tr').forEach(function (row) {
+            const input = row.querySelector('.modal-qty-input');
+            const price = parseFloat(input.dataset.price);
+            const qty = parseInt(input.value) || 0;
+            const lineTotal = price * qty;
+            row.querySelector('.row-total').textContent = '£' + lineTotal.toFixed(2);
+            grand += lineTotal;
+        });
+        table.querySelector('.grand-total').textContent = '£' + grand.toFixed(2);
+    });
+}());
+</script>

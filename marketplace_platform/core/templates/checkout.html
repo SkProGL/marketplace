@@ -64,25 +64,7 @@
                         <label class="form-check-label" for="recurringToggle">Make this a recurring order</label>
                       </div>
                       <div id="recurringOptions" style="display: none;">
-                        <div class="mb-2">
-                          <label class="form-label small text-muted">Repeat</label>
-                          <select class="form-select form-select-sm" name="recurrence_type">
-                            <option value="Weekly">Weekly</option>
-                            <option value="Fortnightly">Fortnightly</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label class="form-label small text-muted">On</label>
-                          <select class="form-select form-select-sm" name="recurrence_day">
-                            <option value="1">Monday</option>
-                            <option value="2">Tuesday</option>
-                            <option value="3">Wednesday</option>
-                            <option value="4">Thursday</option>
-                            <option value="5">Friday</option>
-                            <option value="6">Saturday</option>
-                            <option value="7">Sunday</option>
-                          </select>
-                        </div>
+                        {% include 'includes/orders/recurrence_selects.html' %}
                       </div>
                     </div>
 			<!-- From Uiverse.io by vinodjangid07 --> 

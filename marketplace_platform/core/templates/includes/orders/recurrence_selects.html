@@ -1,0 +1,21 @@
+<div class="d-flex gap-3">
+    <div>
+        <label class="form-label small text-muted mb-1">Repeat</label>
+        <select class="form-select form-select-sm" name="recurrence_type">
+            <option value="Weekly" {% if selected_type == 'Weekly' %}selected{% endif %}>Weekly</option>
+            <option value="Fortnightly" {% if selected_type == 'Fortnightly' %}selected{% endif %}>Fortnightly</option>
+        </select>
+    </div>
+    <div>
+        <label class="form-label small text-muted mb-1">On</label>
+        <select class="form-select form-select-sm" name="recurrence_day">
+            <option value="1" {% if selected_day == 1 %}selected{% endif %}>Monday</option>
+            <option value="2" {% if selected_day == 2 %}selected{% endif %}>Tuesday</option>
+            <option value="3" {% if selected_day == 3 %}selected{% endif %}>Wednesday</option>
+            <option value="4" {% if selected_day == 4 %}selected{% endif %}>Thursday</option>
+            <option value="5" {% if selected_day == 5 %}selected{% endif %}>Friday</option>
+            <option value="6" {% if selected_day == 6 %}selected{% endif %}>Saturday</option>
+            <option value="7" {% if selected_day == 7 %}selected{% endif %}>Sunday</option>
+        </select>
+    </div>
+</div>

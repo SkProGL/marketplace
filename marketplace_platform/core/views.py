@@ -8,7 +8,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from core.forms import LoginForm, ProductForm, SignupForm, CheckoutForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
-from core.utils import get_management_context, handle_management_post
+from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from .models import User, Product, Order, OrderProduct
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -17,6 +17,8 @@ from decimal import Decimal
 
 # Create your views here.
 User = get_user_model()
+
+
 
 
 @login_required
@@ -126,49 +128,51 @@ def recurring_orders(request):
 
 
 @login_required
-def modify_next_occurrence(request, order_id):
-    order = get_object_or_404(Order, id=order_id, customer=request.user)
+def modify_recurring_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id, customer=request.user, recurring=True)
 
     if request.method == 'POST':
-        # Create a brand new one-off order for next occurrence only
-        next_date = get_next_occurrence(order)
-        new_order = Order.objects.create(
-            customer=request.user,
-            total_price=order.total_price,
-            delivery_date=timezone.make_aware(
-                timezone.datetime.combine(
-                    next_date, timezone.datetime.min.time())
-            ),
-            order_status='PENDING',
-            recurring=False,  # This is a one-off modification, not a template
-        )
-
-        # Copy items with updated quantities from POST
-        for op in order.orderproduct_set.all():
-            new_qty = int(request.POST.get(f'qty_{op.id}', op.numPurchased))
-            OrderProduct.objects.create(
-                order=new_order,
-                product=op.product,
-                numPurchased=new_qty,
-            )
-
-        messages.success(
-            request, "Next occurrence updated. The recurring template is unchanged.")
-        return redirect('recurring_orders')
-
+        for order_product in order.orderproduct_set.all():
+            new_quantity = int(request.POST.get(f'qty_{order_product.id}', order_product.numPurchased))
+            order_product.numPurchased = new_quantity
+            order_product.save()
+        order.recurrence_type = request.POST.get('recurrence_type', order.recurrence_type)
+        order.recurrence_day = int(request.POST.get('recurrence_day', order.recurrence_day))
+        order.save()
+        messages.success(request, "Recurring order updated for all future deliveries.")
+        return redirect('orders')
     return render(request, 'modify_occurrence.html', {
         'order': order,
         'next_date': get_next_occurrence(order),
         'items': order.orderproduct_set.all(),
     })
-
+   
+@login_required
+def pause_recurring_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id, customer=request.user, recurring=True)
+    if request.method == 'POST':
+        order.paused = not order.paused
+        order.save()
+        state = "paused" if order.paused else "resumed"
+        messages.success(request, f"Recurring order {state}.")
+    return redirect('orders')
 
 @login_required
-def order_history(request):
-    # Fetch orders for the logged-in user, sorted by most recent first
-    orders = Order.objects.filter(
-        customer=request.user).order_by('-order_date')
-    return render(request, 'order_history.html', {'orders': orders})
+def delete_recurring_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id, customer=request.user, recurring=True)
+    if request.method == 'POST':
+        order.delete()
+        messages.success(request, "Recurring order deleted.")
+    return redirect('orders')
+
+@login_required
+def orders(request):
+    orders = Order.objects.filter(customer=request.user).order_by('-order_date')
+    print(orders)
+    return render(request, 'orders.html', {
+        'orders': orders,
+        'orders_with_next': get_recurring_orders_context(request.user)
+    })
 
 
 @login_required
@@ -180,8 +184,16 @@ def order_detail(request, order_id):
 @login_required
 def reorder(request, order_id):
     old_order = get_object_or_404(Order, id=order_id, customer=request.user)
-    # Logic to add items to cart would go here
-    # Check availability and add to session or Cart model
+    print("\n", old_order)
+    cart = {}
+    names = []
+    # Get all OrderProduct rows for this order and fetch their related Product
+    for order_product in old_order.orderproduct_set.select_related('product').all():
+        cart[str(order_product.product.id)] = order_product.numPurchased
+        names.append(f"{order_product.numPurchased} {order_product.product.name}")
+    request.session['cart'] = cart
+    request.session.modified = True
+    messages.success(request, f"Added to cart: {', '.join(names)}.")
     return redirect('checkout')
 
 
@@ -239,7 +251,7 @@ def checkout(request):
             request.session['cart'] = {}
 
             messages.success(request, "Order placed successfully!")
-            return redirect('order_history')
+            return redirect('orders')
     else:
         form = CheckoutForm()
 
@@ -319,7 +331,6 @@ def login_view(request):
         form = LoginForm()
 
     return render(request, 'login.html', {'form': form})
-
 
 @login_required
 def upload_item(request):
@@ -409,14 +420,17 @@ def invoice_view(request, order_code=None):
         commission_amount = subtotal * (commission_rate / Decimal('100.00'))
         total = subtotal + commission_amount
 
-    return render(request, 'invoice.html', {
+    context = {
         'order': order,
         'invoice_items': invoice_items,
         'subtotal': subtotal,
         'commission_rate': commission_rate,
         'commission_amount': commission_amount,
         'total': total,
-    })
+    }
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'includes/orders/invoice_modal_content.html', context)
+    return render(request, 'invoice.html', context)
 
 
 @management_access_required
@@ -425,7 +439,6 @@ def invoice_view(request, order_code=None):
 def management_view(request: HttpResponse):
     # Construct list of model names
     # Pull specific records for selected model for display
-
     app_config = apps.get_app_config('core')
     selected_model_name = request.GET.get('model')
     is_superuser = request.user.is_superuser
@@ -465,7 +478,6 @@ def management_view(request: HttpResponse):
             cached_update_attempts.pop(selected_model_name, None)
             request.session.modified = True
             return redirect(f"{request.path}?model={selected_model_name}")
-
     # Fetch data for Read display
     # Set flag if new draft row has been created
     cached_update_attempt = request.session.get(
@@ -478,30 +490,30 @@ def management_view(request: HttpResponse):
     readonly_fields = set()
     if selected_model_name:
         # Producer specific handling
-        if not is_superuser and user_category == 'Producer':
+        if not is_superuser and user_category == 'Producer' :
             # Get producer account specific rows for selected model
             row_filter = {
                 'Product':   {'producer': request.user},
-                # Order ownership identified via bridging Order => OrderProduct => Product => Producer
-                'Order':     {'orderproduct__product__producer': request.user},
+                'Order':     {'orderproduct__product__producer': request.user}, # Order ownership identified via bridging Order => OrderProduct => Product => Producer
                 'StoryPost': {'user': request.user},
                 'Recipe':    {'user': request.user},
             }.get(selected_model_name, {})
-            distinct = selected_model_name == 'Order'  # Only need one product
+            distinct = selected_model_name == 'Order' # Only need one product
             # Specify Order as read-only, excludiong order_status for Producers
             if selected_model_name == 'Order':
                 order_model = app_config.get_model('Order')
-                readonly_fields = {
-                    field.name for field in order_model._meta.fields if field.name != 'order_status'}
+                readonly_fields = {field.name for field in 
+                                   order_model._meta.fields if field.name != 'order_status'}
             # Remove id selection fields for producer
-            elif selected_model_name in ('Product', 'StoryPost', 'Recipe'):
+            elif selected_model_name in ('Product', 'StoryPost', 'Recipe'): 
                 owner_field = 'producer' if selected_model_name == 'Product' else 'user'
                 readonly_fields = {owner_field}
 
         selected_model = app_config.get_model(selected_model_name)
         selected_data = get_management_context(
-            request, selected_model, selected_model_name, add_new, row_filter, distinct, readonly_fields)
-
+            request, selected_model, selected_model_name, 
+            add_new, row_filter, distinct, readonly_fields)
+        
     return render(
         request, 'management.html', {
             'model_names': model_names,
@@ -513,7 +525,6 @@ def management_view(request: HttpResponse):
 @login_required
 def community(request):
     return render(request, 'community.html')
-
 
 @login_required
 def get_order_summary_json(request, order_id):
@@ -554,7 +565,6 @@ def get_order_summary_json(request, order_id):
         return JsonResponse(data)
     except Exception as e:
         return JsonResponse({'error': e}, status=404)
-
 
 @login_required
 def profile_view(request):

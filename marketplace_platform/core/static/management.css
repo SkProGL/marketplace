@@ -45,3 +45,7 @@
 .management-btns a {
   width: 50%;
 }
+
+.management-btns :only-child {
+    width: 100%;
+}
