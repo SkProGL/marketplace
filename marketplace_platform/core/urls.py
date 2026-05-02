@@ -10,14 +10,14 @@ urlpatterns = [
     path('inventory_upload/', views.upload_item, name='inventory_upload'),
     path('invoice/<str:order_code>/', views.invoice_view, name='invoice'),
     path('community/', views.community, name='community'),
+    path('profile/', views.profile_view, name='profile'),
+    path('terms/', views.terms_view, name='terms'),
     # Recurring order URLS
-    path('orders/recurring/', views.recurring_orders, name='recurring_orders'),
     path('orders/recurring/<uuid:order_id>/modify/', views.modify_recurring_order, name='modify_recurring_order'),
     path('orders/recurring/<uuid:order_id>/pause/', views.pause_recurring_order, name='pause_recurring_order'),
     path('orders/recurring/<uuid:order_id>/delete/', views.delete_recurring_order, name='delete_recurring_order'),
     # Order URLs
-    path('order_management/', views.order_management, name='order_management'),
-    path('orders/<uuid:order_id>/', views.order_detail, name='order_detail'),
+    path('orders/', views.orders, name='orders'),
     path('orders/<uuid:order_id>/reorder/', views.reorder, name='reorder'),
     # Checkout URLs
     path('add-to-cart/<uuid:product_id>/', views.add_to_cart, name='add_to_cart'),
@@ -27,7 +27,5 @@ urlpatterns = [
     path('checkout/', views.checkout, name='checkout'),
     # Management URLs
     path('management/', views.management_view, name="management"),
-    path('profile/', views.profile_view, name='profile'),
-    path('terms/', views.terms_view, name='terms'),
     path('management/order/<uuid:order_id>/order_summary/', views.get_order_summary_json, name='order_summary'),
 ] 

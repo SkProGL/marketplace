@@ -2,8 +2,21 @@
 .oh-header h1 { font-size: 1.8rem; font-weight: 600; margin-bottom: 4px; }
 .oh-header p { color: #888; font-size: 0.9rem; }
 .oh-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; margin-top: 24px; }
-.oh-card { background: white; border: 1.5px solid #e0e0e0; border-radius: 10px; margin-bottom: 16px; overflow: hidden; padding:0.5em }
+.oh-card {   background: white; border: 1.5px solid #e0e0e0; border-radius: 10px; margin-bottom: 16px; overflow: hidden; padding:0.5em }
+.oh-paused-content { opacity: 0.55; }
+.oh-card-paused    { border-left: 4px solid #ffc107; }
+.oh-card-active    { border-left: 4px solid #198754; }
+.oh-card-header-row { cursor: pointer; user-select: none; }
+.oh-card-header-row:hover { background: rgba(0,0,0,0.02); }
+.oh-chevron { transition: transform 0.2s ease; }
+.oh-card-header-row[aria-expanded="true"] .oh-chevron { transform: rotate(180deg); }
 .oh-card-header { padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; }
+.oh-card-buttons .btn:hover {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+    transition: all 0.15s ease;
+}
+.oh-card-buttons .btn { flex: 1; text-align: center; }
 .oh-meta { display: flex; align-items: center; gap: 12px; }
 .oh-num { font-size: 0.75rem; color: #888; text-transform: uppercase; }
 .oh-date { font-size: 0.85rem; }
@@ -23,7 +36,7 @@
 .oh-btn-outline { padding: 7px 16px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.82rem; text-decoration: none; color: #333; }
 .oh-btn-primary { padding: 7px 16px; background: #333; color: white; border-radius: 6px; font-size: 0.82rem; text-decoration: none; }
 .oh-empty { padding: 32px; text-align: center; color: #888; }
-.oh-ai-card { background: #f0f4e8; border: 1.5px solid #c8d9b8; border-radius: 10px; padding: 20px; position: sticky; top: 24px; }
+.oh-ai-card { background: #f0f4e8; border: 1.5px solid #c8d9b8; border-radius: 10px; padding: 20px;}/* position: sticky; top: 24px; }*/
 .oh-ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .oh-ai-header svg { filter: brightness(0) saturate(100%) invert(29%) sepia(78%) saturate(5443%) hue-rotate(149deg) brightness(94%) contrast(80%);}
 .oh-ai-title { font-weight: 600; font-size: 0.95rem; }

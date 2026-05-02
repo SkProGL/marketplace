@@ -188,7 +188,13 @@ class Order(models.Model):
         FORTNIGHTLY = "Fortnightly"
 
     class Weekday(models.IntegerChoices):
-        MON, TUE, WED, THUR, FRI, SAT, SUN = range(1, 8)
+        MON = 1, 'Monday'
+        TUE = 2, 'Tuesday'
+        WED = 3, 'Wednesday'
+        THUR = 4, 'Thursday'
+        FRI = 5, 'Friday'
+        SAT = 6, 'Saturday'
+        SUN = 7, 'Sunday'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey(
@@ -212,6 +218,10 @@ class Order(models.Model):
     recurrence_day = models.IntegerField(
         choices=Weekday.choices, null=True, blank=True)
     # last_generated=models.DateTimeField(null=True,blank=True)
+
+    @property
+    def calculated_total(self):
+        return sum(op.get_total_item_price for op in self.orderproduct_set.all())
 
     def __str__(self):
         return f"{self.customer} ({str(self.id)[:8]}) - {self.order_status} ({self.order_date.strftime('%d-%m-%Y %H:%M:%S')})"

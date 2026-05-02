@@ -1,13 +1,20 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<!-- <style>
+<style>
+    :root { --main-color: #198754; }
+    .modal { top: 5%; }
     .order-card { background: #fdfdfd; border-left: 5px solid var(--main-color); margin-bottom: 20px; padding: 1.5rem; border-radius: 8px; box-shadow: 4px 4px 10px #ddd; }
     .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
     .status-processed { background: var(--secondary-color); color: white; }
     .status-pending { background: #ffc107; color: black; }
-</style> -->
-<link rel="stylesheet" href="{% static 'order_management.css' %}">
+</style>
+<link rel="stylesheet" href="{% static 'orders.css' %}">
+<link rel="stylesheet" href="{% static 'invoice.css' %}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
+<script>function download_pdf() { html2pdf(document.querySelector('#invoice-modal .invoice-box')); }</script>
+        <!-- Quick re-order panel -->
+         {% include 'includes/orders/ai_order_recommendation.html' %}
 <div class="d-grid" style="grid-template-columns: 1fr 0.3fr; gap: 1rem; align-items: start;">
     <div class="oh-header">
         <h1>Order Management</h1>
@@ -43,7 +50,7 @@
                 </div>
                 {% endfor %}
                 <div class="oh-actions">
-                    <a href="{% url 'invoice' %}" class="oh-btn-outline">View Invoice</a>
+                    <a href="{% url 'invoice' order.id %}" class="oh-btn-outline invoice-link" data-order-id="{{ order.id }}">View Invoice</a>
                     <a href="#" class="oh-btn-outline">Write Review</a>
                     <form action="{% url 'reorder' order.id %}" method="POST" class="oh-reorder-form">
                         {% csrf_token %}
@@ -55,17 +62,39 @@
             <p>You haven't placed any orders yet.</p>
             {% endfor %}
             </div>
-        </div>
-    <!-- Right side -->
-     <!-- Recurring order card -->  
-        {% include 'includes/recurring_order_card.html' %}
-        <!-- Quick re-order panel -->
-         {% include 'includes/ai_order_recommendation.html' %}
     </div>
+    <!-- Right side -->
+    <!-- Recurring order card -->  
+    {% include 'includes/orders/recurring_order_card.html' %}
 </div>
 <script>
 function toggleXAI(id) {
     document.getElementById(id).classList.toggle('visible');
 }
+
+document.querySelectorAll('.invoice-link').forEach(function (link) {
+    link.addEventListener('click', function (e) {
+        e.preventDefault();
+        fetch(this.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.text())
+            .then(html => {
+                document.getElementById('invoice-modal-body').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('invoice-modal')).show();
+            });
+    });
+});
 </script>
+
+<!-- Invoice modal -->
+<div class="modal fade" id="invoice-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Invoice</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="invoice-modal-body"></div>
+        </div>
+    </div>
+</div>
 {% endblock %}
