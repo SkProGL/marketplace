@@ -1,4 +1,6 @@
 import json
+import difflib
+from django.db.models import Q, Sum, Min, Subquery, OuterRef
 from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
 from django.shortcuts import render, get_object_or_404, redirect
@@ -6,10 +8,10 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
-from core.forms import LoginForm, ProductForm, SignupForm, CheckoutForm
+from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, handle_management_post
-from .models import User, Product, Order, OrderProduct
+from .models import User, Product, ProductBatch, Order, OrderProduct
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import timedelta
@@ -38,18 +40,18 @@ def update_cart_ajax(request, product_id):
         cart_items_data = []
         total_price = 0
         if cart:
-            products = Product.objects.filter(id__in=cart.keys())
-            for product in products:
-                qty = cart.get(str(product.id), 0)
-                subtotal = float(product.price) * qty
+            batches = ProductBatch.objects.select_related('product').filter(id__in=cart.keys())
+            for batch in batches:
+                qty = cart.get(str(batch.id), 0)
+                subtotal = float(batch.price) * qty
                 total_price += subtotal
                 cart_items_data.append({
-                    'id': str(product.id),
-                    'name': product.name,
-                    'price': float(product.price),
+                    'id': str(batch.id),
+                    'name': batch.name,
+                    'price': float(batch.price),
                     'quantity': qty,
                     'subtotal': round(subtotal, 2),
-                    'image': product.image.url if product.image else None,
+                    'image': batch.image.url if batch.image else None,
                 })
 
         return JsonResponse({
@@ -66,18 +68,18 @@ def cart_contents(request):
     cart_items_data = []
     total_price = 0
     if cart:
-        products = Product.objects.filter(id__in=cart.keys())
-        for product in products:
-            qty = cart.get(str(product.id), 0)
-            subtotal = float(product.price) * qty
+        batches = ProductBatch.objects.select_related('product').filter(id__in=cart.keys())
+        for batch in batches:
+            qty = cart.get(str(batch.id), 0)
+            subtotal = float(batch.price) * qty
             total_price += subtotal
             cart_items_data.append({
-                'id': str(product.id),
-                'name': product.name,
-                'price': float(product.price),
+                'id': str(batch.id),
+                'name': batch.name,
+                'price': float(batch.price),
                 'quantity': qty,
                 'subtotal': round(subtotal, 2),
-                'image': product.image.url if product.image else None,
+                'image': batch.image.url if batch.image else None,
             })
     return JsonResponse({
         'total_items': sum(cart.values()),
@@ -148,8 +150,9 @@ def modify_next_occurrence(request, order_id):
             new_qty = int(request.POST.get(f'qty_{op.id}', op.numPurchased))
             OrderProduct.objects.create(
                 order=new_order,
-                product=op.product,
+                batch=op.batch,
                 numPurchased=new_qty,
+                price_at_purchase=op.price_at_purchase,
             )
 
         messages.success(
@@ -193,14 +196,14 @@ def checkout(request):
         messages.error(request, "You haven't selected any items.")
         return redirect('home')
 
-    # 1. Gather all products and calculate the total price
+    # 1. Gather all batches and calculate the total price
     total_price = 0
     cart_items = []
 
     for pid, qty in cart.items():
-        product = get_object_or_404(Product, id=pid)
-        total_price += product.price * qty
-        cart_items.append({'product': product, 'quantity': qty})
+        batch = get_object_or_404(ProductBatch, id=pid)
+        total_price += batch.price * qty
+        cart_items.append({'product': batch, 'quantity': qty})
 
     min_delivery_date = (timezone.now() + timedelta(hours=48)
                          ).strftime('%Y-%m-%dT%H:%M')
@@ -228,10 +231,12 @@ def checkout(request):
 
             # 3. Loop through the memory to link ALL items to this order
             for item in cart_items:
+                batch = item['product']
                 OrderProduct.objects.create(
                     order=new_order,
-                    product=item['product'],
-                    numPurchased=item['quantity']
+                    batch=batch,
+                    numPurchased=item['quantity'],
+                    price_at_purchase=batch.price,
                 )
 
             # Clear the memory now that the order is placed!
@@ -257,15 +262,93 @@ def home_view(request):
     # Calculate total price
     total_price = 0
     if cart:
-        products = Product.objects.filter(id__in=cart.keys())
-        for product in products:
-            qty = cart.get(str(product.id), 0)
-            total_price += float(product.price) * qty
+        batches = ProductBatch.objects.filter(id__in=cart.keys())
+        for batch in batches:
+            qty = cart.get(str(batch.id), 0)
+            total_price += float(batch.price) * qty
+
+    # Latest batch subqueries — pick the most recently created batch per product
+    latest = ProductBatch.objects.filter(
+        product=OuterRef('pk')
+    ).order_by('-created_at')
+
+    items = Product.objects.select_related('producer').annotate(
+        total_stock=Sum('batches__stock'),
+        primary_batch_id=Subquery(latest.values('id')[:1]),
+        min_price=Min('batches__price'),
+        primary_image=Subquery(latest.values('image')[:1]),
+        primary_availability=Subquery(latest.values('availability')[:1]),
+        primary_season_start=Subquery(latest.values('seasonStart')[:1]),
+        primary_season_end=Subquery(latest.values('seasonEnd')[:1]),
+        primary_quality=Subquery(latest.values('quality_class')[:1]),
+        primary_surplus=Subquery(latest.values('surplus')[:1]),
+        primary_discount=Subquery(latest.values('discount_percentage')[:1]),
+    ).filter(total_stock__gt=0)
+
+    # Text search
+    q = request.GET.get('q', '').strip()
+    if q:
+        items = items.filter(
+            Q(name__icontains=q) |
+            Q(description__icontains=q) |
+            Q(producer__organisation_name__icontains=q)
+        )
+
+    # Category filter (multiple checkboxes)
+    categories = request.GET.getlist('category')
+    if categories:
+        items = items.filter(category__in=categories)
+
+    # In stock filter — already enforced by total_stock__gt=0 above
+    # Discounted filter
+    if request.GET.get('discounted'):
+        items = items.filter(batches__surplus=True).distinct()
+
+    # In season filter
+    if request.GET.get('in_season'):
+        items = items.filter(
+            batches__availability__in=['Available', 'Available All Year']
+        ).distinct()
+
+    # Spell suggestion: if a search returned no results, suggest the closest product name
+    suggestion = None
+    if q and not items.exists():
+        all_names = list(Product.objects.values_list('name', flat=True))
+        matches = difflib.get_close_matches(q, all_names, n=1, cutoff=0.6)
+        if matches:
+            suggestion = matches[0]
+
+    # AJAX based search
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        data = [{
+            'id': str(item.primary_batch_id),
+            'name': item.name,
+            'price': str(item.min_price),
+            'image': f'/media/{item.primary_image}' if item.primary_image else None,
+            'allergens': item.allergens,
+            'description': item.description,
+            'category': item.category,
+            'availability': item.primary_availability,
+            'seasonStart': item.primary_season_start,
+            'seasonEnd': item.primary_season_end,
+            'organic': item.organic,
+            'producer': item.producer.organisation_name,
+            'quality_class': item.primary_quality,
+            'surplus': item.primary_surplus,
+            'discount': str(item.primary_discount or 0),
+        } for item in items]
+        return JsonResponse({'items': data, 'count': len(data), 'suggestion': suggestion})
 
     return render(request, 'home.html', {
-        'items': Product.objects.all(),
+        'items': items,
         'cart_items': cart,
         'cart_total_price': round(total_price, 2),
+        'selected_categories': categories,
+        'in_stock': request.GET.get('in_stock'),
+        'discounted': request.GET.get('discounted'),
+        'in_season': request.GET.get('in_season'),
+        'search_query': q,
+        'suggestion': suggestion,
     })
 
     
@@ -322,23 +405,64 @@ def login_view(request):
 @login_required
 def upload_item(request):
     if request.method == 'POST':
-        form = ProductForm(request.POST, request.FILES)
-        print(request.FILES, request.POST)
-        if form.is_valid():
-            print(f"\033[42m\033[30mform valid\033[0m")
-            product = form.save(commit=False)
-            if request.user.is_authenticated:
-                product.producer = User.objects.get(pk=request.user.pk)
-                product.save()
-                return redirect('home')
-            else:
-                return HttpResponse("You must be logged in to upload.")
+        product_form = ProductForm(request.POST)
+        batch_form = ProductBatchForm(request.POST, request.FILES)
+        if product_form.is_valid() and batch_form.is_valid():
+            producer = User.objects.get(pk=request.user.pk)
+            # Find existing product template or create a new one
+            product, _ = Product.objects.get_or_create(
+                producer=producer,
+                name=product_form.cleaned_data['name'],
+                defaults={
+                    'category': product_form.cleaned_data['category'],
+                    'description': product_form.cleaned_data['description'],
+                    'unit': product_form.cleaned_data['unit'],
+                    'food_miles': product_form.cleaned_data['food_miles'],
+                    'allergens': product_form.cleaned_data['allergens'],
+                    'organic': product_form.cleaned_data['organic'],
+                }
+            )
+            batch = batch_form.save(commit=False)
+            batch.product = product
+            batch.save()
+            return redirect('home')
         else:
-            print(f"\033[43m\033[30m{form.errors=}\033[0m")
-
+            print(f"\033[43m\033[30m{product_form.errors=} {batch_form.errors=}\033[0m")
     else:
-        form = ProductForm()
-    return render(request, 'inventory_upload.html', {'form': form})
+        product_form = ProductForm()
+        batch_form = ProductBatchForm()
+
+    return render(request, 'inventory_upload.html', {
+        'product_form': product_form,
+        'batch_form': batch_form,
+        'months': Product.Months.choices,
+    })
+
+
+@login_required
+def add_batch(request):
+    producer = request.user
+    products = Product.objects.filter(producer=producer).order_by('name')
+
+    if request.method == 'POST':
+        product_id = request.POST.get('product_id')
+        product = get_object_or_404(Product, id=product_id, producer=producer)
+        batch_form = ProductBatchForm(request.POST, request.FILES)
+        if batch_form.is_valid():
+            batch = batch_form.save(commit=False)
+            batch.product = product
+            batch.save()
+            return redirect('home')
+        else:
+            print(f"\033[43m\033[30m{batch_form.errors=}\033[0m")
+    else:
+        batch_form = ProductBatchForm()
+
+    return render(request, 'add_batch.html', {
+        'products': products,
+        'batch_form': batch_form,
+        'months': Product.Months.choices,
+    })
 
 
 def signup_view(request):

@@ -128,6 +128,25 @@ textarea {
   display: none;
 }
 
+/* season month selects */
+
+.season-months-row {
+  align-items: flex-end;
+}
+
+.season-select {
+  width: 100%;
+  padding: var(--padding-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.season-select[style*="pointer-events: none"] {
+  cursor: not-allowed;
+}
+
 /* button */
 
 .form button {

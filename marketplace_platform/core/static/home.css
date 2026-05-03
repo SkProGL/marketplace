@@ -98,8 +98,9 @@
 
   display: grid;
   width: 100%;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  row-gap: 1rem;
+  column-gap: 0.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 200px));
 }
 .card {
   position: relative;
