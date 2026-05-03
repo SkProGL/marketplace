@@ -239,7 +239,8 @@ def checkout(request):
                 OrderProduct.objects.create(
                     order=new_order,
                     product=item['product'],
-                    numPurchased=item['quantity']
+                    numPurchased=item['quantity'],
+                    product_price_at_purchase=item['product'].price
                 )
 
             # Clear the memory now that the order is placed!

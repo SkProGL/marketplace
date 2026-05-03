@@ -16,12 +16,21 @@ class UserManager(BaseUserManager):
         user.set_password(password)
         user.save(using=self._db)
         return user
+    
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError("The Email field must be set")
+        email=self.normalize_email(email)
+        user=self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return User
 
 class User(AbstractUser):
     class Category(models.TextChoices):
         CUSTOMER = "Customer"
         PRODUCER = "Producer"
-        COMMUNITY = "Community group"
+        COMMUNITY = "Community","Community Group"
         RESTAURANT = "Restaurant"
         ADMIN = "Admin"
 
@@ -144,9 +153,9 @@ class Product(models.Model):
     # Best before date
     best_before = models.DateField(default="2026-04-04")
     # Food miles - distance food travels from producer to customer
-    food_miles = models.IntegerField()
+    food_miles = models.IntegerField(default=0)
     # Stock quantity
-    stock = models.IntegerField()
+    stock = models.IntegerField(default=50)
     # Percentage to indicate how much stock is left before an alert is sent
     # stock_alert_threshold = models.DecimalField(
         # max_digits=5, decimal_places=2, default=0)
@@ -228,10 +237,11 @@ class Order(models.Model):
 
 
 class OrderProduct(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     numPurchased = models.IntegerField()
-
+    product_price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)
     class Meta:
         unique_together = ("order", "product")
         
@@ -277,6 +287,7 @@ class Recipe(models.Model):
 
 
 class RecipeIngredients(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.CharField(max_length=30)
@@ -324,9 +335,9 @@ class Payment(models.Model):
     processed_at = models.DateTimeField(null=True, blank=True)
 
 class OrderPayment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     payment = models.ForeignKey(Payment, on_delete=models.CASCADE)
-
     class Meta:
         unique_together = ("order", "payment")
     date_posted=models.DateTimeField(auto_now_add=True)

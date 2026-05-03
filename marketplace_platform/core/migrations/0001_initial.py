@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
                 ('email', models.EmailField(max_length=254, unique=True)),
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('full_name', models.CharField(blank=True, default='', max_length=128)),
-                ('category', models.CharField(choices=[('Customer', 'Customer'), ('Producer', 'Producer'), ('Community group', 'Community'), ('Restaurant', 'Restaurant'), ('Admin', 'Admin')], default='Customer', max_length=20)),
+                ('category', models.CharField(choices=[('Customer', 'Customer'), ('Producer', 'Producer'), ('Community', 'Community Group'), ('Restaurant', 'Restaurant'), ('Admin', 'Admin')], default='Customer', max_length=20)),
                 ('phone', models.CharField(blank=True, max_length=20)),
                 ('address', models.CharField(blank=True, max_length=256)),
                 ('postcode', models.CharField(blank=True, max_length=20)),
@@ -101,8 +101,9 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='OrderProduct',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('numPurchased', models.IntegerField()),
+                ('product_price_at_purchase', models.DecimalField(decimal_places=2, max_digits=10)),
                 ('order', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.order')),
                 ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.product')),
             ],
@@ -130,7 +131,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='RecipeIngredients',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('quantity', models.CharField(max_length=30)),
                 ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.product')),
                 ('recipe', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.recipe')),
@@ -170,7 +171,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='OrderPayment',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('date_posted', models.DateTimeField(auto_now_add=True)),
                 ('order', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.order')),
                 ('payment', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.payment')),
