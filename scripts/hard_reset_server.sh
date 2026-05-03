@@ -19,7 +19,11 @@ docker compose run \
   --rm web sh -c "python manage.py makemigrations && \
                   python manage.py migrate && \
                   python manage.py createsuperuser --noinput && \
-                  python manage.py seed_users"
+                  python manage.py seed_users && \
+                  python manage.py import_users && \
+                  python manage.py import_products && \
+                  python manage.py import_orders
+                  "
 
 # Start the containers
 docker compose up
