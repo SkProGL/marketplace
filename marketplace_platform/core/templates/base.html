@@ -55,8 +55,7 @@
                         {% if navbar_alerts %}{% for alert in navbar_alerts %}
                         <li><a class="dropdown-item d-flex gap-2 align-items-start py-2" href="{{ alert.link_url }}">
                                 <i class="bi bi-{{ alert.icon }} text-{{ alert.colour }} mt-1"></i>
-                                <div style="font-size:.85rem; overflow-wrap: break-word; white-space: normal">{{
-                                    alert.message }}<br><small class="text-success">{{ alert.link_label }} →</small>
+                                <div style="font-size:.85rem; overflow-wrap: break-word; white-space: normal">{{alert.message }}<br><small class="text-success">{{ alert.link_label }} →</small>
                                 </div>
                             </a></li>
                         {% endfor %}{% else %}

@@ -6,11 +6,11 @@
 {% block content %}
 
 <style>
-/* Copy button hover effect for model selection group */
-.btn-check + .btn-outline-success:hover {
-    background-color: #198754;
-    color: white;
-}
+    /* Copy button hover effect for model selection group */
+    .btn-check+.btn-outline-success:hover {
+        background-color: #198754;
+        color: white;
+    }
 </style>
 <link rel="stylesheet" href="{% static 'management.css' %}">
 <div class="row justify-content-center">
@@ -22,68 +22,66 @@
             <!-- Primary card -->
             <div class="card shadow p-4 ">
                 <!-- Model selection button group -->
-                <div class="flex-wrap gap-2 btn-group card-header  border-0 bg-transparent management-topbar" role="group">
+                <div class="flex-wrap gap-2 btn-group card-header  border-0 bg-transparent management-topbar"
+                    role="group">
                     {% for model_name in model_names %}
-                        <input  type="radio" 
-                                class="btn-check " 
-                                name="btnradio" 
-                                id="btnradio{{ forloop.counter }}"
-                                onchange="location.href='?model={{ model_name }}'"
-                                {% if model_name == selected_model_name %}checked{% endif %}>
-                        <label class="btn btn-outline-success" for="btnradio{{ forloop.counter }}">
-                            {{ model_name }}
-                            <!-- Producers - Show alert badges indicating stock and pending order counts -->
-                            {% if model_name == "Product" %}
-                                {% if stock_alert.warning_count > 0 %}
-                                <span class="badge bg-warning">{{ stock_alert.warning_count }}</span>
-                                {% endif %}
-                                {% if stock_alert.error_count > 0 %}
-                                <span class="badge bg-danger">{{ stock_alert.error_count }}</span>
-                                {% endif %}
-
+                    <input type="radio" class="btn-check " name="btnradio" id="btnradio{{ forloop.counter }}"
+                        onchange="location.href='?model={{ model_name }}'" {% if model_name == selected_model_name%}checked{% endif %}>
+                    <label class="btn btn-outline-success" for="btnradio{{ forloop.counter }}">
+                        {{ model_name }}
+                        <!-- Producers - Show alert badges indicating stock and pending order counts -->
+                        {% if model_name == "Product" %}
+                            {% if stock_alert.warning_count > 0 %}
+                            <span class="badge bg-warning">{{ stock_alert.warning_count }}</span>
                             {% endif %}
-                            {% if model_name == "Order" %}
-                                {% if stock_alert.pending_orders > 0 %}
-                                <span class="badge bg-info">{{ stock_alert.pending_orders }}</span>
-                                {% endif %}
+                            {% if stock_alert.error_count > 0 %}
+                            <span class="badge bg-danger">{{ stock_alert.error_count }}</span>
                             {% endif %}
-                        </label>
+                        {% endif %}
+                        {% if model_name == "Order" %}
+                            {% if stock_alert.pending_orders > 0 %}
+                            <span class="badge bg-info">{{ stock_alert.pending_orders }}</span>
+                            {% endif %}
+                        {% endif %}
+                    </label>
                     {% endfor %}
-                    </div> 
+                </div>
                 <!-- Construct selected model table -->
                 {% if selected_data %}
-                    {% include 'includes/management/management_table.html' %}       
-                    {% else %}
-                    <div class="p-5 text-center text-muted">
-                        Select a table from the header above.
-                    </div>
+                {% include 'includes/management/management_table.html' %}
+                {% else %}
+                <div class="p-5 text-center text-muted">
+                    Select a table from the header above.
+                </div>
                 {% endif %}
                 <!-- Disable actions if Order and user is Producer -->
                 {% if selected_model_name %}
                 <!-- Actions for update and new entry creation -->
                 <div class="management-btns">
                     {% if user.is_superuser or user.category == 'Producer' %}
-                    <button type="submit" name="update"  class="btn btn-outline-primary" onclick="return confirm('Are you sure you want to save all changes {{ selected_model_name }}?');" title="Save changes"><i class="bi bi-floppy-fill"></i></button>
+                    <button type="submit" name="update" class="btn btn-outline-primary"
+                        onclick="return confirm('Are you sure you want to save all changes {{ selected_model_name }}?');"
+                        title="Save changes"><i class="bi bi-floppy-fill"></i></button>
                     {% endif %}
                     {% if user.is_superuser %}
-                        <a class="btn btn-outline-success" title="Add new entry" disable>
+                    <a href="?model={{ selected_model_name }}&draft=true" class="btn btn-outline-success" >
                         <i class="bi bi-plus-square-fill"></i>
                     </a>
                     {% endif %}
-                    </div>            
+                </div>
             </div>
-                {% endif %}
-            </div>
-        </form>
+            {% endif %}
     </div>
+    </form>
+</div>
 </div>
 <script>
-    document.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && document.activeElement.tagName === 'INPUT') {
-        e.preventDefault();
-        document.querySelector('[name="update"]').click();
-    }
-});
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && document.activeElement.tagName === 'INPUT') {
+            e.preventDefault();
+            document.querySelector('[name="update"]').click();
+        }
+    });
 </script>
 {% endblock %}
 
@@ -92,8 +90,8 @@
 {% block modals %}
 <!-- Order modal window for expanded order view -->
 {% if selected_model_name == "Order" %}
-    {% include 'includes/management/management_order_modal.html' %}     
-    <!-- defer is best practice to wait until html is parsed before loading script-->
-    <script defer src="{% static 'js/management_order_modal.js' %}"></script>
+{% include 'includes/management/management_order_modal.html' %}
+<!-- defer is best practice to wait until html is parsed before loading script-->
+<script defer src="{% static 'js/management_order_modal.js' %}"></script>
 {% endif %}
 {% endblock %}
