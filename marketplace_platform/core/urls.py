@@ -1,24 +1,24 @@
-# app/urls.py
-from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
 from core import views
 
 urlpatterns = [
+    # General/Account URLs
     path('', views.home_view, name='home'),
     path('login/', views.login_view, name='login'),
     path('signup/', views.signup_view, name='signup'),
-    path('inventory_upload/', views.upload_item, name='inventory_upload'),
-    path('invoice/<str:order_code>/', views.invoice_view, name='invoice'),
-    path('community/', views.community, name='community'),
     path('profile/', views.profile_view, name='profile'),
     path('terms/', views.terms_view, name='terms'),
+    path('review/<uuid:product_id>/', views.add_review, name='add_review'),
+    path('community/', views.community, name='community'),
+    path('inventory_upload/', views.upload_item, name='inventory_upload'),
+    # Order URLs
+    path('orders/', views.orders, name='orders'),
+    path('orders/<uuid:order_id>/reorder/', views.reorder, name='reorder'),
+    path('invoice/<str:order_code>/', views.invoice_view, name='invoice'),
     # Recurring order URLS
     path('orders/recurring/<uuid:order_id>/modify/', views.modify_recurring_order, name='modify_recurring_order'),
     path('orders/recurring/<uuid:order_id>/pause/', views.pause_recurring_order, name='pause_recurring_order'),
     path('orders/recurring/<uuid:order_id>/delete/', views.delete_recurring_order, name='delete_recurring_order'),
-    # Order URLs
-    path('orders/', views.orders, name='orders'),
-    path('orders/<uuid:order_id>/reorder/', views.reorder, name='reorder'),
     # Checkout URLs
     path('add-to-cart/<uuid:product_id>/', views.add_to_cart, name='add_to_cart'),
     path('cart/contents/', views.cart_contents, name='cart_contents'),
@@ -28,4 +28,5 @@ urlpatterns = [
     # Management URLs
     path('management/', views.management_view, name="management"),
     path('management/order/<uuid:order_id>/order_summary/', views.get_order_summary_json, name='order_summary'),
+
 ] 

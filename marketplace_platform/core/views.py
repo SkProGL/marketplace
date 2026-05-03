@@ -1,15 +1,13 @@
 import json
 from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
-from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
-from core.forms import LoginForm, ProductForm, SignupForm, CheckoutForm
+from core.forms import LoginForm, ProductForm, SignupForm, CheckoutForm, ReviewForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
-from .models import User, Product, Order, OrderProduct
+from .models import User, Product, Order, OrderProduct, Review
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import timedelta
@@ -17,9 +15,6 @@ from decimal import Decimal
 
 # Create your views here.
 User = get_user_model()
-
-
-
 
 @login_required
 def update_cart_ajax(request, product_id):
@@ -578,3 +573,41 @@ def profile_view(request):
 def terms_view(request):
     """Display the terms and conditions / cookie policy page."""
     return render(request, 'terms.html')
+
+
+@login_required
+def add_review(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+
+    if request.user.category == User.Category.PRODUCER:
+        if product.producer == request.user:
+            messages.error(request, "You cannot review your own products.")
+            return redirect("orders")
+
+    delivered_purchase = OrderProduct.objects.filter(
+        product=product,
+        order__customer=request.user,
+        order__order_status=Order.Status.DELIVERED
+    ).exists()
+
+    if not delivered_purchase:
+        messages.error(request, "You can only review products from delivered orders.")
+        return redirect("orders")
+
+    if Review.objects.filter(user=request.user, product=product).exists():
+        messages.info(request, "You've already reviewed this product.")
+        return redirect("orders")
+
+    if request.method == "POST":
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.user = request.user
+            review.product = product
+            review.save()
+            messages.success(request, "Review submitted!")
+            return redirect("orders")
+    else:
+        form = ReviewForm()
+
+    return render(request, "review_form.html", {"form": form, "product": product})

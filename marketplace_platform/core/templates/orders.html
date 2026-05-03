@@ -47,11 +47,13 @@
                         <div class="oh-item-farm">{{ item.product.producer.name }}</div>
                     </div>
                     <span class="oh-item-price">£{{ item.product.price }}</span>
+                {% if order.order_status == "DELIVERED" %}
+                    <a href="{% url 'add_review' item.product.id %}" class="oh-btn-outline" style="font-size:0.78rem;">Write Review</a>
+                {% endif %}
                 </div>
                 {% endfor %}
                 <div class="oh-actions">
                     <a href="{% url 'invoice' order.id %}" class="oh-btn-outline invoice-link" data-order-id="{{ order.id }}">View Invoice</a>
-                    <a href="#" class="oh-btn-outline">Write Review</a>
                     <form action="{% url 'reorder' order.id %}" method="POST" class="oh-reorder-form">
                         {% csrf_token %}
                         <button type="submit" class="oh-btn-primary">Reorder</button>
