@@ -13,7 +13,15 @@
   margin-bottom: var(--row-gap);
 }
 
-/*FILTER ---------------------------------*/
+/*filter */
+
+.home-filter-group {
+  box-shadow: inset 0 0 10px #959595;
+  border-radius: 20px;
+  padding: 10px 15px;
+  /* margin: 30px 0; */
+  margin: 4rem 0 1rem 0;
+}
 .filters {
   user-select: none;
   margin: var(--row-gap) 0;
@@ -51,11 +59,12 @@
 .widget-stepper-btn {
   border: none;
   background: transparent;
-  font-size: 2.2rem;
+  /* font-size: 2.2rem; */
+  font-size: 18px;
   cursor: pointer;
   padding: 8px;
   color: #f5ddb7;
-  text-shadow: 1px 1px 1px black;
+  /* text-shadow: 1px 1px 1px black; */
 }
 
 .widget-stepper-input {
@@ -84,8 +93,13 @@
 /* From Uiverse.io by dovatgabriel */
 
 .widget-card-grid {
-  display: inline-flex;
-  gap: 4rem;
+  /* display: inline-flex; */
+  /* gap: 4rem; */
+
+  display: grid;
+  width: 100%;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 .card {
   position: relative;
@@ -95,7 +109,7 @@
   cursor: pointer;
   transition: all 120ms;
   display: flex;
-  flex-direction: column; 
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: #fff;
@@ -127,10 +141,13 @@
   position: absolute;
   top: 4%;
   left: 4%;
-  color: black;
+  /* color: black; */
+  color: #ff0000e3;
   text-shadow: 0 0 white;
   background: white;
-  padding: 8px;
+  /* padding: 8px; */
+  background: #ff000029;
+  padding: 4px 8px;
   border-radius: 1rem;
 }
 
@@ -141,62 +158,62 @@
   transform: translateX(-50%);
 }
 .cart-widget {
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
 }
 
 .add-to-cart-btn {
-    background: #198754;
-    color: white;
-    border: none;
-    padding: 6px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    white-space: nowrap;
-    font-family: monospace;
+  background: #198754;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+  font-family: monospace;
 }
 
 .add-to-cart-btn:hover {
-    background: #157347;
+  background: #157347;
 }
 
 .cart-stepper {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 2px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
 }
 
 .cart-stepper .widget-stepper-btn {
-    background: white;
-    border: 1.5px solid #198754;
-    color: #198754;
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  background: white;
+  border: 1px solid #198754;
+  color: #198754;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cart-stepper .widget-stepper-btn:hover {
-    background: #f0fff4;
+  background: #f0fff4;
 }
 
 .stepper-qty {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #198754;
-    min-width: 20px;
-    text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #198754;
+  min-width: 20px;
+  text-align: center;
 }
 .allergens svg {
   background: none;
   margin-bottom: 2px;
+  color: #ff0000e3;
 }
 
 .card:hover img {
@@ -267,6 +284,7 @@
   --width-of-input: 300px;
   border: none;
   padding: 0;
+  margin: 4rem 0 0 0;
 }
 
 .input-alt {
@@ -290,4 +308,8 @@
 .home-results {
   margin: 0 0 2rem 0;
   padding: 6px 12px;
+}
+
+img {
+  pointer-events: none;
 }

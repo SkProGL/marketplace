@@ -9,33 +9,36 @@
 	<input class="input input-alt" placeholder="Search" required="" type="text">
 	<span class="input-border input-border-alt"></span>
 </div>
-<div>
-	<div class="filters">
-	  <input type="checkbox" id="apple">
-	  <label for="apple">Apple</label>
+<div class="home-filter-group">
+	<div>
+		<div class="filters">
+		  <input type="checkbox" id="apple">
+		  <label for="apple">Apple</label>
 
-	  <input type="checkbox" id="carrot">
-	  <label for="carrot">Carrot</label>
+		  <input type="checkbox" id="carrot">
+		  <label for="carrot">Carrot</label>
 
-	  <input type="checkbox" id="potatoes">
-	  <label for="potatoes">Potatoes</label>
+		  <input type="checkbox" id="potatoes">
+		  <label for="potatoes">Potatoes</label>
 
+		</div>
 	</div>
-</div>
-<div class="custom-filters">
+	<div class="custom-filters">
 
-	<div class="filters">
+		<div class="filters">
 
-	  <input type="checkbox" id="stock">
-	  <label for="stock">In Stock</label>
+		  <input type="checkbox" id="stock">
+		  <label for="stock">In Stock</label>
 
-	  <input type="checkbox" id="discount">
-	  <label for="discount">Discounted %</label>
+		  <input type="checkbox" id="discount">
+		  <label for="discount">Discounted %</label>
+		</div>
+		{% include "components/widget-food-miles.html" %}
+		{% include "components/widget-tree.html" %}
+		{% include "components/widget-offer.html" %}
+		<br/>
 	</div>
-	{% include "components/widget-food-miles.html" %}
-	{% include "components/widget-tree.html" %}
-	{% include "components/widget-offer.html" %}
-	<br/>
+
 </div>
 <div class="home-results">
   <b>Found {{ items|length }} matches</b>
@@ -46,26 +49,26 @@
   {% for item in items %}
     <div class="card" style="display: flex; flex-direction: column; height:280px; width:190px;overflow: hidden;">
 
-      <div class="image" style="height: 65%; width: 100%; flex-shrink: 0;  overflow: hidden; position: relative;">
+      <div class="image" style="height: 75%; width: 100%; flex-shrink: 0;  overflow: hidden; position: relative;">
         {% if item.image %}
           <img src="{{ item.image.url }}" style="height: 100%; width: 100%; object-fit: cover; display: block;">
         {% else %}
-          <img src="{% static 'test.jpg' %}" style="height: 100%; width: 100%; object-fit: cover;">
-          <img src="{% static 'test.jpg' %}" style="height: 100%; width: 100%; object-fit: cover;">
+          <img src="{% static 'test.jpg' %}" style="height: 100%; width: 100%; object-fit: cover; display: block;">
         {% endif %}
       </div>
 
-      <div style="display: flex; padding: 15px; flex-grow: 1;">
+      <div style="display: flex; padding: 0 15px; flex-grow: 1;">
 
         {% if item.allergens %}
         <span class="allergens">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle-warning-icon lucide-message-circle-warning" transform="scale(-1,1)"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+          {% include "includes/icons/icon_warning.html" %}
             {{ item.allergens|join:", " }}
         </span>
         {% endif %}
 <!-- Plus and minus controls, needs to be here so the count would work correctly-->
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <div style="display: flex; flex-direction: column;">
+            <!-- <div style="display: flex; flex-direction: column;"> -->
+            <div style="">
                 <span class="title">{{ item.name }}</span>
                 <span class="price">£{{ item.price }}</span>
             </div>
@@ -82,7 +85,7 @@
                 {% else %}
                     <!-- Not in cart — show Add button -->
                     <button class="add-to-cart-btn" onclick="addToCart('{{ item.id }}', this)">
-                        Add to Cart
+                        Add
                       </button>
                 {% endif %}
             </div>
@@ -96,6 +99,8 @@
 <br/>
 <br/>
 <br/>
+
+{% include "api-meals.html" %}
 <!--Quantity input sync with stepper-->
 <script>
   document.querySelectorAll('.card').forEach(card => {
@@ -134,4 +139,5 @@
   });
 </script>
 <script src="{% static 'cart.js' %}"></script>
+
 {% endblock %}

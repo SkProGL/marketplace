@@ -1,6 +1,6 @@
 <div class="food-miles-filter">
   <!-- From Uiverse.io by Yaya12085 -->
-  <span class="food-miles-title">Food miles:</span>
+  <span class="food-miles-title"></span>
   <div class="radio-input">
     <label>
       <input
@@ -14,14 +14,10 @@
     </label>
     <label>
       <input value="value-2" name="value-radio" id="value-2" type="radio" />
-      <span>10</span>
+      <span>Food miles</span>
     </label>
     <label>
       <input value="value-3" name="value-radio" id="value-3" type="radio" />
-      <span>15</span>
-    </label>
-    <label>
-      <input value="value-4" name="value-radio" id="value-4" type="radio" />
       <span>&gt;20</span>
     </label>
     <span class="selection"></span>
@@ -44,11 +40,16 @@
     display: none;
   }
 
-  .radio-input label span::after {
+.radio-input label:nth-child(2) span::after {
+    content: "";
+  }
+
+  .radio-input label:not(:nth-child(2)) span::after {
     content: " mi";
   }
   .radio-input {
     --container_width: 350px;
+    --option_count: 3;
     position: relative;
     display: flex;
     align-items: center;
@@ -82,7 +83,7 @@
     align-items: center;
     z-index: 1;
     letter-spacing: 2px;
-    font-size: 14px;
+    font-size: 13px;
     white-space: nowrap;
   }
 
@@ -90,8 +91,7 @@
     display: none;
     position: absolute;
     height: 100%;
-    /* width: calc(var(--container_width) / 4); */
-    width: 25%;
+    width: calc(100% / var(--option_count));
     z-index: 0;
     left: 0;
     top: 0;
@@ -108,27 +108,17 @@
   }
 
   .radio-input label:nth-child(1):has(input:checked) ~ .selection {
-    /* transform: translateX(calc(var(--container_width) * 0 / 4)); */
-
     transform: translateX(0%);
   }
 
   .radio-input label:nth-child(2):has(input:checked) ~ .selection {
-    /* transform: translateX(calc(var(--container_width) * 1 / 4)); */
-
     transform: translateX(100%);
   }
 
   .radio-input label:nth-child(3):has(input:checked) ~ .selection {
-    /* transform: translateX(calc(var(--container_width) * 2 / 4)); */
-
     transform: translateX(200%);
   }
 
-  .radio-input label:nth-child(4):has(input:checked) ~ .selection {
-    /* transform: translateX(calc(var(--container_width) * 3 / 4)); */
-    transform: translateX(300%);
-  }
   .input-alt,
   label {
     box-shadow:

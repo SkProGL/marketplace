@@ -1,0 +1,46 @@
+<div class="oh-ai-panel">
+    <div class="oh-ai-card">
+        <div class="oh-ai-header">
+            <span class="oh-ai-icon">🔄</span>
+            <div>
+                <div class="oh-ai-title">Quick Re-order</div>
+                <div class="oh-ai-sub">Based on your purchase history</div>
+            </div>
+        </div>
+        <div class="oh-xai-toggle" onclick="toggleXAI('xai1')">● Why these recommendations?</div>
+        <div class="oh-xai-box" id="xai1">
+            These items were identified from your last orders.
+            The model uses <strong>order frequency</strong> and
+            <strong>weekly patterns</strong> to suggest what you likely need next.
+        </div>
+<div class="d-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 1rem; align-items: start;">
+            <div class="oh-rec-item">
+                <div class="oh-rec-info">
+                    <div class="oh-rec-name">Organic Carrots</div>
+                    <div class="oh-rec-farm">Bristol Valley Farm</div>
+                    <div class="oh-rec-reason">Ordered 3× recently</div>
+                </div>
+                <span class="oh-rec-price">£6.25</span>
+                <a href="{% url 'home' %}" class="oh-add-btn">+</a>
+            </div>
+            <div class="oh-rec-item">
+                <div class="oh-rec-info">
+                    <div class="oh-rec-name">Fresh Milk</div>
+                    <div class="oh-rec-farm">Hillside Dairy</div>
+                    <div class="oh-rec-reason">Ordered 2× recently</div>
+                </div>
+                <span class="oh-rec-price">£2.50</span>
+                <a href="{% url 'home' %}" class="oh-add-btn">+</a>
+            </div>
+            <div class="oh-rec-item">
+                <div class="oh-rec-info">
+                    <div class="oh-rec-name">Sourdough Loaf</div>
+                    <div class="oh-rec-farm">The Clifton Bakery</div>
+                    <div class="oh-rec-reason">Ordered 1× recently</div>
+                </div>
+                <span class="oh-rec-price">£5.75</span>
+                <a href="{% url 'home' %}" class="oh-add-btn">+</a>
+            </div>
+        </div>
+    </div>    
+</div>

@@ -1,0 +1,77 @@
+<div class="oh-card">
+  {% if orders_with_next %}
+    {% for entry in orders_with_next %}
+    <div class="widget-account-form-card {% if entry.order.paused %}oh-card-paused{% else %}oh-card-active{% endif %}">
+
+      <!-- Clickable header — always visible -->
+      <div class="d-flex justify-content-between align-items-center p-3 oh-card-header-row"
+           role="button"
+           data-bs-toggle="collapse"
+           data-bs-target="#order-body-{{ entry.order.id }}"
+           aria-expanded="false">
+        <div>
+          <h5 class="mb-0">{{ entry.order.recurrence_type }}
+            {% if entry.order.paused %}
+              <span class="badge bg-warning text-dark">Paused</span>
+            {% else %}
+              <span class="badge bg-success">Next: {{ entry.next_date|date:"D d M" }}</span>
+            {% endif %}
+          </h5>
+          <small class="text-muted">Every
+            {% if entry.order.recurrence_type == 'Fortnightly' %}other{% endif %}
+            {{ entry.order.get_recurrence_day_display }}
+          </small>
+        </div>
+        <i class="bi bi-chevron-down oh-chevron text-muted"></i>
+      </div>
+
+      <!-- Collapsible body -->
+      <div class="collapse" id="order-body-{{ entry.order.id }}">
+        <div class="{% if entry.order.paused %}oh-paused-content{% endif %} px-3 pb-2">
+          <table class="table table-sm">
+            <thead><tr><th>Product</th><th>Qty</th><th>Price each</th><th>Total</th></tr></thead>
+            <tbody>
+              {% for op in entry.items %}
+              <tr>
+                <td>{{ op.product.name }}</td>
+                <td>{{ op.numPurchased }}</td>
+                <td>£{{ op.product.price }}</td>
+                <td>£{{ op.get_total_item_price }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr class="fw-bold">
+                <td>Order Total</td><td></td><td></td>
+                <td>£{{ entry.order.calculated_total }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="oh-card-buttons d-flex gap-2 px-3 pb-3">
+          <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modify-{{ entry.order.id }}">
+            <i class="bi bi-pencil-square"></i> Modify
+          </button>
+          <form action="{% url 'pause_recurring_order' entry.order.id %}" method="POST" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('{% if entry.order.paused %}Resume this recurring order?{% else %}Pause this recurring order?{% endif %}')">
+              {% if entry.order.paused %}<i class="bi bi-arrow-right"></i> Resume{% else %}<i class="bi bi-pause"></i> Pause{% endif %}
+            </button>
+          </form>
+          <form action="{% url 'delete_recurring_order' entry.order.id %}" method="POST" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this recurring order?')">
+              <i class="bi bi-trash"></i> Delete
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+    {% include 'includes/orders/modify_recurring_modal.html' %}
+    {% endfor %}
+
+  {% else %}
+    <p class="text-muted">You have no recurring orders. Set one up at checkout!</p>
+  {% endif %}
+</div>
