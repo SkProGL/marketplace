@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from django.apps import AppConfig
 from django.db import models
 from django.contrib import messages
@@ -380,3 +381,51 @@ def get_pending_orders(user):
         order_status='PENDING'
     ).distinct()
     
+def get_next_occurrence(order: Order) -> date | None:
+    """Calculate the next delivery date based on recurrence type."""
+    today = timezone.now().date()
+
+    if not order.recurrence_day or order.recurrence_type == 'None':
+        return None
+
+
+    # find the next occurrence of the chosen weekday from today
+    days_ahead = (order.recurrence_day - today.isoweekday()) % 7 or 7
+    next_date = today + timedelta(days=days_ahead)
+
+    if order.recurrence_type == 'Fortnightly':
+        base = order.delivery_date.date()
+
+        # find the first recurrence_day after the original order date
+        days_to_first = (order.recurrence_day - base.isoweekday()) % 7 or 7
+        first_occurrence = base + timedelta(days=days_to_first)
+
+        # advance in 7-day steps until we're on the right fortnight
+        while (next_date - first_occurrence).days % 14 != 0:
+            next_date += timedelta(days=7)
+
+    # enforce 48-hour lead time - push forward if too soon
+    min_date = today + timedelta(days=2)
+    if next_date < min_date:
+        next_date += timedelta(days=14 if order.recurrence_type == 'Fortnightly' else 7)
+
+    return next_date
+
+def get_recurring_orders_context(user):
+    today = timezone.now().date()
+    orders = Order.objects.filter(
+        customer=user,
+        recurring=True,
+    ).prefetch_related('orderproduct_set__product')
+
+    result = []
+    for order in orders:
+        delivery = order.delivery_date.date()
+        # Use the original delivery if it hasn't happened yet, else next recurrence
+        next_date = delivery if delivery > today else get_next_occurrence(order)
+        result.append({
+            'order': order,
+            'next_date': next_date,
+            'items': order.orderproduct_set.all(),
+        })
+    return result
