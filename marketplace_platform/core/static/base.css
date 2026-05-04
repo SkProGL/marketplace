@@ -1,5 +1,6 @@
 body {
   background-color: #ededed;
+    padding-top: 5%;
 }
 * {
   /* font-family: sans-serif; */
@@ -9,16 +10,8 @@ body {
 .alert {
   border-radius: 20px;
 }
-.navbar-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 0 1rem;
-  gap: 1rem;
-  position: relative;
-  background: white;
-}
+
+
 /* .cart-icon-wrapper { */
 /*   position: relative; */
 /*   cursor: pointer; */
@@ -47,6 +40,8 @@ body {
 .base-btn-group.empty {
   animation: glow 1s infinite alternate;
 }
+
+
 .cart-overlay {
   display: none;
   position: fixed;
@@ -227,33 +222,21 @@ body {
   padding-bottom: 1px;
   transform: rotate(-10deg);
 }
+
+
+.modal {
+  top: 10%;
+}
+
 .navbar {
   height: 50px;
   z-index: 9999;
-}
-.navbar-brand:hover #logo {
-  transform: rotate(0deg);
-}
-.navbar-brand {
-  margin-left: 0.2rem;
 }
 .nav-link {
   /* margin: 0 0.5rem; */
   color: black;
   white-space: nowrap;
   font-size: 12px;
-}
-
-.modal {
-  top: 10%;
-}
-
-body {
-  background-color: #ededed;
-}
-* {
-  /* font-family: sans-serif; */
-  font-family: monospace;
 }
 
 .navbar-brand {
@@ -269,10 +252,6 @@ body {
   white-space: nowrap;
 }
 
-.navbar {
-  min-height: 50px;
-}
-
 .navbar-brand:hover #logo {
   transform: rotate(0deg);
 }
@@ -281,11 +260,33 @@ body {
   flex-grow: 0;
 }
 
+.navbar-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 1rem;
+  gap: 1rem;
+  position: relative;
+  background: white;
+}
+
+        .navbar-brand {
+            font-weight: 700;
+            color: #198754 !important;
+        }
+
 @media (max-width: 991.98px) {
   .navbar-container {
     flex-wrap: wrap;
   }
-
+    #navbarNav .base-btn-group,
+    #navbarNav .base-manage {
+        text-align: center;
+        width: 95%;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
   .navbar-collapse {
     flex-basis: 100%;
     width: 100%;
@@ -303,6 +304,21 @@ body {
     padding-left: 0;
   }
 }
+/* Navbar RWD breakpoints to avoid overflowing elements */
+
+
+@media (min-width: 600px) {
+    .navbar-user-label {
+        display: block !important;
+    }
+}
+@media (min-width: 400px) {
+    #logo-text {
+        display: inline !important;
+    }
+}
+
+
 .btn-icon,
 .base-btn-group {
   display: inline-block;
@@ -317,6 +333,13 @@ body {
 }
 .base-btn-group {
   background: rgb(0 128 0 / 10%);
+  box-shadow:
+    1px 1px 2px -1px #fff inset,
+    /* 0 2px 1px #00000010,
+    0 4px 2px #00000010,
+    0 8px 4px #00000010,
+    0 16px 8px #00000010,
+    0 32px 16px #00000010; */
 }
 .base-btn-group span,
 .base-btn-group a {
@@ -338,14 +361,20 @@ body {
     hue-rotate(149deg) brightness(94%) contrast(80%);
   padding-bottom: 1px;
 }
+#navbarNav .base-btn-group:hover {
+    filter: brightness(0.50);
+}
 
 .btn-icon {
-  padding: 0;
+  padding: 12px 12px;
   border: none;
   /* width: 24px; */
   height: fit-content;
-}
 
+}
+.btn-icon:hover{
+ filter: brightness(0.50);
+}
 .btn-icon button {
   /* display: block; */
   margin: 0;
@@ -377,6 +406,22 @@ body {
   font-size: 20px;
   margin-left: 0.5rem;
 }
+#base-product {
+  background: rgb(99 102 241 / 12%);
+  border: 1px solid #6366f1;
+  svg {
+    filter: brightness(0) saturate(100%) invert(38%) sepia(72%) saturate(600%)
+      hue-rotate(215deg) brightness(95%) contrast(90%);
+  }
+}
+#base-manage {
+  background: rgb(234 88 12 / 10%);
+  border: 1px solid #c2540a;
+  svg {
+    filter: brightness(0) saturate(100%) invert(40%) sepia(80%) saturate(500%)
+      hue-rotate(10deg) brightness(90%) contrast(90%);
+  }
+}
 #base-community {
   background: rgb(245 222 179 / 30%);
   /* border: 1px solid wheat; */
@@ -393,18 +438,6 @@ body {
     filter: brightness(0) saturate(100%) invert(57%) sepia(0%) saturate(1459%)
       hue-rotate(139deg) brightness(82%) contrast(94%);
   }
-}
-.base-manage {
-  background-color: #00ac7c;
-  border: 1px solid green;
-  border-radius: 20px;
-  height: 30px;
-  padding: 5px 12px;
-  user-select: none;
-  text-decoration: none;
-  color: white;
-  margin: 0 0.5rem;
-  text-wrap-mode: nowrap;
 }
 
 #alert-bell-btn {
@@ -428,3 +461,4 @@ body {
     box-shadow: 0 0 10px 10px #bef4ae8c;
   }
 }
+

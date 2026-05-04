@@ -64,30 +64,12 @@
                         <label class="form-check-label" for="recurringToggle">Make this a recurring order</label>
                       </div>
                       <div id="recurringOptions" style="display: none;">
-                        <div class="mb-2">
-                          <label class="form-label small text-muted">Repeat</label>
-                          <select class="form-select form-select-sm" name="recurrence_type">
-                            <option value="Weekly">Weekly</option>
-                            <option value="Fortnightly">Fortnightly</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label class="form-label small text-muted">On</label>
-                          <select class="form-select form-select-sm" name="recurrence_day">
-                            <option value="1">Monday</option>
-                            <option value="2">Tuesday</option>
-                            <option value="3">Wednesday</option>
-                            <option value="4">Thursday</option>
-                            <option value="5">Friday</option>
-                            <option value="6">Saturday</option>
-                            <option value="7">Sunday</option>
-                          </select>
-                        </div>
+                        {% include 'includes/orders/recurrence_selects.html' %}
                       </div>
                     </div>
 			<!-- From Uiverse.io by vinodjangid07 --> 
 			<button class="checkout-pay" type="submit"> Pay
-			  <svg class="svgIcon" viewBox="0 0 576 512"><path d="M512 80c8.8 0 16 7.2 16 16v32H48V96c0-8.8 7.2-16 16-16H512zm16 144V416c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V224H528zM64 32C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64H512c35.3 0 64-28.7 64-64V96c0-35.3-28.7-64-64-64H64zm56 304c-13.3 0-24 10.7-24 24s10.7 24 24 24h48c13.3 0 24-10.7 24-24s-10.7-24-24-24H120zm128 0c-13.3 0-24 10.7-24 24s10.7 24 24 24H360c13.3 0 24-10.7 24-24s-10.7-24-24-24H248z"></path></svg>
+      {% include "includes/icons/icon_payment.html" %}
 			</button>
 			{#<button type="submit" class="btn btn-success w-100 py-3 mt-4 fw-bold"> CONFIRM & PAY £{{ total_price }} </button>#}
                 </div>

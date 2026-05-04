@@ -16,12 +16,21 @@ class UserManager(BaseUserManager):
         user.set_password(password)
         user.save(using=self._db)
         return user
+    
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError("The Email field must be set")
+        email=self.normalize_email(email)
+        user=self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return User
 
 class User(AbstractUser):
     class Category(models.TextChoices):
         CUSTOMER = "Customer"
         PRODUCER = "Producer"
-        COMMUNITY = "Community group"
+        COMMUNITY = "Community","Community Group"
         RESTAURANT = "Restaurant"
         ADMIN = "Admin"
 
@@ -144,9 +153,9 @@ class Product(models.Model):
     # Best before date
     best_before = models.DateField(default="2026-04-04")
     # Food miles - distance food travels from producer to customer
-    food_miles = models.IntegerField()
+    food_miles = models.IntegerField(default=0)
     # Stock quantity
-    stock = models.IntegerField()
+    stock = models.IntegerField(default=50)
     # Percentage to indicate how much stock is left before an alert is sent
     # stock_alert_threshold = models.DecimalField(
         # max_digits=5, decimal_places=2, default=0)
@@ -188,7 +197,13 @@ class Order(models.Model):
         FORTNIGHTLY = "Fortnightly"
 
     class Weekday(models.IntegerChoices):
-        MON, TUE, WED, THUR, FRI, SAT, SUN = range(1, 8)
+        MON = 1, 'Monday'
+        TUE = 2, 'Tuesday'
+        WED = 3, 'Wednesday'
+        THUR = 4, 'Thursday'
+        FRI = 5, 'Friday'
+        SAT = 6, 'Saturday'
+        SUN = 7, 'Sunday'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey(
@@ -206,21 +221,27 @@ class Order(models.Model):
         max_length=20, choices=Status.choices, default=Status.PENDING)
     special_instructions = models.TextField(blank=True)
     recurring = models.BooleanField(default=False)
+    paused = models.BooleanField(default=False)  
     recurrence_type = models.CharField(
         max_length=20, choices=Recurrence.choices, default=Recurrence.NONE)
     recurrence_day = models.IntegerField(
         choices=Weekday.choices, null=True, blank=True)
     # last_generated=models.DateTimeField(null=True,blank=True)
 
+    @property
+    def calculated_total(self):
+        return sum(op.get_total_item_price for op in self.orderproduct_set.all())
+
     def __str__(self):
         return f"{self.customer} ({str(self.id)[:8]}) - {self.order_status} ({self.order_date.strftime('%d-%m-%Y %H:%M:%S')})"
 
 
 class OrderProduct(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     numPurchased = models.IntegerField()
-
+    product_price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)
     class Meta:
         unique_together = ("order", "product")
         
@@ -266,6 +287,7 @@ class Recipe(models.Model):
 
 
 class RecipeIngredients(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.CharField(max_length=30)
@@ -313,9 +335,9 @@ class Payment(models.Model):
     processed_at = models.DateTimeField(null=True, blank=True)
 
 class OrderPayment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     payment = models.ForeignKey(Payment, on_delete=models.CASCADE)
-
     class Meta:
         unique_together = ("order", "payment")
     date_posted=models.DateTimeField(auto_now_add=True)

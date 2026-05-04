@@ -45,7 +45,7 @@
 .management-btns a {
   width: 50%;
 }
-.container-fluid {
-  top: 4rem;
-  position: relative;
+
+.management-btns :only-child {
+    width: 100%;
 }

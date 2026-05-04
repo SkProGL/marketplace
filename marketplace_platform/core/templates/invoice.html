@@ -1,5 +1,6 @@
-{% extends "base.html" %} {% load static %} {% block content %}
-
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
 <link rel="stylesheet" href="{% static 'invoice.css' %}" />
 <link rel="stylesheet" href="{% static 'common.css' %}" />
 <script
@@ -8,7 +9,6 @@
   crossorigin="anonymous"
   referrerpolicy="no-referrer"
 ></script>
-
 <script>
   function download_pdf() {
     var element = document.querySelector("html");
@@ -16,89 +16,8 @@
     html2pdf(element);
   }
 </script>
-{# {% include "components/widget-order-validated.html" %} #}
-<div class="invoice-box">
-  <table cellpadding="0" cellspacing="0">
-    <tr class="top">
-      <td colspan="2">
-        <table>
-          <tr>
-            <td class="title">
-              <a class="nav-home" href="/home">
-                <span>Bristol&nbsp</span>
-                <span>Marketplace</span>
-              </a>
-            </td>
+{% include 'includes/orders/invoice_modal_content.html' %}
 
-            <td class="title-column">
-              Order ID: #{{ order.id|stringformat:"s"|cut:"-"|slice:":8"|default:"N/A" }}<br />
-              Order Date: {{ order.order_date|date:"d M Y"|default:"N/A" }}<br />
-              Delivery Date: {{ order.delivery_date|date:"d M Y"|default:"N/A" }}<br />
-              Order Type: {{ order.get_recurrence_type_display|default:"One-off" }}
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-
-    <tr class="information">
-      <td colspan="2">
-        <table>
-          <tr>
-            <td>
-              Bristol Regional Food Network<br />
-              20-Mile Community Marketplace<br />
-              Bristol, United Kingdom
-            </td>
-
-            <td>
-              Customer: {{ order.customer.organisation_name|default:order.customer.full_name|default:order.customer.email|default:"N/A" }}<br />
-              Contact: {{ order.customer.full_name|default:order.customer.email|default:"N/A" }}<br />
-              {{ order.customer.phone|default:"" }}<br />
-              {{ order.customer.email|default:"" }}
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-
-    <tr class="heading">
-      <td>Product</td>
-      <td>Price</td>
-    </tr>
-
-    {% for item in invoice_items %}
-    <tr class="item">
-      <td>
-        {{ item.name }} (x{{ item.quantity }})<br />
-        Producer: {{ item.producer.full_name|default:item.producer.organisation_name|default:item.producer.email }}<br />
-        {{ item.details }}<br />
-        Best Before: {{ item.best_before|date:"d M Y" }}
-      </td>
-      <td>£{{ item.line_total|floatformat:2 }}</td>
-    </tr>
-    {% endfor %}
-
-    <tr class="item">
-      <td>Subtotal</td>
-      <td>£{{ subtotal|floatformat:2 }}</td>
-    </tr>
-
-    <tr class="item">
-      <td>Network Commission ({{ commission_rate|floatformat:2 }}%)</td>
-      <td>£{{ commission_amount|floatformat:2 }}</td>
-    </tr>
-
-    <tr class="total">
-      <td></td>
-      <td>Total: £{{ total|floatformat:2 }}</td>
-    </tr>
-  </table>
-
-  <button onclick="download_pdf()" type="button" id="invoice-download-pdf">Download .PDF</button>
-  <a href="/" style="font-family: monospace; color: var(--secondary-color)"
-    id="invoice-back-home">Back to marketplace</a
-  >
-</div>
+<a href="/" style="font-family: monospace; color: var(--secondary-color)" id="invoice-back-home">Back to marketplace</a>
 
 {% endblock %}
