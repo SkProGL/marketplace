@@ -33,7 +33,7 @@
 }
 
 .management-topbar {
-    margin-bottom: 2.5rem;
+  margin-bottom: 2.5rem;
 }
 .management-btns {
   display: inline-flex;
@@ -44,4 +44,8 @@
 .management-btns button,
 .management-btns a {
   width: 50%;
+}
+.container-fluid {
+  top: 4rem;
+  position: relative;
 }

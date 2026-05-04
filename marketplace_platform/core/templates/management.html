@@ -30,7 +30,7 @@
                                 id="btnradio{{ forloop.counter }}"
                                 onchange="location.href='?model={{ model_name }}'"
                                 {% if model_name == selected_model_name %}checked{% endif %}>
-                        <label class="btn btn-outline-success" for="btnradio{{ forloop.counter }}">
+                        <label class="btn btn-outline-success model-label" for="btnradio{{ forloop.counter }}">
                             {{ model_name }}
                             <!-- Producers - Show alert badges indicating stock and pending order counts -->
                             {% if model_name == "Product" %}
@@ -49,7 +49,16 @@
                             {% endif %}
                         </label>
                     {% endfor %}
-                    </div> 
+                    </div>
+                <script>
+                    document.querySelectorAll('.model-label').forEach(label => {
+                        // Regex to add space before capital letters, make all lowercase, and capitalize the first letter
+                        label.childNodes[0].textContent = label.childNodes[0].textContent.trim()
+                            .replace(/([a-z])([A-Z])/g, '$1 $2')
+                            .toLowerCase()
+                            .replace(/^./, str => str.toUpperCase());
+                    });
+                </script>
                 <!-- Construct selected model table -->
                 {% if selected_data %}
                     {% include 'includes/management_table.html' %}       

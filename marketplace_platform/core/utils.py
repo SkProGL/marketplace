@@ -233,7 +233,7 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
     Construct display data for selected model for management view table.
     Additionally handles row sorting logic.
     """
-    # Construct headeres for selected mdoels
+    # Construct headers for selected models
     fields = selected_model._meta.fields
     headers = [field.name for field in selected_model._meta.fields]
     if 'id' in headers:
@@ -241,6 +241,8 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
         final_headers = ['id'] + headers
     else:
         final_headers = headers
+
+    display_headers = [{'raw': name, 'display': name.replace('_', ' ').capitalize()} for name in final_headers]
 
     # Extract all records from model
     # Apply record filter for lower permissions if applicable (i.e., Producer)
@@ -333,7 +335,7 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
         # rows.insert(0, draft_data) add to top for visibility?
         rows.append(draft_data)
 
-    return {'headers': final_headers, 'rows': rows, 'current_sort': sort_field, 'current_dir': sort_direction}
+    return {'headers': display_headers, 'rows': rows, 'current_sort': sort_field, 'current_dir': sort_direction}
     
 def format_for_display(field, raw_value):
     """

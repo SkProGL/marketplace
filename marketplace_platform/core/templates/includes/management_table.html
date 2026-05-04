@@ -13,11 +13,11 @@
                 <th class="bg-transparent
                 " style="min-width: 50px; ">
                 <!-- Pass the current model, header and current sort method. Selecting the header flips the direction. -->
-                <a href="?model={{ selected_model_name }}&sortby={{ header }}&direction={% if selected_data.current_sort == header and selected_data.current_direction == 'ascending' %}descending{% else %}ascending{% endif %}" 
+                <a href="?model={{ selected_model_name }}&sortby={{ header.raw }}&direction={% if selected_data.current_sort == header.raw and selected_data.current_direction == 'ascending' %}descending{% else %}ascending{% endif %}" 
                    class="text-decoration-none text-black d-flex  justify-content-between">
-                    {{ header }}
+                    {{ header.display }}
                     <span>
-                        {% if selected_data.current_sort == header %}
+                        {% if selected_data.current_sort == header.raw %}
                             {% if selected_data.current_direction == 'ascending' %}
                                 <i class="bi bi-arrow-down text-success" style="font-size: 0.8em;"></i>
                             {% else %}
@@ -30,6 +30,7 @@
                 </a>
                 </th>
             {% endfor %}
+
             <!-- Delete header -->
             <th></th>
         </tr>
