@@ -1,9 +1,28 @@
 from django.db import models
-from django.db import models
-from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.fields import ArrayField as _ArrayField
+from django.contrib.postgres.forms import SimpleArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 import uuid
+
+
+class ComparableArrayField(SimpleArrayField):
+    def __init__(self, *args, **kwargs):
+        # Callable defaults (e.g. default=list) cause Field.formfield() to pass
+        # show_hidden_initial=True, which makes changed_data compare against the
+        # empty hidden POST field instead of the model value. Force it off so
+        # changed_data uses form.initial (the actual DB value) instead.
+        kwargs['show_hidden_initial'] = False
+        super().__init__(*args, **kwargs)
+
+    def has_changed(self, initial, data):
+        return self.to_python(data or '') != (initial or [])
+
+
+class ArrayField(_ArrayField):
+    def formfield(self, **kwargs):
+        kwargs.setdefault('form_class', ComparableArrayField)
+        return super().formfield(**kwargs)
 
 # Define Custom UserManager to set emial as username
 class UserManager(BaseUserManager):
@@ -163,7 +182,7 @@ class Product(models.Model):
     stock_alert_threshold = models.IntegerField()
     # List of food allergens
     allergens = ArrayField(models.CharField(
-        max_length=128, blank=True), default=list)
+        max_length=128, blank=True), default=list, blank=True)
     # Whether the product is organic-certified
     organic = models.BooleanField(default=False)
     # Whether the product is surplus and thus eligible for discounts

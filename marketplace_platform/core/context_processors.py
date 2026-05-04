@@ -29,7 +29,7 @@ def navbar_alerts(request):
         alerts.append({
             "icon": "bag-check-fill",
             "colour": "success",
-            "message": f"New order {order.customer.email}: {item_summary}",
+            "message": f"Outstanding order {order.customer.email}: {item_summary}",
             "link_url": '/management/?model=Order',
             "link_label": "View orders",
         })

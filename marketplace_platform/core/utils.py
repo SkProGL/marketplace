@@ -152,7 +152,7 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                     id_field = PRODUCER_ID_FIELDS[selected_model_name]
                     row_data[id_field] = str(request.user.pk)
 
-                print(f"\n {row_data}\n")
+                # print(f"\n {row_data}\n")
 
                 if is_new_record:
                     model_instance = model()
@@ -161,15 +161,18 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
 
                 # Apply data to model form
                 form = DynamicForm(row_data, instance=model_instance)
-
                 # Use built-in data validation
                 if form.is_valid():
                     # Force trigger on pw change
                     password_provided = bool(selected_model_name == 'User' and row_data.get('password'))
                     
                     # Validate if something has changed
+                    if 'allergens' in form.changed_data:
+                        print(f"allergens initial: {repr(form.initial.get('allergens'))}")
+                        print(f"allergens cleaned: {repr(form.cleaned_data.get('allergens'))}")
+
                     if form.has_changed() or is_new_record or password_provided:
-                        print(f"[has_changed] {form.changed_data}")
+                        print(f"[has_changed] { {f: (form.initial.get(f), form.cleaned_data.get(f)) for f in form.changed_data} }")
                         saved_record = form.save(commit=False)         
 
                         # User - Validate entered passwords and apply built-in password hashing
