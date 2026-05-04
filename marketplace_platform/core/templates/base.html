@@ -62,7 +62,15 @@
                                 {% endif %}
                             </ul>
                         </div>
-                        <a href="{% url 'inventory_upload' %}" class="base-manage" style="text-wrap-mode: nowrap;" title="Add new product">+ Product</a>
+                        <div class="dropdown">
+                          <button class="base-manage dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            + Product
+                          </button>
+                          <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'inventory_upload' %}">New product</a></li>
+                            <li><a class="dropdown-item" href="{% url 'add_batch' %}">Add batch to existing</a></li>
+                          </ul>
+                        </div>
                         <a href="{% url 'management' %}" class="base-manage" title="View stored data">⚙ Manage</a>
                          {% endif %}
                         <!-- <a class="nav-link" href="">Community</a> -->

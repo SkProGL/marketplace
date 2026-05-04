@@ -11,9 +11,6 @@
     {% csrf_token %}
 
     <!-- Required hidden defaults -->
-    <input type="hidden" name="availability" value="Available">
-    <input type="hidden" name="seasonStart" value="January">
-    <input type="hidden" name="seasonEnd" value="December">
     <input type="hidden" name="stock_alert_threshold" value="0">
     <input type="hidden" name="discount_percentage" value="0">
     <input type="hidden" name="best_before" value="2026-12-31">
@@ -64,20 +61,37 @@
       <label for="preserve">Preserve</label>
     </div>
 
-    <!-- (UI only — backend uses hidden fields for now) -->
-    <label>Season</label>
+    <div class="row season-months-row" id="season-months">
+      <div style="flex:1">
+        <label>Season Start</label>
+        <select name="seasonStart" id="seasonStart" class="season-select">
+          {% for value, display in months %}
+            <option value="{{ value }}">{{ display }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="flex:1">
+        <label>Season End</label>
+        <select name="seasonEnd" id="seasonEnd" class="season-select">
+          {% for value, display in months %}
+            <option value="{{ value }}" {% if forloop.last %}selected{% endif %}>{{ display }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <label>Quality Class</label>
     <div class="toggles">
-      <input type="radio" name="season_ui" id="spring" checked />
-      <label for="spring">Spring</label>
-
-      <input type="radio" name="season_ui" id="summer" />
-      <label for="summer">Summer</label>
-
-      <input type="radio" name="season_ui" id="autumn" />
-      <label for="autumn">Autumn</label>
-
-      <input type="radio" name="season_ui" id="winter" />
-      <label for="winter">Winter</label>
+      <input type="radio" name="quality_class" id="qc-A" value="A" checked />
+      <label for="qc-A">A — Premium</label>
+      <input type="radio" name="quality_class" id="qc-B" value="B" />
+      <label for="qc-B">B — Standard</label>
+      <input type="radio" name="quality_class" id="qc-C" value="C" />
+      <label for="qc-C">C — Economy</label>
+      <input type="radio" name="quality_class" id="qc-D" value="D" />
+      <label for="qc-D">D — Basic</label>
+      <input type="radio" name="quality_class" id="qc-S" value="Discounted" />
+      <label for="qc-S">Surplus / Discount</label>
     </div>
 
     <label>Options</label>
@@ -101,6 +115,22 @@
   document.querySelector('input[type="file"]').addEventListener('change', function() {
     const span = this.closest('label.upload').querySelector('.upload-label');
     span.textContent = this.files && this.files[0] ? this.files[0].name : 'Select image';
-});
+  });
+
+  const startSelect = document.getElementById('seasonStart');
+  const endSelect = document.getElementById('seasonEnd');
+
+  function updateEndOptions() {
+    const startIdx = startSelect.selectedIndex;
+    Array.from(endSelect.options).forEach((opt, i) => {
+      opt.disabled = i < startIdx;
+    });
+    if (endSelect.selectedIndex < startIdx) {
+      endSelect.selectedIndex = startIdx;
+    }
+  }
+
+  startSelect.addEventListener('change', updateEndOptions);
+  updateEndOptions();
 </script>
 {% endblock %}

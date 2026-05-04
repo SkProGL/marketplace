@@ -305,6 +305,67 @@
     cb.addEventListener('change', () => fetchResults());
   });
 
+  function fetchResults() {
+    const form = searchInput.closest('form');
+    const params = new URLSearchParams(new FormData(form));
+
+    fetch(`?${params.toString()}`, {
+      headers: { 'x-requested-with': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+      // Update count
+      document.querySelector('.home-results b').textContent = `Found ${data.count} matches`;
+
+      // Rebuild the card grid
+      const grid = document.querySelector('.widget-card-grid');
+      grid.innerHTML = data.items.map(item => `
+        <div class="card" style="display:flex;flex-direction:column;height:280px;width:190px;overflow:hidden;">
+          <div class="image" style="height:65%;width:100%;flex-shrink:0;overflow:hidden;">
+            ${item.image
+              ? `<img src="${item.image}" style="height:100%;width:100%;object-fit:cover;">`
+              : `<img src="/static/test.jpg" style="height:100%;width:100%;object-fit:cover;">`
+            }
+          </div>
+          <div style="display:flex;padding:15px;flex-grow:1;">
+            ${item.allergens.length ? `
+              <span class="allergens">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="scale(-1,1)"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                ${item.allergens.join(', ')}
+              </span>
+            ` : ''}
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <div style="display:flex;flex-direction:column;">
+                <span class="title">${item.name}</span>
+                <span class="price">£${item.price}</span>
+              </div>
+              <div class="cart-widget" data-product-id="${item.id}">
+                <button class="add-to-cart-btn" onclick="addToCart('${item.id}', this)">
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    });
+  }
+</script>
+<!--Quantity input sync with stepper-->
+<!--Filter search without reload-->
+<script>
+  const searchInput = document.querySelector('input[name="q"]');
+  let searchTimer;
+
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => fetchResults(), 500);
+  });
+
+  document.querySelectorAll('.filters input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', () => fetchResults());
+  });
+
   const offerBtn = document.querySelector('.widget-offer-btn');
   if (offerBtn) {
     offerBtn.addEventListener('click', () => {

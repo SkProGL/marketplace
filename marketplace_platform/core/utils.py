@@ -9,7 +9,7 @@ from django.forms import modelform_factory
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest
 from core.forms import PASSWORD_STRENGTH_ERROR, SignupForm
-from core.models import Order, Product
+from core.models import Order, Product, ProductBatch
 
 # Management
 ## Universal readonly fields
@@ -314,9 +314,9 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
             
             row_cells.append(cell_data)
 
-        # For Product row, set colour class based onm stock threshold status
+        # For ProductBatch row, set colour class based on stock threshold status
         row_class = ''
-        if selected_model_name == 'Product':
+        if selected_model_name == 'ProductBatch':
             stock = getattr(record, 'stock', None)
             threshold = getattr(record, 'stock_alert_threshold', None)
             if stock is not None and threshold is not None:
@@ -365,8 +365,8 @@ def get_low_stock_products(user):
     Get all product records for given User where stock is >= defined threshold. 
     User for alerts and notifications. 
     """
-    return Product.objects.filter(
-        producer=user,
+    return ProductBatch.objects.filter(
+        product__producer=user,
         stock__lte=models.F('stock_alert_threshold')
     )
 
@@ -375,8 +375,8 @@ def get_pending_orders(user):
     Get all pending orders for given producers.
     User for alerts and notifications. 
     """
-    return  Order.objects.filter(
-        orderproduct__product__producer=user,
+    return Order.objects.filter(
+        orderproduct__batch__product__producer=user,
         order_status='PENDING'
     ).distinct()
     

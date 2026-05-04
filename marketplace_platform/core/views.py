@@ -341,6 +341,7 @@ def home_view(request):
 
     return render(request, 'home.html', {
         'items': items,
+        'items': items,
         'cart_items': cart,
         'cart_total_price': round(total_price, 2),
         'selected_categories': categories,

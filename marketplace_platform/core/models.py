@@ -125,54 +125,121 @@ class Product(models.Model):
         max_length=20, choices=Category.choices, default=Category.VEGETABLE)
     # Detailed description of the product
     description = models.TextField()
-    # Price of the product - max 10 digits, with 2 decimal places
-    price = models.DecimalField(max_digits=10, decimal_places=2)
     # Unit of measurement
     unit = models.CharField(
         max_length=20, choices=Units.choices, default=Units.KG
     )
-    # Seasonal availability
-    availability = models.CharField(
-        max_length=20, choices=SeasonalAvailability.choices, default=SeasonalAvailability.AV)
-    # Season start and end
-    seasonStart = models.CharField(
-        max_length=20, choices=Months.choices, default=Months.JAN
-    )
-    seasonEnd = models.CharField(
-        max_length=20, choices=Months.choices, default=Months.DEC
-    )
-    # Best before date
-    best_before = models.DateField(default="2026-04-04")
     # Food miles - distance food travels from producer to customer
     food_miles = models.IntegerField()
-    # Stock quantity
-    stock = models.IntegerField()
-    # Percentage to indicate how much stock is left before an alert is sent
-    # stock_alert_threshold = models.DecimalField(
-        # max_digits=5, decimal_places=2, default=0)
-    # Replace with absolute number as perecentage needs max stock
-    stock_alert_threshold = models.IntegerField()
     # List of food allergens
     allergens = ArrayField(models.CharField(
         max_length=128, blank=True), default=list)
     # Whether the product is organic-certified
     organic = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.name} ({self.producer})"
+
+
+class ProductBatch(models.Model):
+    class QualityClass(models.TextChoices):
+        A = "A", "A — Premium"
+        B = "B", "B — Standard"
+        C = "C", "C — Economy"
+        D = "D", "D — Basic"
+        Discounted = "Discounted", "Surplus / Discount"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name='batches')
+    batch_number = models.CharField(max_length=32, unique=True, blank=True)
+    quality_class = models.CharField(
+        max_length=10, choices=QualityClass.choices, default=QualityClass.A)
+
+    # Price of the product - max 10 digits, with 2 decimal places
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    # Stock quantity
+    stock = models.IntegerField()
+    # Absolute number of units before a low-stock alert is sent
+    stock_alert_threshold = models.IntegerField(default=0)
+    # Associated image
+    image = models.ImageField(upload_to='item_images/', blank=True)
+    # Best before date
+    best_before = models.DateField(default="2026-04-04")
     # Whether the product is surplus and thus eligible for discounts
     surplus = models.BooleanField(default=False)
-    # Discount percentage, stored as a decimal
-    # For example, a 20% discount is stored as 20.00
-    # Discounts would be calculated as price * (discount_percentage / 100)
+    # Discount percentage (e.g. 20.00 = 20%)
     discount_percentage = models.DecimalField(
         max_digits=4, decimal_places=2, default=0)
     # Discount expiry date
     discount_expiry = models.DateTimeField(blank=True, null=True)
     # Note attached to discounts
     discount_note = models.TextField(blank=True)
-    # Associated image
-    image = models.ImageField(upload_to='item_images/', blank=True)
+    # Seasonal availability
+    availability = models.CharField(
+        max_length=20,
+        choices=Product.SeasonalAvailability.choices,
+        default=Product.SeasonalAvailability.AV)
+    # Season start and end
+    seasonStart = models.CharField(
+        max_length=20, choices=Product.Months.choices, default=Product.Months.JAN)
+    seasonEnd = models.CharField(
+        max_length=20, choices=Product.Months.choices, default=Product.Months.DEC)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # --- Convenience properties so templates can use batch.name, batch.producer etc. ---
+    @property
+    def name(self):
+        return self.product.name
+
+    @property
+    def producer(self):
+        return self.product.producer
+
+    @property
+    def category(self):
+        return self.product.category
+
+    @property
+    def description(self):
+        return self.product.description
+
+    @property
+    def allergens(self):
+        return self.product.allergens
+
+    def _generate_batch_number(self):
+        from django.utils import timezone
+        today = timezone.now().date()
+        cat_code = self.product.category[:3].upper()
+        org_name = self.product.producer.organisation_name or self.product.producer.email
+        org_code = ''.join(w[0].upper() for w in org_name.split() if w)[:3]
+        date_str = today.strftime('%Y%m%d')
+        seq = self.__class__.objects.filter(
+            product__producer=self.product.producer,
+            created_at__date=today
+        ).count() + 1
+        return f"{cat_code}-{org_code}-{date_str}-{seq:03d}"
+
+    def _compute_availability(self):
+        from django.utils import timezone
+        month_order = {v: i for i, v in enumerate(Product.Months.values, 1)}
+        start = month_order.get(self.seasonStart, 1)
+        end = month_order.get(self.seasonEnd, 12)
+        if start == 1 and end == 12:
+            return Product.SeasonalAvailability.AAY
+        current = timezone.now().month
+        in_season = (start <= current <= end) if start <= end else (current >= start or current <= end)
+        return Product.SeasonalAvailability.AV if in_season else Product.SeasonalAvailability.UN
+
+    def save(self, *args, **kwargs):
+        if not self.batch_number:
+            self.batch_number = self._generate_batch_number()
+        self.availability = self._compute_availability()
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.name} ({self.producer}) £{self.price}"
+        return f"{self.batch_number} — {self.product.name} £{self.price}"
 
 
 class Order(models.Model):
@@ -196,7 +263,7 @@ class Order(models.Model):
         on_delete=models.CASCADE
     )
     products = models.ManyToManyField(
-        Product,
+        ProductBatch,
         through="OrderProduct"
     )
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -210,7 +277,6 @@ class Order(models.Model):
         max_length=20, choices=Recurrence.choices, default=Recurrence.NONE)
     recurrence_day = models.IntegerField(
         choices=Weekday.choices, null=True, blank=True)
-    # last_generated=models.DateTimeField(null=True,blank=True)
 
     def __str__(self):
         return f"{self.customer} ({str(self.id)[:8]}) - {self.order_status} ({self.order_date.strftime('%d-%m-%Y %H:%M:%S')})"
@@ -218,19 +284,23 @@ class Order(models.Model):
 
 class OrderProduct(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    batch = models.ForeignKey(ProductBatch, on_delete=models.CASCADE)
     numPurchased = models.IntegerField()
+    price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     class Meta:
-        unique_together = ("order", "product")
-        
+        unique_together = ("order", "batch")
+
+    @property
+    def product(self):
+        return self.batch.product
+
     @property
     def get_total_item_price(self):
-        """Calculates the total cost for this specific item line"""
-        return self.numPurchased * self.product.price
-    
+        return self.numPurchased * self.price_at_purchase
+
     def __str__(self):
-        return f"{str(self.id)[:8]} - {self.order_status}"
+        return f"{self.batch.batch_number} x{self.numPurchased}"
 
 
 class StoryPost(models.Model):
