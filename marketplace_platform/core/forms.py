@@ -102,7 +102,7 @@ class CheckoutForm(forms.Form):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['name', 'category', 'description', 'unit', 'food_miles', 'allergens', 'organic']
+        fields = ['name', 'category', 'description', 'price', 'unit', 'food_miles', 'allergens', 'organic']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
         }
@@ -125,7 +125,7 @@ class ProductBatchForm(forms.ModelForm):
     class Meta:
         model = ProductBatch
         fields = [
-            'quality_class', 'price', 'stock', 'stock_alert_threshold', 'image',
+            'quality_class', 'stock', 'stock_alert_threshold', 'image',
             'best_before', 'surplus', 'discount_percentage',
             'discount_expiry', 'discount_note',
             'seasonStart', 'seasonEnd',

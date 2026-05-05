@@ -314,3 +314,26 @@
 img {
   pointer-events: none;
 }
+
+
+.card-btn-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.card-cart-badge {
+  display: none;
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  background: #198754;
+  color: white;
+  border-radius: 10px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  text-align: center;
+  line-height: 16px;
+  pointer-events: none;
+}

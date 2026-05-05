@@ -368,7 +368,7 @@ def get_low_stock_products(user):
     """
     return ProductBatch.objects.filter(
         product__producer=user,
-        stock__lte=models.F('stock_alert_threshold')
+        stock__lte=models.F('product__stock_alert_threshold')
     )
 
 def get_pending_orders(user):
@@ -416,7 +416,7 @@ def get_recurring_orders_context(user):
     orders = Order.objects.filter(
         customer=user,
         recurring=True,
-    ).prefetch_related('orderproduct_set__product')
+    ).prefetch_related('orderproduct_set__batch__product')
 
     result = []
     for order in orders:

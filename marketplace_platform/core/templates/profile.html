@@ -207,6 +207,25 @@
       </div>
     </div>
   </div>
+  <div class="profile-card">
+    <div class="profile-card-title">Organic certification</div>
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-success py-2 mb-3" style="font-size:0.85rem;">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+    <form method="POST">
+      {% csrf_token %}
+      <div class="profile-field" style="margin-bottom:1rem;">
+        <label>Your organic practices &amp; values</label>
+        <textarea name="organic_description" rows="5"
+          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.9rem;resize:vertical;"
+          placeholder="Describe your organic farming methods, certifications, and values…">{{ user.organic_description }}</textarea>
+        <small style="color:var(--muted);">This is shown to customers who click "View organic certification" on your products.</small>
+      </div>
+      <button type="submit" class="btn btn-sm" style="background:var(--green);color:#fff;border-radius:8px;padding:0.4rem 1.2rem;">Save</button>
+    </form>
+  </div>
   {% endif %}
 </div>
 {% endblock %}
