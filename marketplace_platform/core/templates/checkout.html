@@ -60,7 +60,7 @@
 			{% include "components/widget-card.html" %}
                     <div class="mt-4 p-3 bg-light rounded border border-secondary-subtle">
                       <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" id="recurringToggle" name="recurring" value="true">
+                        <input class="form-check-input" type="checkbox" id="recurringToggle">
                         <label class="form-check-label" for="recurringToggle">Make this a recurring order</label>
                       </div>
                       <div id="recurringOptions" style="display: none;">
@@ -78,10 +78,17 @@
     </div>
 </div>
 <script>
+  const recurringToggle = document.getElementById('recurringToggle');
+  const recurringOptions = document.getElementById('recurringOptions');
 
-  document.getElementById('recurringToggle').addEventListener('change', function() {
-    document.getElementById('recurringOptions').style.display = this.checked ? 'block' : 'none';
-  });
+  function syncRecurring() {
+    const on = recurringToggle.checked;
+    recurringOptions.style.display = on ? 'block' : 'none';
+    recurringOptions.querySelectorAll('select').forEach(s => s.disabled = !on);
+  }
+
+  recurringToggle.addEventListener('change', syncRecurring);
+  syncRecurring();
 </script>
 <style>
 

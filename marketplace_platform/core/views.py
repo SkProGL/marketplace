@@ -1,17 +1,60 @@
 import json
+import os
 from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from core.forms import LoginForm, ProductForm, SignupForm, CheckoutForm, ReviewForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
-from .models import User, Product, Order, OrderProduct, Review
+from django.conf import settings
+from .models import User, Product, Order, OrderProduct, Review, OrderStatusHistory
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
+from django.db.models import Q
+
+MANAGEMENT_SEARCH_FIELDS = {
+    'Product':    (['name', 'category', 'description'],
+                   lambda obj: f"{obj.category} · £{obj.price}"),
+    'Order':      (['order_status', 'special_instructions'],
+                   lambda obj: f"{obj.order_status} · £{obj.total_price}"),
+    'User':       (['email', 'first_name', 'last_name'],
+                   lambda obj: obj.email),
+    'StoryPost':  (['title', 'body'],
+                   lambda obj: ""),
+    'Recipe':     (['title', 'description'],
+                   lambda obj: ""),
+    'Payment':    (['status'],
+                   lambda obj: f"£{obj.amount} · {obj.status}"),
+}
+MODEL_INSTRUCTIONS = {
+    # 'User': 'Display individuals interacting with the platform (customers, producers, admins). Handles authentication, contact details and role types.',
+    
+    # 'Product': 'Display the physical items available for purchase. Stores core details like name, current price, description, and active stock levels.',
+    
+    'Order': 'Select a row to manage order details. Tracks the delivery details, total cost, assigned customer and the current overall progression status. <br> Select a heading to alternate between sort direction.',
+    
+    # 'OrderProduct': 'Displays the bridge connecting an Order to specific Products. Captures the exact quantity purchased and locks in the price of the item at the exact time of checkout.',
+    # 
+    # 'StoryPost': 'Display blog-style updates or news posts created by the producer to share behind-the-scenes content or announcements with customers.',
+    
+    # 'Recipe': 'Display and manage recipes.',
+    
+    # 'RecipeIngredients': 'The bridge connecting a Recipe to the Products (or general ingredients) required to make it, including the exact measurements needed.',
+    
+    # 'Review': 'Display customer feedback. Contains a text evaluation and a rating score attached to a specific Product or Recipe.',
+    
+    # 'Payment': 'Records a financial transaction attempt via a payment gateway (like Stripe). Stores the transaction ID, amount charged, and whether it succeeded or failed.',
+    
+    # 'OrderPayment': 'The link mapping a specific Payment record to a specific Order. Useful if an order has multiple payment attempts, refunds, or split payments.',
+    
+    # 'OrderStatusHistory': 'An audit log that tracks the lifecycle of an Order. Records exactly when a status changed (e.g., PENDING to READY), who changed it, and any optional notes.'
+}
+
+STATUS_SEQUENCE = ['PENDING', 'CONFIRMED', 'READY', 'DELIVERED']
 
 # Create your views here.
 User = get_user_model()
@@ -106,8 +149,7 @@ def get_next_occurrence(order):
 def recurring_orders(request):
     orders = Order.objects.filter(
         customer=request.user,
-        recurring=True
-    ).prefetch_related('orderproduct_set__product')
+    ).exclude(recurrence_type='None').prefetch_related('orderproduct_set__product')
 
     orders_with_next = []
     for order in orders:
@@ -124,7 +166,7 @@ def recurring_orders(request):
 
 @login_required
 def modify_recurring_order(request, order_id):
-    order = get_object_or_404(Order, id=order_id, customer=request.user, recurring=True)
+    order = get_object_or_404(Order, id=order_id, customer=request.user)
 
     if request.method == 'POST':
         for order_product in order.orderproduct_set.all():
@@ -144,7 +186,7 @@ def modify_recurring_order(request, order_id):
    
 @login_required
 def pause_recurring_order(request, order_id):
-    order = get_object_or_404(Order, id=order_id, customer=request.user, recurring=True)
+    order = get_object_or_404(Order, id=order_id, customer=request.user)
     if request.method == 'POST':
         order.paused = not order.paused
         order.save()
@@ -154,7 +196,7 @@ def pause_recurring_order(request, order_id):
 
 @login_required
 def delete_recurring_order(request, order_id):
-    order = get_object_or_404(Order, id=order_id, customer=request.user, recurring=True)
+    order = get_object_or_404(Order, id=order_id, customer=request.user)
     if request.method == 'POST':
         order.delete()
         messages.success(request, "Recurring order deleted.")
@@ -218,20 +260,15 @@ def checkout(request):
     if request.method == "POST":
         form = CheckoutForm(request.POST)
         if form.is_valid():
-            # Read recurring fields from POST
-            is_recurring = request.POST.get('recurring') == 'true'
             recurrence_type = request.POST.get('recurrence_type', 'None')
             recurrence_day = request.POST.get('recurrence_day', None)
-            # 2. Create the ONE main Order
             new_order = Order.objects.create(
                 customer=request.user,
                 total_price=round(total_price, 2),
                 delivery_date=form.cleaned_data['delivery_date'],
                 order_status='PENDING',
-                recurring=is_recurring,
-                recurrence_type=recurrence_type if is_recurring else 'None',
-                recurrence_day=int(
-                    recurrence_day) if is_recurring and recurrence_day else None,
+                recurrence_type=recurrence_type,
+                recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
             )
 
             # 3. Loop through the memory to link ALL items to this order
@@ -304,6 +341,16 @@ def clear_cart(request):
     request.session['cart'] = {}
     messages.success(request, "Cart cleared.")
     return redirect('home')
+
+
+@login_required
+def clear_notifications(request):
+    if request.method == 'POST':
+        keys = request.POST.getlist('keys')
+        dismissed = set(request.session.get('dismissed_notifications', []))
+        dismissed.update(keys)
+        request.session['dismissed_notifications'] = list(dismissed)
+    return redirect(request.META.get('HTTP_REFERER', 'home'))
 
 
 def login_view(request):
@@ -383,7 +430,7 @@ def signup_view(request):
 
     return render(request, "signup.html", {"form": form})
 
-
+@login_required
 def invoice_view(request, order_code=None):
     order_qs = Order.objects.filter(customer=request.user).prefetch_related(
         'orderproduct_set__product', 'customer')
@@ -457,10 +504,14 @@ def management_view(request: HttpResponse):
     # Filter returned models based on allowed_models
     model_names = [model.__name__ for model in app_config.get_models(
     ) if model.__name__ in allowed_models]
+    model_display_names = [app_config.get_model(name)._meta.verbose_name_plural.title() for name in model_names]
     print(model_names)
     print(f"{user_category} - {allowed_models}")
 
     print(f"\n[management_view] Selected model is: {selected_model_name}")
+
+    if selected_model_name == 'Order':
+        auto_update_order_statuses()
 
     # Handle POST actions (Create, Update & Delete)
     if request.method == 'POST' and selected_model_name:
@@ -507,14 +558,23 @@ def management_view(request: HttpResponse):
 
         selected_model = app_config.get_model(selected_model_name)
         selected_data = get_management_context(
-            request, selected_model, selected_model_name, 
+            request, selected_model, selected_model_name,
             add_new, row_filter, distinct, readonly_fields)
-        
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'includes/management/management_table_fragment.html', {
+            'selected_data': selected_data,
+            'selected_model_name': selected_model_name,
+        })
+    instructions = MODEL_INSTRUCTIONS.get(selected_model_name, '')
+    print(instructions)
     return render(
         request, 'management.html', {
             'model_names': model_names,
+            'model_display_names': model_display_names,
             'selected_model_name': selected_model_name,
             'selected_data': selected_data,
+            'model_instructions': instructions,
         })
 
 
@@ -538,14 +598,19 @@ def get_order_summary_json(request, order_id):
 
         receipt_data = []
         for item in items:
+            stock_now = item.product.stock
             receipt_data.append({
                 'name': item.product.name,
                 'qty': item.numPurchased,
                 'price': f"{item.product.price:.2f}",
-                'total': f"{item.numPurchased * item.product.price:.2f}"
+                'total': f"{item.numPurchased * item.product.price:.2f}",
+                'stock_now': stock_now,
+                'stock_after': stock_now - item.numPurchased,
             })
         data = {
             'status': order.order_status,
+            'advance_url': f"/management/order/{order_id}/advance/" if order.order_status in ('PENDING', 'CONFIRMED') else None,
+            'next_status': {'PENDING': 'CONFIRMED', 'CONFIRMED': 'READY'}.get(order.order_status),
             'customer_name': order.customer.username,
             'customer_type': order.customer.category,
             'email': order.customer.email,
@@ -554,13 +619,83 @@ def get_order_summary_json(request, order_id):
             'instructions': order.special_instructions,
             'order_date': order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else '',
             'delivery_date': order.delivery_date.strftime('%Y-%m-%d') if order.delivery_date else '',
-            'recurrence': f"{order.get_recurrence_day_display()} ({order.recurrence_type})" if order.recurring else '',
+            'recurrence': f"{order.get_recurrence_day_display()} ({order.recurrence_type})" if order.recurrence_type != 'None' else '',
             'total_price': f"{order.total_price:.2f}",
             'receipt': receipt_data
         }
+        data['status_history'] = [
+            {
+                'from': h.from_status,
+                'to': h.to_status,
+                'by': h.changed_by.email if h.changed_by else '—',
+                'at': h.changed_at.strftime('%d %b %Y %H:%M'),
+                'note': h.note,
+            }
+            for h in order.status_history.all()
+        ]
         return JsonResponse(data)
     except Exception as e:
-        return JsonResponse({'error': e}, status=404)
+        return JsonResponse({'error': str(e)}, status=404)
+
+
+def auto_update_order_statuses():
+    """Auto-update orders when their delivery date has passed."""
+    now = timezone.now()
+
+    # READY => DELIVERED
+    ready_due = Order.objects.filter(order_status='READY', delivery_date__lte=now)
+    histories = [
+        OrderStatusHistory(order=o, from_status='READY', to_status='DELIVERED',
+                           changed_by=None, note='Auto-delivered: delivery date reached.')
+        for o in ready_due
+    ]
+    OrderStatusHistory.objects.bulk_create(histories)
+    ready_due.update(order_status='DELIVERED')
+
+    # PENDING => CANCELLED (producer never acknowledged)
+    unacknowledged = Order.objects.filter(order_status='PENDING', delivery_date__lte=now)
+    histories = [
+        OrderStatusHistory(order=o, from_status='PENDING', to_status='CANCELLED',
+                           changed_by=None, note='Auto-cancelled: delivery date passed without acknowledgement.')
+        for o in unacknowledged
+    ]
+    OrderStatusHistory.objects.bulk_create(histories)
+    unacknowledged.update(order_status='CANCELLED')
+
+
+@management_access_required
+def advance_order_status(request, order_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    try:
+        order = Order.objects.get(pk=order_id)
+    except Order.DoesNotExist:
+        return JsonResponse({'error': 'Order not found'}, status=404)
+
+    # Producer can only advance orders that contain their products
+    if not request.user.is_superuser and getattr(request.user, 'category', None) == 'Producer':
+        if not order.products.filter(producer=request.user).exists():
+            return JsonResponse({'error': 'Access denied'}, status=403)
+
+    current = order.order_status
+    try:
+        next_status = STATUS_SEQUENCE[STATUS_SEQUENCE.index(current) + 1]
+    except (ValueError, IndexError):
+        return JsonResponse({'error': 'Already at final status'}, status=400)
+
+    note = request.POST.get('note', '').strip()
+    OrderStatusHistory.objects.create(
+        order=order,
+        from_status=current,
+        to_status=next_status,
+        changed_by=request.user,
+        note=note,
+    )
+    order.order_status = next_status
+    order.save(update_fields=['order_status'])
+    messages.success(request, f"Order {str(order_id)[:8]} advanced to {next_status.title()}.")
+    return redirect(request.META.get('HTTP_REFERER', 'management'))
+
 
 @login_required
 def profile_view(request):
@@ -612,3 +747,43 @@ def add_review(request, product_id):
         form = ReviewForm()
 
     return render(request, "review_form.html", {"form": form, "product": product})
+
+
+@management_access_required
+def management_search(request):
+    q = request.GET.get('q', '').strip()
+    if len(q) < 2:
+        return JsonResponse({'results': []})
+
+    app_config = apps.get_app_config('core')
+    is_superuser = request.user.is_superuser
+    user_category = getattr(request.user, 'category', None)
+    allowed_models = get_all_models() if is_superuser else MANAGE_MODEL_ACCESS.get(user_category, [])
+    if callable(allowed_models):
+        allowed_models = allowed_models()
+
+    results = []
+    for model_name, (fields, detail_fn) in MANAGEMENT_SEARCH_FIELDS.items():
+        if model_name not in allowed_models:
+            continue
+        model = app_config.get_model(model_name)
+        query = Q()
+        for f in fields:
+            query |= Q(**{f'{f}__icontains': q})
+        qs = model.objects.filter(query)
+        # Producer scoping
+        if not is_superuser and user_category == 'Producer':
+            if model_name == 'Product':
+                qs = qs.filter(producer=request.user)
+            elif model_name in ('StoryPost', 'Recipe'):
+                qs = qs.filter(user=request.user)
+        for obj in qs[:5]:
+            results.append({
+                'model': model_name,
+                'model_label': model._meta.verbose_name_plural.title(),
+                'id': str(obj.pk),
+                'label': str(obj),
+                'detail': detail_fn(obj),
+            })
+
+    return JsonResponse({'results': results})

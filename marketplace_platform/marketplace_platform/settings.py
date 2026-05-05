@@ -156,3 +156,24 @@ MESSAGE_TAGS = {
     messages.WARNING: 'warning',
     messages.ERROR: 'danger',  # This turns the "error" tag into "danger"
 }
+
+DB_LOG_FILE = os.path.join(BASE_DIR, 'database_interactions.log')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'db_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': DB_LOG_FILE,
+        },
+    },
+    'loggers': {
+        'django.db.backends': {
+            'handlers': ['db_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}

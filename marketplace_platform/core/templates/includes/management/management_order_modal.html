@@ -1,13 +1,13 @@
 <!-- Management panel: modal for expanded order details-->
  <!-- Find  -->
 <style>
-    #orderSummaryModal span{
+    #orderSummaryModal span:not(.text-success):not(.status-pill){
         color: var(--bs-secondary-color)
     }
 </style>
     <div class="modal fade" id="orderSummaryModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">          
+      <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Order Info <span id="status"></span><br>
                         <small class="text-muted" id="order-id"></small>
@@ -16,32 +16,62 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <b>Contact details</b><br>
-                    <small>
-                        User: <span id="customer_name">Loading...</span> (Type: <span id="customer_type"></span>)<br>
-                        Email: <span id="email"></span><br>
-                        Phone number: <span id="phone"></span><br> 
-                    </small><br>
-
-                    <b>Delivery details</b><br>
-                    <small>
-                        Address: <span id="address"></span><br>
-                        Order date: <span id="order_date"></span><br>
-                        Delivery date: <span id="delivery_date"></span><br>
-                        Recurrence: <span id="recurrence"></span><br>
-                        Special instructions: <span id="instructions"></span><br>
-                    </small>
+                    <div class="row">
+                    <div class="col-sm">
+                        <b>Contact details</b><br>
+                        <small>
+                            User: <span id="customer_name">Loading...</span> (Type: <span id="customer_type"></span>)<br>
+                            Email: <span id="email"></span><br>
+                            Phone number: <span id="phone"></span><br>
+                        </small><br>
+                    </div>
+                    <div class="col-sm">
+    
+                        <b>Delivery details</b><br>
+                        <small>
+                            Address: <span id="address"></span><br>
+                            Order date: <span id="order_date"></span><br>
+                            Delivery date: <span id="delivery_date"></span><br>
+                            Recurrence: <span id="recurrence"></span><br>
+                            Special instructions: <span id="instructions"></span><br>
+                        </small>
+                        </div>
+                    </div>
                     <hr>
                     
                     <b>RECEIPT</b><br>
-                    <div id="receipt-table" class="mt-2"></div>
-                    <hr>
+                    <div id="receipt-table" class="mt-2 align-items-end"></div>
                     
-                    <b>Total: £<span id="total_price"></span></b>
+  
+                    <hr>
+                    <b>Status History</b>
+                    <div id="status-history" class="mt-2" style="font-size:.82rem;"></div>
+        
+                <div id="progress-container" class="mt-4 mb-2">
+                        <div class="progress" style="height: 1.25rem;">
+                            <div id="order-progress-bar" 
+                                 class="progress-bar bg-success progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" 
+                                 style="width: 0%; transition: width 0.6s ease;">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-1 text-muted" style="font-size: 0.7rem; font-weight: 600;">
+                            <span id="label-PENDING">PENDING</span>
+                            <span id="label-CONFIRMED">CONFIRMED</span>
+                            <span id="label-READY">READY</span>
+                            <span id="label-DELIVERED">DELIVERED</span>
+                        </div>
+                </div>
+                <div id="advance-section" class="px-4 pb-3 d-none">
+                    <hr class="mt-0">
+                    <b id="advance-label"></b>
+                    <textarea id="advance-note" class="form-control form-control-sm my-2" rows="3" placeholder="Optional note to customer..."></textarea>
+                    <button id="advance-btn" type="button" class="btn btn-outline-success w-100"></button>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
+
             </div>
         </div>
     </div>

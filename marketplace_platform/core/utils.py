@@ -3,6 +3,7 @@ from django.apps import AppConfig
 from django.db import models
 from django.contrib import messages
 from django.contrib.postgres.fields import ArrayField
+from django.core.paginator import Paginator
 from django.http import HttpRequest
 from django.utils import timezone
 from typing import Type, Any
@@ -16,7 +17,13 @@ from core.models import Order, Product
 ## Universal readonly fields
 READONLY_FIELDS = ['id', 'date_joined', 'last_login']
 ## Producer specific fields
-PRODUCER_ID_FIELDS = {'Product': 'producer', 'StoryPost': 'user', 'Recipe': 'user'} 
+PRODUCER_ID_FIELDS = {'Product': 'producer', 'StoryPost': 'user', 'Recipe': 'user'}
+## Fields to show first, per model
+MODEL_FIELD_PRIORITY = {
+    'User': ['email', 'password', 'full_name', 'category', 'organisation_name','phone', 'addrss', 'postcode^'],
+    'Product': ['name', 'category', 'price', 'stock', 'alert_threshold', 'all_year', 'seasonStart', 'seasonEnd'],
+    'Order': ['customer','order_status']
+}
 
 def create_draft_entry(request, headers, selected_model: Type[models.Model], cached_update_attempt=None, readonly_fields=None) -> dict[str, Any]:
     """
@@ -48,6 +55,7 @@ def create_draft_entry(request, headers, selected_model: Type[models.Model], cac
         field = selected_model._meta.get_field(field_name)
 
         # Use data from previous attempt or default as defined in models.py, otherwise defer to default defined above
+        base_value = ""
         if field_name in cached_update_attempt:
             base_value = cached_update_attempt[field_name]
         elif field.has_default():
@@ -91,8 +99,8 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
     """
     model = app_config.get_model(selected_model_name)
     user_category = getattr(request.user, 'category', None)
-    if user_category == 'Producer' and selected_model_name == "Order":
-        messages.error(request, "Producers cannot modify orders.")
+    if user_category == 'Producer' and selected_model_name == "Order" and 'delete' in request.POST:
+        messages.error(request, "Producers cannot delete orders.")
         return False
     # DELETE
     if 'delete' in request.POST:
@@ -159,6 +167,12 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                 else:
                     model_instance = model.objects.get(pk=row_id)
 
+                # Season fields are disabled (not submitted) when all_year is True.
+                # Add the instance's current values so the form sees no change for those fields.
+                if row_data.get('all_year') in ('True', 'true', '1'):
+                    row_data.setdefault('seasonStart', getattr(model_instance, 'seasonStart', 'January'))
+                    row_data.setdefault('seasonEnd', getattr(model_instance, 'seasonEnd', 'December'))
+
                 # Apply data to model form
                 form = DynamicForm(row_data, instance=model_instance)
                 # Use built-in data validation
@@ -166,51 +180,46 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                     # Force trigger on pw change
                     password_provided = bool(selected_model_name == 'User' and row_data.get('password'))
                     
-                    # Validate if something has changed
-                    if 'allergens' in form.changed_data:
-                        print(f"allergens initial: {repr(form.initial.get('allergens'))}")
-                        print(f"allergens cleaned: {repr(form.cleaned_data.get('allergens'))}")
+                    # if form.has_changed() or is_new_record or password_provided:
+                    print(f"[has_changed] { {f: (form.initial.get(f), form.cleaned_data.get(f)) for f in form.changed_data} }")
+                    saved_record = form.save(commit=False)         
 
-                    if form.has_changed() or is_new_record or password_provided:
-                        print(f"[has_changed] { {f: (form.initial.get(f), form.cleaned_data.get(f)) for f in form.changed_data} }")
-                        saved_record = form.save(commit=False)         
-
-                        # User - Validate entered passwords and apply built-in password hashing
-                        if selected_model_name == 'User' and password_provided:
-                            password = row_data.get('password')
-                            if password == row_data.get('confirm_password'):
-                                if SignupForm.validate_password(password):
-                                     saved_record.set_password(password)
-                                else:
-                                    error_msg = PASSWORD_STRENGTH_ERROR
+                    # User - Validate entered passwords and apply built-in password hashing
+                    if selected_model_name == 'User' and password_provided:
+                        password = row_data.get('password')
+                        if password == row_data.get('confirm_password'):
+                            if SignupForm.validate_password(password):
+                                    saved_record.set_password(password)
                             else:
-                                error_msg = f"Passwords do not match for row {str(row_id)[:8]}."
-                        if error_msg:
-                            messages.error(request, error_msg)
-                            # Store data from update attempt to continue editing
-                            _cache_attempt(request, selected_model_name, row_id, row_data)
-                            return False
+                                error_msg = PASSWORD_STRENGTH_ERROR
                         else:
-                            try:
-                                saved_record.save()  
-                                if is_new_record:
-                                    messages.success(request, f"New {selected_model_name} created!")
-                                else:
-                                    # Signal success field updates
-                                    # Manually include 'password' in the text since it's excluded
-                                    changed_list = list(form.changed_data)
-                                    if password_provided:
-                                        changed_list.append('password')
-                                    
-                                    changes = ",".join(changed_list)
-                                    messages.success(request, f"Updated row {str(row_id)[:8]}: {changes}")
-                                # Clear update attempt on success
-                                cached_update_attempt = request.session.get('cached_update_attempt', {})
-                                cached_update_attempt.pop(selected_model_name, None)
-                                request.session.modified = True
-                            except Exception as e:
-                                messages.error(request, f"Update error: {e}")
-                                return False
+                            error_msg = f"Passwords do not match for row {str(row_id)[:8]}."
+                    if error_msg:
+                        messages.error(request, error_msg)
+                        # Store data from update attempt to continue editing
+                        _cache_attempt(request, selected_model_name, row_id, row_data)
+                        return False
+                    else:
+                        try:
+                            saved_record.save()  
+                            if is_new_record:
+                                messages.success(request, f"New {selected_model_name} created!")
+                            else:
+                                # Signal success field updates
+                                # Manually include 'password' in the text since it's excluded
+                                changed_list = list(form.changed_data)
+                                if password_provided:
+                                    changed_list.append('password')
+                                
+                                changes = ",".join(changed_list)
+                                messages.success(request, f"Updated row {str(row_id)[:8]}: {changes}")
+                            # Clear update attempt on success
+                            cached_update_attempt = request.session.get('cached_update_attempt', {})
+                            cached_update_attempt.pop(selected_model_name, None)
+                            request.session.modified = True
+                        except Exception as e:
+                            messages.error(request, f"Update error: {e}")
+                            return False
                 else:
                     # Signal unsuccesful field updates using built-in django validation error
                     # Must mark_safe to render to html
@@ -231,20 +240,35 @@ def _cache_attempt(request, selected_model_name, row_id, row_data):
     request.session['cached_update_attempt'][selected_model_name][str(row_id)] = row_data
     request.session.modified = True 
 
-def get_management_context(request:HttpRequest, selected_model: Type[models.Model], selected_model_name, 
-                           add_new=False, row_filter = None, distinct = False, readonly_fields=None) -> dict[str, Any]:
+
+def get_management_context(request:HttpRequest, selected_model: Type[models.Model],
+                           selected_model_name, add_new=False, row_filter=None,
+                           distinct=False, readonly_fields=None, hidden_fields=['id', 'is_active', 'is_superuser']) -> dict[str, Any]:
     """
     Construct display data for selected model for management view table.
     Additionally handles row sorting logic.
     """
+    PAGE_SIZE = 12
+    LABEL_OVERRIDES = {
+    'is_staff': 'Staff',
+    'is_superuser': 'Admin',
+    }
     # Construct headeres for selected mdoels
     fields = selected_model._meta.fields
-    headers = [field.name for field in selected_model._meta.fields]
-    if 'id' in headers:
-        headers.remove('id')
-        final_headers = ['id'] + headers
-    else:
-        final_headers = headers
+    
+    # Get all headers, excluding any fields in hidden_fields (defaults to hiding id).
+    _hidden = hidden_fields if hidden_fields is not None else {'id'}
+    visible_fields = [field for field in fields if field.name not in _hidden]
+    priority = MODEL_FIELD_PRIORITY.get(selected_model_name, [])
+    if priority:
+        visible_fields.sort(key=lambda f: priority.index(f.name) if f.name in priority else len(priority))
+    final_headers = [field.name for field in visible_fields]
+    header_labels = [field.verbose_name.title() for field in visible_fields]
+
+    header_labels = [
+        LABEL_OVERRIDES.get(field.name, field.verbose_name.title())
+        for field in visible_fields
+    ]
 
     # Extract all records from model
     # Apply record filter for lower permissions if applicable (i.e., Producer)
@@ -254,17 +278,20 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
         records = records.distinct()
     print(f"[get_management_context] Found {len(records)} records")
 
-    # Sorting logic  
+    # Sorting logic
     # Extract direction and header to sort by
-    sort_field = request.GET.get('sortby')
-    sort_direction = request.GET.get('direction', 'ascending')
-    
-    # Reorder records based on direction and field
+    default_sort = {'Order': ('order_date', 'descending')}.get(selected_model_name, (None, 'ascending'))
+    sort_field = request.GET.get('sortby', default_sort[0])
+    sort_direction = request.GET.get('direction', default_sort[1])
     if sort_field:
         if sort_direction == 'descending':
             records = records.order_by(f'-{sort_field}')
         else:
             records = records.order_by(sort_field)
+
+    paginator = Paginator(records, PAGE_SIZE)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+    records = page_obj
 
     # Fetch FKs for drop-down selection fields
     foreign_key_options = {}
@@ -334,10 +361,9 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
     # If new row button selected, add draft row
     if add_new:
         draft_data = create_draft_entry(request, final_headers, selected_model, cached_update_attempt.get('draft', {}), readonly_fields)
-        # rows.insert(0, draft_data) add to top for visibility?
-        rows.append(draft_data)
+        rows.insert(0, draft_data)
 
-    return {'headers': final_headers, 'rows': rows, 'current_sort': sort_field, 'current_dir': sort_direction}
+    return {'headers': final_headers, 'header_labels': header_labels, 'rows': rows, 'current_sort': sort_field, 'current_direction': sort_direction, 'page_obj': page_obj}
     
 def format_for_display(field, raw_value):
     """
@@ -418,8 +444,7 @@ def get_recurring_orders_context(user):
     today = timezone.now().date()
     orders = Order.objects.filter(
         customer=user,
-        recurring=True,
-    ).prefetch_related('orderproduct_set__product')
+    ).exclude(recurrence_type='None').prefetch_related('orderproduct_set__product')
 
     result = []
     for order in orders:
