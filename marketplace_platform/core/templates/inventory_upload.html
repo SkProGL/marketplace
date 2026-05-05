@@ -1,106 +1,315 @@
 {% extends "base.html" %}
-
 {% load static %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'inventory_upload.css' %}">
 
+<div class="form">
 
-    <div class="form">
-      <h2>Add product</h2>
- <form method="POST" enctype="multipart/form-data">
-    {% csrf_token %}
+  <!-- Tabs -->
+  <div class="form-tabs">
+    <button type="button" class="tab-btn active" id="tab-new" onclick="switchTab('new')">New Product</button>
+    <button type="button" class="tab-btn" id="tab-batch" onclick="switchTab('batch')">Add Batch</button>
+  </div>
 
-    <!-- Required hidden defaults -->
-    <input type="hidden" name="availability" value="Available">
-    <input type="hidden" name="seasonStart" value="January">
-    <input type="hidden" name="seasonEnd" value="December">
-    <input type="hidden" name="stock_alert_threshold" value="0">
-    <input type="hidden" name="discount_percentage" value="0">
-    <input type="hidden" name="best_before" value="2026-12-31">
+  <!-- ── TAB 1: New Product ─────────────────────────────── -->
+  <div id="pane-new">
+    <p class="tab-hint">Creates a new generic product and sets its Class A (base) price.</p>
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="new_product">
+      <input type="hidden" name="stock_alert_threshold" value="0">
+      <input type="file" name="image" accept="image/*" id="np-image" style="display:none;">
 
-    <label>Label</label>
-    <input type="text" name="name" placeholder="Product label" required />
+      <div style="display:flex;gap:24px;align-items:flex-start;margin-bottom:16px;">
 
-    <label>Description</label>
-    <textarea name="description" placeholder="Short product description" required></textarea>
+        <!-- Left: image drop zone -->
+        <div id="np-dropzone" style="flex-shrink:0;width:200px;height:200px;border:2px dashed #ccc;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;background:#fafafa;transition:border-color 0.2s,background 0.2s;overflow:hidden;">
+          <div id="np-dz-placeholder" style="text-align:center;pointer-events:none;padding:16px;">
+            <div style="font-size:2.8rem;color:#ccc;line-height:1;font-weight:300;">+</div>
+            <div style="font-size:0.75rem;color:#aaa;margin-top:10px;line-height:1.4;">Drag or select<br>the image</div>
+          </div>
+          <img id="np-preview" src="" alt="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">
+          <button type="button" id="np-revert" title="Change image" style="display:none;position:absolute;top:0;left:0;width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,0.9);box-shadow:0 1px 4px rgba(0,0,0,0.25);cursor:pointer;align-items:center;justify-content:center;z-index:2;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+          </button>
+        </div>
 
-    <label>Allergens</label>
-    <input type="text" name="allergens" placeholder="gluten,nuts" />
+        <!-- Right: form fields -->
+        <div style="flex:1;min-width:0;">
+          <label>Product name</label>
+          <input type="text" name="name" placeholder="e.g. Granny Smith Apples" required />
 
-    <label>Price / Unit / Stock</label>
-    <div class="row price-row">
-      <input type="number" step="0.01" name="price" placeholder="Price $" required />
-	<select name="unit" required>
-	  <option value="kg">kg</option>
-	  <option value="g">g</option>
-	  <option value="l">l</option>
-	  <option value="ml">ml</option>
-	  <option value="pcs">pcs</option>
-	  <option value="bunch">bunch</option>
-	  <option value="heads">heads</option>
-	  <option value="dozen">dozen</option>
-	</select>
-      <input type="number" name="stock" min="1" value="1" placeholder="Stock" required />
-    </div>
+          <label>Description</label>
+          <textarea name="description" placeholder="Short product description" required></textarea>
 
-    <label>Food miles</label>
-    <input type="number" name="food_miles" min="1" value="1" required />
+          <label>Allergens</label>
+          <input type="text" name="allergens" placeholder="gluten, nuts (comma separated)" />
 
-    <label>Category</label>
-    <div class="toggles">
-      <input type="radio" name="category" value="Vegetable" id="veg" checked />
-      <label for="veg">Vegetable</label>
+          <label>Category</label>
+          <div class="toggles">
+            <input type="radio" name="category" value="Vegetable" id="cat-veg" checked />
+            <label for="cat-veg">Vegetable</label>
+            <input type="radio" name="category" value="Fruit" id="cat-fruit" />
+            <label for="cat-fruit">Fruit</label>
+            <input type="radio" name="category" value="Dairy" id="cat-dairy" />
+            <label for="cat-dairy">Dairy</label>
+            <input type="radio" name="category" value="Bakery" id="cat-bakery" />
+            <label for="cat-bakery">Bakery</label>
+            <input type="radio" name="category" value="Preserve" id="cat-preserve" />
+            <label for="cat-preserve">Preserve</label>
+          </div>
 
-      <input type="radio" name="category" value="Fruit" id="fruit" />
-      <label for="fruit">Fruit</label>
+          <label>Base price (Class A) / Unit</label>
+          <div class="row price-row">
+            <input type="number" step="0.01" min="0.01" name="price" placeholder="£ Price" required />
+            <select name="unit" required>
+              <option value="kg">kg</option>
+              <option value="g">g</option>
+              <option value="l">l</option>
+              <option value="ml">ml</option>
+              <option value="pcs">pcs</option>
+              <option value="bunch">bunch</option>
+              <option value="heads">heads</option>
+              <option value="dozen">dozen</option>
+            </select>
+          </div>
 
-      <input type="radio" name="category" value="Dairy" id="dairy" />
-      <label for="dairy">Dairy</label>
+          <label>Options</label>
+          <div class="toggles">
+            <input type="checkbox" name="organic" id="np-organic" />
+            <label for="np-organic">Organic</label>
+          </div>
+        </div>
+      </div>
 
-      <input type="radio" name="category" value="Bakery" id="bakery" />
-      <label for="bakery">Bakery</label>
+      <button type="submit">Create Product</button>
+    </form>
+  </div>
 
-      <input type="radio" name="category" value="Preserve" id="preserve" />
-      <label for="preserve">Preserve</label>
-    </div>
+  <!-- ── TAB 2: Add Batch ───────────────────────────────── -->
+  <div id="pane-batch" style="display:none">
+    <p class="tab-hint">Add a lower-grade or surplus batch to an existing product. Price is suggested from the Class A base price.</p>
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="new_batch">
 
-    <!-- (UI only — backend uses hidden fields for now) -->
-    <label>Season</label>
-    <div class="toggles">
-      <input type="radio" name="season_ui" id="spring" checked />
-      <label for="spring">Spring</label>
+      <label>Product</label>
+      <select name="product_id" id="batch-product" required>
+        <option value="" disabled selected>Select product…</option>
+        {% for product in products %}
+          <option value="{{ product.id }}"
+                  data-base-price="{{ product.price }}">
+            {{ product.name }} — Class A: £{{ product.price }}
+          </option>
+        {% endfor %}
+      </select>
 
-      <input type="radio" name="season_ui" id="summer" />
-      <label for="summer">Summer</label>
+      <div id="base-price-display" style="display:none; margin-top:8px; color:#555; font-size:0.88rem;">
+        Class A base price: <strong id="base-price-value">—</strong>
+      </div>
 
-      <input type="radio" name="season_ui" id="autumn" />
-      <label for="autumn">Autumn</label>
+      <label>Quality class</label>
+      <div class="toggles">
+        <input type="radio" name="quality_class" value="A" id="qc-A" checked />
+        <label for="qc-A">A — Premium</label>
+        <input type="radio" name="quality_class" value="B" id="qc-B" />
+        <label for="qc-B">B — Standard</label>
+        <input type="radio" name="quality_class" value="C" id="qc-C" />
+        <label for="qc-C">C — Economy</label>
+        <input type="radio" name="quality_class" value="D" id="qc-D" />
+        <label for="qc-D">D — Basic</label>
+        <input type="radio" name="quality_class" value="Discounted" id="qc-S" />
+        <label for="qc-S">Surplus / Discount</label>
+      </div>
 
-      <input type="radio" name="season_ui" id="winter" />
-      <label for="winter">Winter</label>
-    </div>
+      <div style="margin-top:10px; font-size:0.88rem; color:#555;">
+        Effective price: <strong id="effective-price-display">—</strong>
+        <span id="price-suggestion" style="color:#888; margin-left:6px;"></span>
+      </div>
+      <input type="hidden" name="price" id="batch-price" value="0" />
 
-    <label>Options</label>
-    <div class="toggles">
-      <input type="checkbox" name="organic" id="organic" />
-      <label for="organic">Organic</label>
+      <label>Stock</label>
+      <input type="number" name="stock" min="1" value="1" required />
 
-      <input type="checkbox" name="surplus" id="surplus" />
-      <label for="surplus">Surplus</label>
-    </div>
+      <label>Harvest date</label>
+      <input type="date" name="harvest_date" />
 
-    <label>Image</label>
-    <label class="upload">
-      <input type="file" name="image" />
-      <span class="upload-label">Select image</span>
-    </label>
+      <label>Best before</label>
+      <input type="date" name="best_before" required />
 
-    <button type="submit">Upload Product</button>
-  </form>
+      <div id="discount-row" style="display:none">
+        <label>Discount %</label>
+        <input type="number" step="0.01" min="0" max="100" name="discount_percentage" placeholder="e.g. 20" />
+        <label>Discount note</label>
+        <input type="text" name="discount_note" placeholder="Reason for discount" />
+      </div>
+
+      <label>Image</label>
+      <label class="upload" id="ab-upload-label">
+        <input type="file" name="image" accept="image/*" id="ab-image" />
+        <span class="upload-label">Select image (auto-compressed on upload)</span>
+      </label>
+
+      <button type="submit">Add Batch</button>
+    </form>
+  </div>
+
+</div>
+
 <script>
-  document.querySelector('input[type="file"]').addEventListener('change', function() {
-    const span = this.closest('label.upload').querySelector('.upload-label');
-    span.textContent = this.files && this.files[0] ? this.files[0].name : 'Select image';
-});
+  // ── Tab switching ──────────────────────────────────────
+  function switchTab(tab) {
+    document.getElementById('pane-new').style.display   = tab === 'new'   ? '' : 'none';
+    document.getElementById('pane-batch').style.display = tab === 'batch' ? '' : 'none';
+    document.getElementById('tab-new').classList.toggle('active',   tab === 'new');
+    document.getElementById('tab-batch').classList.toggle('active', tab === 'batch');
+    if (tab === 'batch') updateSuggestedPrice();
+  }
+
+  // ── New product image drop zone ───────────────────────
+  const npDropzone    = document.getElementById('np-dropzone');
+  const npImageInput  = document.getElementById('np-image');
+  const npPreview     = document.getElementById('np-preview');
+  const npPlaceholder = document.getElementById('np-dz-placeholder');
+
+  const npRevert = document.getElementById('np-revert');
+
+  function showNpPreview(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      npPreview.src = e.target.result;
+      npPreview.style.display = 'block';
+      npPlaceholder.style.display = 'none';
+      npDropzone.style.borderStyle = 'solid';
+      npDropzone.style.borderColor = '#198754';
+      npRevert.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  npRevert.addEventListener('click', e => {
+    e.stopPropagation();
+    npImageInput.value = '';
+    npPreview.style.display = 'none';
+    npPreview.src = '';
+    npPlaceholder.style.display = 'block';
+    npRevert.style.display = 'none';
+    npDropzone.style.borderStyle = 'dashed';
+    npDropzone.style.borderColor = '#ccc';
+    npDropzone.style.background = '#fafafa';
+  });
+
+  npDropzone.addEventListener('click', () => npImageInput.click());
+  npImageInput.addEventListener('change', function() {
+    if (this.files[0]) showNpPreview(this.files[0]);
+  });
+  npDropzone.addEventListener('dragover', e => {
+    e.preventDefault();
+    npDropzone.style.borderColor = '#198754';
+    npDropzone.style.background  = '#f0fff4';
+  });
+  npDropzone.addEventListener('dragleave', e => {
+    if (!npDropzone.contains(e.relatedTarget)) {
+      npDropzone.style.borderColor = '#ccc';
+      npDropzone.style.background  = '#fafafa';
+    }
+  });
+  npDropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    npDropzone.style.background = '#fafafa';
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      npImageInput.files = dt.files;
+      showNpPreview(file);
+    }
+  });
+
+  // ── Batch tab image label update ──────────────────────
+  const abImage = document.getElementById('ab-image');
+  if (abImage) {
+    abImage.addEventListener('change', function() {
+      const span = this.closest('label.upload').querySelector('.upload-label');
+      span.textContent = this.files[0] ? this.files[0].name : 'Select image (auto-compressed on upload)';
+    });
+  }
+
+  // ── Season end constraints (batch tab) ────────────────
+  function lockSeasonEnd(startId, endId) {
+    const s = document.getElementById(startId);
+    const e = document.getElementById(endId);
+    if (!s || !e) return;
+    function update() {
+      Array.from(e.options).forEach((opt, i) => { opt.disabled = i < s.selectedIndex; });
+      if (e.selectedIndex < s.selectedIndex) e.selectedIndex = s.selectedIndex;
+    }
+    s.addEventListener('change', update);
+    update();
+  }
+
+  // ── Batch tab: price suggestion ───────────────────────
+  const discounts = { A: 0, B: 0.15, C: 0.30, D: 0.45, Discounted: 0.50 };
+  const labels    = { A: 'base price', B: '−15% from base', C: '−30% from base', D: '−45% from base', Discounted: '−50% from base (suggested)' };
+
+  const productSelect  = document.getElementById('batch-product');
+  const priceInput     = document.getElementById('batch-price');
+  const priceSuggLabel = document.getElementById('price-suggestion');
+  const basePriceDisp  = document.getElementById('base-price-display');
+  const basePriceVal   = document.getElementById('base-price-value');
+
+  function getSelectedBasePrice() {
+    const opt = productSelect.options[productSelect.selectedIndex];
+    return opt ? parseFloat(opt.dataset.basePrice) : NaN;
+  }
+
+  const effectivePriceDisplay = document.getElementById('effective-price-display');
+
+  function updateSuggestedPrice() {
+    const base = getSelectedBasePrice();
+    const qc   = document.querySelector('input[name="quality_class"]:checked')?.value;
+    if (isNaN(base) || !qc) {
+      priceSuggLabel.textContent = '';
+      effectivePriceDisplay.textContent = '—';
+      return;
+    }
+    const discount = discounts[qc] ?? 0;
+    const effective = (base * (1 - discount)).toFixed(2);
+    priceInput.value = effective;
+    effectivePriceDisplay.textContent = `£${effective}`;
+    priceSuggLabel.textContent = `(${labels[qc]})`;
+  }
+
+  productSelect.addEventListener('change', () => {
+    const base = getSelectedBasePrice();
+    if (!isNaN(base)) {
+      basePriceDisp.style.display = '';
+      basePriceVal.textContent = `£${base.toFixed(2)}`;
+    } else {
+      basePriceDisp.style.display = 'none';
+    }
+    updateSuggestedPrice();
+  });
+
+  document.querySelectorAll('input[name="quality_class"]').forEach(r => {
+    r.addEventListener('change', updateSuggestedPrice);
+  });
+
+  // ── Surplus/Discounted class shows discount fields ─────
+  function updateDiscountRow() {
+    const qc = document.querySelector('input[name="quality_class"]:checked')?.value;
+    document.getElementById('discount-row').style.display = qc === 'Discounted' ? '' : 'none';
+  }
+  document.querySelectorAll('input[name="quality_class"]').forEach(r => {
+    r.addEventListener('change', updateDiscountRow);
+  });
+  updateDiscountRow();
+
+  // ── Restore correct tab if form was submitted with errors ──
+  const formType = '{{ active_tab|default:"new" }}';
+  if (formType === 'new_batch') switchTab('batch');
 </script>
 {% endblock %}

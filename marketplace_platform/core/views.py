@@ -1,13 +1,15 @@
 import json
+import difflib
+from django.db.models import Q, Sum, Subquery, OuterRef, Prefetch, Avg, Count
 from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login
 from django.http import HttpResponse, JsonResponse
-from core.forms import LoginForm, ProductForm, SignupForm, CheckoutForm, ReviewForm
+from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
-from .models import User, Product, Order, OrderProduct, Review
+from .models import User, Product, ProductBatch, Order, OrderProduct, Review
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import timedelta
@@ -15,6 +17,7 @@ from decimal import Decimal
 
 # Create your views here.
 User = get_user_model()
+import json
 
 @login_required
 def update_cart_ajax(request, product_id):
@@ -35,18 +38,18 @@ def update_cart_ajax(request, product_id):
         cart_items_data = []
         total_price = 0
         if cart:
-            products = Product.objects.filter(id__in=cart.keys())
-            for product in products:
-                qty = cart.get(str(product.id), 0)
-                subtotal = float(product.price) * qty
+            batches = ProductBatch.objects.select_related('product').filter(id__in=cart.keys())
+            for batch in batches:
+                qty = cart.get(str(batch.id), 0)
+                subtotal = float(batch.price) * qty
                 total_price += subtotal
                 cart_items_data.append({
-                    'id': str(product.id),
-                    'name': product.name,
-                    'price': float(product.price),
+                    'id': str(batch.id),
+                    'name': batch.name,
+                    'price': float(batch.price),
                     'quantity': qty,
                     'subtotal': round(subtotal, 2),
-                    'image': product.image.url if product.image else None,
+                    'image': batch.image.url if batch.image else None,
                 })
 
         return JsonResponse({
@@ -63,18 +66,18 @@ def cart_contents(request):
     cart_items_data = []
     total_price = 0
     if cart:
-        products = Product.objects.filter(id__in=cart.keys())
-        for product in products:
-            qty = cart.get(str(product.id), 0)
-            subtotal = float(product.price) * qty
+        batches = ProductBatch.objects.select_related('product').filter(id__in=cart.keys())
+        for batch in batches:
+            qty = cart.get(str(batch.id), 0)
+            subtotal = float(batch.price) * qty
             total_price += subtotal
             cart_items_data.append({
-                'id': str(product.id),
-                'name': product.name,
-                'price': float(product.price),
+                'id': str(batch.id),
+                'name': batch.name,
+                'price': float(batch.price),
                 'quantity': qty,
                 'subtotal': round(subtotal, 2),
-                'image': product.image.url if product.image else None,
+                'image': batch.image.url if batch.image else None,
             })
     return JsonResponse({
         'total_items': sum(cart.values()),
@@ -107,7 +110,7 @@ def recurring_orders(request):
     orders = Order.objects.filter(
         customer=request.user,
         recurring=True
-    ).prefetch_related('orderproduct_set__product')
+    ).prefetch_related('orderproduct_set__batch__product')
 
     orders_with_next = []
     for order in orders:
@@ -127,15 +130,39 @@ def modify_recurring_order(request, order_id):
     order = get_object_or_404(Order, id=order_id, customer=request.user, recurring=True)
 
     if request.method == 'POST':
+        # Create a brand new one-off order for next occurrence only
         for order_product in order.orderproduct_set.all():
             new_quantity = int(request.POST.get(f'qty_{order_product.id}', order_product.numPurchased))
             order_product.numPurchased = new_quantity
             order_product.save()
         order.recurrence_type = request.POST.get('recurrence_type', order.recurrence_type)
-        order.recurrence_day = int(request.POST.get('recurrence_day', order.recurrence_day))
-        order.save()
-        messages.success(request, "Recurring order updated for all future deliveries.")
-        return redirect('orders')
+        next_date = get_next_occurrence(order)
+        new_order = Order.objects.create(
+            customer=request.user,
+            total_price=order.total_price,
+            delivery_date=timezone.make_aware(
+                timezone.datetime.combine(
+                    next_date, timezone.datetime.min.time())
+            ),
+            order_status='PENDING',
+            recurring=False,  # This is a one-off modification, not a template
+        )
+
+        # Copy items with updated quantities from POST
+        for op in order.orderproduct_set.all():
+            new_qty = int(request.POST.get(f'qty_{op.id}', op.numPurchased))
+            OrderProduct.objects.create(
+                order=new_order,
+                batch=op.batch,
+                product=op.product,
+                numPurchased=new_qty,
+                price_at_purchase=op.price_at_purchase,
+            )
+
+        messages.success(
+            request, "Next occurrence updated. The recurring template is unchanged.")
+        return redirect('recurring_orders')
+
     return render(request, 'modify_occurrence.html', {
         'order': order,
         'next_date': get_next_occurrence(order),
@@ -191,7 +218,6 @@ def reorder(request, order_id):
     messages.success(request, f"Added to cart: {', '.join(names)}.")
     return redirect('checkout')
 
-
 @login_required
 def checkout(request):
     cart = request.session.get('cart', {})
@@ -201,14 +227,14 @@ def checkout(request):
         messages.error(request, "You haven't selected any items.")
         return redirect('home')
 
-    # 1. Gather all products and calculate the total price
+    # 1. Gather all batches and calculate the total price
     total_price = 0
     cart_items = []
 
     for pid, qty in cart.items():
-        product = get_object_or_404(Product, id=pid)
-        total_price += product.price * qty
-        cart_items.append({'product': product, 'quantity': qty})
+        batch = get_object_or_404(ProductBatch, id=pid)
+        total_price += batch.price * qty
+        cart_items.append({'product': batch, 'quantity': qty})
 
     min_delivery_date = (timezone.now() + timedelta(hours=48)
                          ).strftime('%Y-%m-%dT%H:%M')
@@ -236,11 +262,13 @@ def checkout(request):
 
             # 3. Loop through the memory to link ALL items to this order
             for item in cart_items:
+                batch = item['product']
                 OrderProduct.objects.create(
                     order=new_order,
-                    product=item['product'],
+                    batch=batch,
                     numPurchased=item['quantity'],
-                    product_price_at_purchase=item['product'].price
+                    product_price_at_purchase=item['product'].price,
+                    price_at_purchase=batch.price,
                 )
 
             # Clear the memory now that the order is placed!
@@ -263,22 +291,137 @@ def checkout(request):
 
 def home_view(request):
     cart = request.session.get('cart', {})
-
-    # Calculate total price
     total_price = 0
     if cart:
-        products = Product.objects.filter(id__in=cart.keys())
-        for product in products:
-            qty = cart.get(str(product.id), 0)
-            total_price += float(product.price) * qty
+        batches = ProductBatch.objects.filter(id__in=cart.keys())
+        for batch in batches:
+            qty = cart.get(str(batch.id), 0)
+            total_price += float(batch.price) * qty
+
+    in_stock_batches_qs = ProductBatch.objects.filter(stock__gt=0).order_by('quality_class')
+
+    class_a_image = ProductBatch.objects.filter(
+        product=OuterRef('pk'), quality_class='A'
+    ).order_by('-created_at')
+
+    items = Product.objects.select_related('producer').prefetch_related(
+        Prefetch('batches', queryset=in_stock_batches_qs, to_attr='in_stock_batches')
+    ).annotate(
+        total_stock=Sum('batches__stock'),
+        primary_image=Subquery(class_a_image.values('image')[:1]),
+        avg_rating=Avg('review__rating'),
+        review_count=Count('review'),
+    ).filter(total_stock__gt=0)
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        items = items.filter(
+            Q(name__icontains=q) |
+            Q(description__icontains=q) |
+            Q(producer__organisation_name__icontains=q)
+        )
+
+    categories = request.GET.getlist('category')
+    if categories:
+        items = items.filter(category__in=categories)
+
+    if request.GET.get('discounted'):
+        items = items.filter(batches__surplus=True).distinct()
+
+    if request.GET.get('in_season'):
+        items = items.filter(
+            batches__availability__in=['Available', 'Available All Year']
+        ).distinct()
+
+    suggestion = None
+    if q and not items.exists():
+        all_names = list(Product.objects.values_list('name', flat=True))
+        matches = difflib.get_close_matches(q, all_names, n=1, cutoff=0.6)
+        if matches:
+            suggestion = matches[0]
+
+    items_list = list(items)
+
+    def _batch_dict(b, unit=''):
+        return {
+            'id': str(b.id),
+            'quality_class': b.quality_class,
+            'price': str(b.price),
+            'unit': unit,
+            'stock': b.stock,
+            'best_before': str(b.best_before),
+            'image': f'/media/{b.image}' if b.image else None,
+            'surplus': b.surplus,
+            'discount': str(b.discount_percentage),
+            'availability': b.availability,
+            'seasonStart': b.seasonStart,
+            'seasonEnd': b.seasonEnd,
+        }
+
+    batch_data = {
+        str(item.id): [_batch_dict(b, item.unit) for b in item.in_stock_batches]
+        for item in items_list
+    }
+
+    for item in items_list:
+        batches = item.in_stock_batches
+        if batches:
+            prices = [float(b.price) for b in batches]
+            lo = min(prices)
+            hi = max(prices)
+            item.price_display = f'From £{lo:.2f}' if lo != hi else f'£{lo:.2f}'
+        else:
+            item.price_display = f'£{item.price}'
+
+    product_ids = [item.id for item in items_list]
+    reviews_qs = Review.objects.filter(product_id__in=product_ids).select_related('user').order_by('-date_posted')
+    review_data = {}
+    for r in reviews_qs:
+        pid = str(r.product_id)
+        if pid not in review_data:
+            review_data[pid] = []
+        if len(review_data[pid]) < 5:
+            review_data[pid].append({
+                'rating': r.rating,
+                'title': r.title,
+                'content': r.content,
+                'date': r.date_posted.strftime('%d %b %Y'),
+                'author': 'Anonymous' if r.anonymous else (r.user.full_name or r.user.email),
+            })
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        data = [{
+            'id': str(item.id),
+            'name': item.name,
+            'price': str(item.price),
+            'price_display': item.price_display,
+            'image': f'/media/{item.primary_image}' if item.primary_image else None,
+            'allergens': item.allergens,
+            'description': item.description,
+            'category': item.category,
+            'organic': item.organic,
+            'producer': item.producer.organisation_name,
+            'organic_description': item.producer.organic_description,
+            'avg_rating': round(item.avg_rating, 1) if item.avg_rating else None,
+            'review_count': item.review_count,
+        } for item in items_list]
+        return JsonResponse({'items': data, 'count': len(data), 'suggestion': suggestion, 'batch_data': batch_data, 'review_data': review_data})
 
     return render(request, 'home.html', {
-        'items': Product.objects.all(),
+        'items': items_list,
+        'batch_data': batch_data,
+        'review_data': review_data,
         'cart_items': cart,
         'cart_total_price': round(total_price, 2),
+        'selected_categories': categories,
+        'in_stock': request.GET.get('in_stock'),
+        'discounted': request.GET.get('discounted'),
+        'in_season': request.GET.get('in_season'),
+        'search_query': q,
+        'suggestion': suggestion,
     })
 
-
+    
 def add_to_cart(request, product_id):
     if request.method == 'POST':
         # Get the current memory, or start a blank dictionary
@@ -335,24 +478,104 @@ def login_view(request):
 
 @login_required
 def upload_item(request):
-    if request.method == 'POST':
-        form = ProductForm(request.POST, request.FILES)
-        print(request.FILES, request.POST)
-        if form.is_valid():
-            print(f"\033[42m\033[30mform valid\033[0m")
-            product = form.save(commit=False)
-            if request.user.is_authenticated:
-                product.producer = User.objects.get(pk=request.user.pk)
-                product.save()
-                return redirect('home')
-            else:
-                return HttpResponse("You must be logged in to upload.")
-        else:
-            print(f"\033[43m\033[30m{form.errors=}\033[0m")
+    products = Product.objects.filter(producer=request.user).order_by('name')
+    active_tab = 'new'
 
+    if request.method == 'POST':
+        form_type = request.POST.get('form_type')
+
+        if form_type == 'new_product':
+            active_tab = 'new'
+            allergens_raw = request.POST.get('allergens', '').strip()
+            allergens = [a.strip() for a in allergens_raw.split(',') if a.strip()]
+
+            product, created = Product.objects.get_or_create(
+                name=request.POST.get('name', '').strip(),
+                defaults={
+                    'producer': request.user,
+                    'category': request.POST.get('category', 'Vegetable'),
+                    'description': request.POST.get('description', ''),
+                    'price': Decimal(request.POST.get('price') or '0'),
+                    'unit': request.POST.get('unit', 'kg'),
+                    'food_miles': 0,
+                    'stock_alert_threshold': 0,
+                    'allergens': allergens,
+                    'organic': 'organic' in request.POST,
+                }
+            )
+            image = request.FILES.get('image')
+            if image and created:
+                from datetime import date, timedelta
+                ProductBatch.objects.create(
+                    product=product,
+                    quality_class='A',
+                    stock=1,
+                    best_before=date.today() + timedelta(days=365),
+                    image=image,
+                )
+            return redirect('inventory_upload')
+
+        elif form_type == 'new_batch':
+            active_tab = 'batch'
+            product = get_object_or_404(Product, id=request.POST.get('product_id'))
+            quality_class = request.POST.get('quality_class', 'B')
+            surplus = quality_class == 'Discounted'
+            ref_batch = product.batches.filter(quality_class='A').order_by('-created_at').first() \
+                        or product.batches.order_by('-created_at').first()
+            season_start = ref_batch.seasonStart if ref_batch else 'January'
+            season_end = ref_batch.seasonEnd if ref_batch else 'December'
+            class_discounts = {'A': Decimal('0'), 'B': Decimal('15'), 'C': Decimal('30'), 'D': Decimal('45'), 'Discounted': Decimal('50')}
+            if quality_class == 'Discounted':
+                discount_pct = Decimal(request.POST.get('discount_percentage') or '50')
+            else:
+                discount_pct = class_discounts.get(quality_class, Decimal('0'))
+            harvest_date = request.POST.get('harvest_date') or None
+            ProductBatch.objects.create(
+                product=product,
+                quality_class=quality_class,
+                stock=int(request.POST.get('stock') or 1),
+                harvest_date=harvest_date,
+                best_before=request.POST.get('best_before'),
+                seasonStart=season_start,
+                seasonEnd=season_end,
+                surplus=surplus,
+                discount_percentage=discount_pct,
+                discount_note=request.POST.get('discount_note', ''),
+                image=request.FILES.get('image'),
+            )
+            return redirect('home')
+
+    return render(request, 'inventory_upload.html', {
+        'months': Product.Months.choices,
+        'products': products,
+        'active_tab': active_tab,
+    })
+
+
+@login_required
+def add_batch(request):
+    producer = request.user
+    products = Product.objects.filter(producer=producer).order_by('name')
+
+    if request.method == 'POST':
+        product_id = request.POST.get('product_id')
+        product = get_object_or_404(Product, id=product_id, producer=producer)
+        batch_form = ProductBatchForm(request.POST, request.FILES)
+        if batch_form.is_valid():
+            batch = batch_form.save(commit=False)
+            batch.product = product
+            batch.save()
+            return redirect('home')
+        else:
+            print(f"\033[43m\033[30m{batch_form.errors=}\033[0m")
     else:
-        form = ProductForm()
-    return render(request, 'inventory_upload.html', {'form': form})
+        batch_form = ProductBatchForm()
+
+    return render(request, 'add_batch.html', {
+        'products': products,
+        'batch_form': batch_form,
+        'months': Product.Months.choices,
+    })
 
 
 def signup_view(request):
@@ -396,7 +619,7 @@ def signup_view(request):
 
 def invoice_view(request, order_code=None):
     order_qs = Order.objects.filter(customer=request.user).prefetch_related(
-        'orderproduct_set__product', 'customer')
+        'orderproduct_set__batch__product', 'customer')
     if order_code:
         order = order_qs.filter(id__startswith=order_code).order_by(
             'order_date').first()
@@ -412,16 +635,16 @@ def invoice_view(request, order_code=None):
     if order:
         items = order.orderproduct_set.all()
         for item in items:
-            line_total = item.numPurchased * item.product.price
+            line_total = item.numPurchased * item.price_at_purchase
             subtotal += line_total
             invoice_items.append({
-                'name': item.product.name,
-                'producer': item.product.producer,
+                'name': item.batch.name,
+                'producer': item.batch.producer,
                 'quantity': item.numPurchased,
-                'price': item.product.price,
+                'price': item.price_at_purchase,
                 'line_total': line_total,
-                'details': item.product.description,
-                'best_before': item.product.best_before,
+                'details': item.batch.description,
+                'best_before': item.batch.best_before,
             })
         commission_amount = subtotal * (commission_rate / Decimal('100.00'))
         total = subtotal + commission_amount
@@ -573,11 +796,19 @@ def get_order_summary_json(request, order_id):
         return JsonResponse({'error': e}, status=404)
 
 @login_required
+@login_required
 def profile_view(request):
     """Display the logged-in user's profile page."""
     product_count = None
     if request.user.category == 'Producer':
         product_count = Product.objects.filter(producer=request.user).count()
+
+    if request.method == 'POST' and request.user.category == 'Producer':
+        request.user.organic_description = request.POST.get('organic_description', '').strip()
+        request.user.save(update_fields=['organic_description'])
+        messages.success(request, 'Organic certification updated.')
+        return redirect('profile')
+
     return render(request, 'profile.html', {'product_count': product_count})
 
 

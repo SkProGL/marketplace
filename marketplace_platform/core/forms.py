@@ -2,7 +2,7 @@ from datetime import timedelta
 from django.utils import timezone
 
 from django import forms
-from .models import Product, User, Review
+from .models import Product, ProductBatch, User, Review
 
 PASSWORD_STRENGTH_ERROR = "Password must be at least 8 characters and include 1 lowercase and 1 uppercase letter."
 
@@ -110,13 +110,7 @@ class CheckoutForm(forms.Form):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = [
-            'name', 'category', 'description', 'price',
-            'unit', 'availability', 'seasonStart', 'seasonEnd',
-            'best_before', 'food_miles', 'stock', 'stock_alert_threshold',
-            'allergens', 'organic', 'surplus', 'discount_percentage',
-            'discount_expiry', 'discount_note', 'image'
-        ]
+        fields = ['name', 'category', 'description', 'price', 'unit', 'food_miles', 'allergens', 'organic']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
         }
@@ -133,3 +127,14 @@ class ReviewForm(forms.ModelForm):
             "anonymous": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
         labels = {"anonymous": "Post anonymously"}
+
+
+class ProductBatchForm(forms.ModelForm):
+    class Meta:
+        model = ProductBatch
+        fields = [
+            'quality_class', 'stock', 'stock_alert_threshold', 'image',
+            'best_before', 'surplus', 'discount_percentage',
+            'discount_expiry', 'discount_note',
+            'seasonStart', 'seasonEnd',
+        ]
