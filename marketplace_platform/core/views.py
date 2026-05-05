@@ -313,16 +313,21 @@ def login_view(request):
             login_data = form.cleaned_data
             email = login_data.get('email')
             password = login_data.get('password')
+            remember_me = login_data.get('remember_me')
 
             # Check if these credentials match a user in the DB
             user = authenticate(request, email=email, password=password)
 
             if user is not None:
                 login(request, user)
+                if not remember_me:
+                    request.session.set_expiry(0)
+                else:
+                    request.session.set_expiry(1209600)  # 2 weeks
                 messages.success(request, f"Welcome back, {email}!")
                 return redirect('home')  # Go to the marketplace
             else:
-                messages.error(request, "Invalid email or password.")
+                messages.error(request, "username or password is incorrect")
     else:
         form = LoginForm()
 
@@ -355,6 +360,7 @@ def signup_view(request):
         form = SignupForm(request.POST)
         if form.is_valid():
             user = form.save()
+            remember_me = form.cleaned_data.get('remember_me')
             print("SIGNUP SUCCESS")
 
             print(f"\033[42m\033[30msignup success\033[0m")
@@ -369,7 +375,11 @@ def signup_view(request):
                 "category": user.category,
                 "organisation_name": user.organisation_name,
             })
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            if not remember_me:
+                request.session.set_expiry(0)
+            else:
+                request.session.set_expiry(1209600)  # 2 weeks
             messages.success(request, "Account created successfully.")
             return redirect("home")
 

@@ -7,7 +7,7 @@ from django.http import HttpRequest
 from django.utils import timezone
 from typing import Type, Any
 from django.forms import modelform_factory
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 from django.http import HttpRequest
 from core.forms import PASSWORD_STRENGTH_ERROR, SignupForm
 from core.models import Order, Product
@@ -210,8 +210,8 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                                 return False
                 else:
                     # Signal unsuccesful field updates using built-in django validation error
-                    # Must mark_safe to render to html
-                    error_html = mark_safe(f"<b>Error on row {str(row_id)[:8]}:</b><br>{form.errors}")
+                    # Must format_html to render to html safely
+                    error_html = format_html("<b>Error on row {}:</b><br>{}", str(row_id)[:8], form.errors)
                     messages.error(request, error_html)
                     _cache_attempt(request, selected_model_name, row_id, row_data)
                     return False
