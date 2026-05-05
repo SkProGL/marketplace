@@ -152,8 +152,6 @@ class Product(models.Model):
     )
     # Best before date
     best_before = models.DateField(default="2026-04-04")
-    # Food miles - distance food travels from producer to customer
-    food_miles = models.IntegerField(default=0)
     # Stock quantity
     stock = models.IntegerField(default=50)
     # Percentage to indicate how much stock is left before an alert is sent
@@ -241,6 +239,7 @@ class OrderProduct(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     numPurchased = models.IntegerField()
+    food_miles = models.FloatField()
     product_price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)
     class Meta:
         unique_together = ("order", "product")
@@ -256,6 +255,7 @@ class OrderProduct(models.Model):
 
 class StoryPost(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title=models.CharField(max_length=128)
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE

@@ -34,7 +34,6 @@ class Command(BaseCommand):
                         seasonStart=row["seasonStart"].capitalize(),
                         seasonEnd=row["seasonEnd"].capitalize(),
                         best_before=row["best_before"],
-                        food_miles=int(row["food_miles"]),
                         stock=int(row["stock"]),
                         stock_alert_threshold=to_decimal(row["stock_alert_threshold"]),
                         allergens=[],
