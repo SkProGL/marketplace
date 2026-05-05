@@ -14,6 +14,10 @@ class SignupForm(forms.ModelForm):
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'})
     )
+    remember_me = forms.BooleanField(
+        required=False, 
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
     accept_policy = forms.BooleanField(
         required=True,
         error_messages={'required': 'You must accept the policy.'},
@@ -79,6 +83,10 @@ class LoginForm(forms.Form):
     password = forms.CharField(
         widget=forms.PasswordInput(
             attrs={'class': 'form-control', 'placeholder': 'Password'})
+    )
+    remember_me = forms.BooleanField(
+        required=False, 
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
 class CheckoutForm(forms.Form):
     
