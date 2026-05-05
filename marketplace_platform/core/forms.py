@@ -2,7 +2,7 @@ from datetime import timedelta
 from django.utils import timezone
 
 from django import forms
-from .models import Product, User
+from .models import Product, User, Review
 
 PASSWORD_STRENGTH_ERROR = "Password must be at least 8 characters and include 1 lowercase and 1 uppercase letter."
 
@@ -112,3 +112,16 @@ class ProductForm(forms.ModelForm):
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
         }
+
+
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ["rating", "title", "content", "anonymous"]
+        widgets = {
+            "rating": forms.HiddenInput(),
+            "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "Review title"}),
+            "content": forms.Textarea(attrs={"class": "form-control", "rows": 4, "placeholder": "Share your experience with this product..."}),
+            "anonymous": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {"anonymous": "Post anonymously"}

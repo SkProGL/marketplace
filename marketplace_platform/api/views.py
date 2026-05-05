@@ -45,7 +45,7 @@ def meal_search(request):
         if not meals:
             return Response({"results": []})
 
-        # 🔧 Clean response (important)
+        # Clean response (important)
         results = []
         for meal in meals:
             results.append({

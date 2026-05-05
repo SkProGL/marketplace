@@ -54,6 +54,7 @@ class Migration(migrations.Migration):
                 ('order_status', models.CharField(choices=[('PENDING', 'Pending'), ('CONFIRMED', 'Confirmed'), ('READY', 'Ready'), ('DELIVERED', 'Delivered')], default='PENDING', max_length=20)),
                 ('special_instructions', models.TextField(blank=True)),
                 ('recurring', models.BooleanField(default=False)),
+                ('paused', models.BooleanField(default=False)),
                 ('recurrence_type', models.CharField(choices=[('None', 'None'), ('Weekly', 'Weekly'), ('Fortnightly', 'Fortnightly')], default='None', max_length=20)),
                 ('recurrence_day', models.IntegerField(blank=True, choices=[(1, 'Mon'), (2, 'Tue'), (3, 'Wed'), (4, 'Thur'), (5, 'Fri'), (6, 'Sat'), (7, 'Sun')], null=True)),
                 ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
