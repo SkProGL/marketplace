@@ -4,5 +4,7 @@ psycopg[binary]
 pillow
 djangorestframework
 django-browser-reload
+argon2-cffi
+django-axes
 django-simple-history
 django-import-export

@@ -2,142 +2,608 @@
 {% load static %}
 {% load cart_tags %}
 {% block content %}
-    <link rel="stylesheet" href="{% static 'home.css' %}">
+<link rel="stylesheet" href="{% static 'home.css' %}">
 
 <!-- From Uiverse.io by adamgiebl --> 
-<div class="form-control">
-	<input class="input input-alt" placeholder="Search" required="" type="text">
-	<span class="input-border input-border-alt"></span>
-</div>
-<div class="home-filter-group">
-	<div>
-		<div class="filters">
-		  <input type="checkbox" id="apple">
-		  <label for="apple">Apple</label>
+<form method="GET" action="">
+  <div class="form-control">
+    <input class="input input-alt" placeholder="Search" type="text" 
+           name="q" value="{{ request.GET.q }}">
+    <span class="input-border input-border-alt"></span>
+  </div>
 
-		  <input type="checkbox" id="carrot">
-		  <label for="carrot">Carrot</label>
+  <div>
+    <div class="filters">
+      <input type="checkbox" id="fruit" name="category" value="Fruit"
+             {% if "Fruit" in selected_categories %}checked{% endif %}>
+      <label for="fruit">Fruits</label>
 
-		  <input type="checkbox" id="potatoes">
-		  <label for="potatoes">Potatoes</label>
+      <input type="checkbox" id="vegetable" name="category" value="Vegetable"
+             {% if "Vegetable" in selected_categories %}checked{% endif %}>
+      <label for="vegetable">Vegetables</label>
 
-		</div>
-	</div>
-	<div class="custom-filters">
+      <input type="checkbox" id="dairy" name="category" value="Dairy"
+             {% if "Dairy" in selected_categories %}checked{% endif %}>
+      <label for="dairy">Dairy</label>
 
-		<div class="filters">
+      <input type="checkbox" id="bakery" name="category" value="Bakery"
+             {% if "Bakery" in selected_categories %}checked{% endif %}>
+      <label for="bakery">Bakery</label>
 
-		  <input type="checkbox" id="stock">
-		  <label for="stock">In Stock</label>
+      <input type="checkbox" id="preserve" name="category" value="Preserve"
+             {% if "Preserve" in selected_categories %}checked{% endif %}>
+      <label for="preserve">Preserve</label>
 
-		  <input type="checkbox" id="discount">
-		  <label for="discount">Discounted %</label>
-		</div>
-		{% include "components/widget-food-miles.html" %}
-		{% include "components/widget-tree.html" %}
-		{% include "components/widget-offer.html" %}
-		<br/>
-	</div>
+      <input type="checkbox" id="in_season" name="in_season" value="1"
+             {% if in_season %}checked{% endif %}>
+      <label for="in_season">In Season</label>
+    </div>
+  </div>
 
-</div>
+  <div class="custom-filters">
+    <div class="filters">
+      <input type="checkbox" id="stock" name="in_stock" value="1"
+             {% if in_stock %}checked{% endif %}>
+      <label for="stock">In Stock</label>
+
+      <input type="checkbox" id="discount" name="discounted" value="1"
+             {% if discounted %}checked{% endif %}>
+      <label for="discount">Discounted %</label>
+    </div>
+
+    {% include "components/widget-food-miles.html" %}
+    {% include "components/widget-tree.html" %}
+    {#% include "components/widget-offer.html" %#}
+    <br/>
+  </div>
+</form>
 <div class="home-results">
   <b>Found {{ items|length }} matches</b>
+  <p id="search-suggestion" {% if not suggestion %}style="display:none"{% endif %}>
+    Did you mean: <a id="suggestion-link" href="{% if suggestion %}?q={{ suggestion }}{% endif %}">{{ suggestion }}</a>?
+  </p>
 </div>
 
 <!--This is the product image styling and positioning-->
 <div class="widget-card-grid">
   {% for item in items %}
-    <div class="card" style="display: flex; flex-direction: column; height:280px; width:190px;overflow: hidden;">
+    <div class="card" style="display: flex; flex-direction: column; height:320px; width:210px;overflow: hidden; cursor:pointer;"
+         data-name="{{ item.name }}"
+         data-description="{{ item.description }}"
+         data-allergens="{{ item.allergens|join:', ' }}"
+         data-category="{{ item.category }}"
+         data-organic="{{ item.organic }}"
+         data-producer="{{ item.producer.organisation_name }}"
+         data-organic-info="{{ item.producer.organic_description }}"
+         data-avg-rating="{{ item.avg_rating|default:'' }}"
+         data-review-count="{{ item.review_count }}"
+         data-product-id="{{ item.id }}">
 
       <div class="image" style="height: 75%; width: 100%; flex-shrink: 0;  overflow: hidden; position: relative;">
-        {% if item.image %}
-          <img src="{{ item.image.url }}" style="height: 100%; width: 100%; object-fit: cover; display: block;">
+        {% if item.primary_image %}
+          <img src="/media/{{ item.primary_image }}" style="height: 100%; width: 100%; object-fit: cover; display: block;">
         {% else %}
           <img src="{% static 'test.jpg' %}" style="height: 100%; width: 100%; object-fit: cover; display: block;">
         {% endif %}
+        {% if item.organic %}
+          <img src="{% static 'organic_badge.svg' %}" alt="Organic product" style="position:absolute;top:6px;left:6px;width:42px;height:42px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));">
+        {% endif %}
       </div>
 
-      <div style="display: flex; padding: 0 15px; flex-grow: 1;">
-
-        {% if item.allergens %}
-        <span class="allergens">
-          {% include "includes/icons/icon_warning.html" %}
-            {{ item.allergens|join:", " }}
-        </span>
-        {% endif %}
-<!-- Plus and minus controls, needs to be here so the count would work correctly-->
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <!-- <div style="display: flex; flex-direction: column;"> -->
-            <div style="">
+      <div style="display: flex; padding: 0 15px; flex-grow: 1; width: 100%;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex: 1;">
+            <div style="display: flex; flex-direction: column; justify-content: center;">
                 <span class="title">{{ item.name }}</span>
-                <span class="price">£{{ item.price }}</span>
-            </div>
-<!--This is the name, price and add to cart-->
-            <!-- Cart widget: shows button OR stepper depending on cart state -->
-            <div class="cart-widget" data-product-id="{{ item.id }}">
-                {% if item.id|stringformat:"s" in cart_items %}
-                    <!-- Already in cart — show stepper -->
-                    <div class="cart-stepper">
-                        <button class="widget-stepper-btn" onclick="updateCart('{{ item.id }}', -1, this)">−</button>
-                        <span class="stepper-qty">{{ cart_items|get_item:item.id }}</span>
-                        <button class="widget-stepper-btn" onclick="updateCart('{{ item.id }}', 1, this)">+</button>
-                    </div>
-                {% else %}
-                    <!-- Not in cart — show Add button -->
-                    <button class="add-to-cart-btn" onclick="addToCart('{{ item.id }}', this)">
-                        Add
-                      </button>
+                {% if item.producer.organisation_name %}<span style="display:block; font-size:11px; color:#888;">{{ item.producer.organisation_name }}</span>{% endif %}
+                <span class="price">{{ item.price_display }}</span>
+                {% if item.avg_rating %}
+                <span style="font-size:11px;color:#888;">⭐ {{ item.avg_rating }}/5 ({{ item.review_count }})</span>
                 {% endif %}
             </div>
-        </div> 
-    </div>  
+            <div class="card-btn-wrap">
+                <button type="button" class="add-to-cart-btn">Add</button>
+                <span class="card-cart-badge"></span>
+            </div>
+        </div>
+    </div>
 </div>
   {% endfor %}
 </div>
-<!-- <div class="home-results"><b>Found 2 matches</b></div> -->
+<!-- Product detail modal -->
+<div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <h5 class="modal-title mb-1">
+            <span id="modalName"></span>
+            <span id="modalOrganicInline" class="badge bg-success ms-2" style="display:none;font-size:0.85rem;vertical-align:middle;">Certified organic</span>
+          </h5>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <small class="text-muted" id="modalProducer"></small>
+            <button id="modalCertBtn" class="btn btn-link p-0 text-success" style="font-size:0.78rem;display:none;" data-bs-toggle="modal" data-bs-target="#certModal">View organic certification ›</button>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
 
-<br/>
-<br/>
-<br/>
+      <div class="modal-body pt-0">
+        <div class="row g-3 align-items-start">
+          <div class="col-5" style="height:340px;">
+            <img id="modalImage" src="" alt="" class="img-fluid rounded" style="object-fit:cover;height:100%;width:100%;display:block;">
+          </div>
+          <div class="col-7">
 
-{% include "api-meals.html" %}
-<!--Quantity input sync with stepper-->
+            <div class="mb-2">
+              <strong>Available classes</strong>
+              <select id="modalClassSelect" class="form-select form-select-sm mt-1">
+                <option value="" disabled selected>Select class…</option>
+              </select>
+            </div>
+
+            <p class="mb-1"><strong>Category:</strong> <span id="modalCategory"></span></p>
+            <p class="mb-1"><strong>Availability:</strong> <span id="modalAvailability"></span></p>
+            <div id="modalSeasonRow" class="mb-1" style="display:none">
+              <strong>Season:</strong> <span id="modalSeason"></span>
+            </div>
+            <p class="mb-1"><strong id="modalStockLabel">Total in stock:</strong> <span id="modalTotalStock"></span> <span id="modalStockUnit"></span></p>
+
+            <p class="mt-2 mb-1"><strong>Description</strong></p>
+            <p id="modalDescription" class="text-muted small"></p>
+
+            <div id="modalAllergenRow" class="mt-1" style="display:none">
+              <strong>Allergens:</strong> <span id="modalAllergens" class="text-danger small"></span>
+            </div>
+
+            <!-- Shown only after a class is selected -->
+            <div id="modalBatchInfo" style="visibility:hidden">
+              <hr class="my-2">
+              <p class="mb-1"><strong>Price:</strong> <span id="modalPrice"></span></p>
+              <p class="mb-1"><strong>Best before:</strong> <span id="modalBestBefore"></span></p>
+              <span id="modalSurplusBadge" class="badge bg-warning text-dark" style="display:none">Surplus</span>
+              <div id="modalDiscountRow" class="mb-1 text-danger" style="display:none">
+                <strong>Discount:</strong> <span id="modalDiscount"></span>% off
+              </div>
+            </div>
+
+            <div id="modalCartControls" class="mt-3" style="display:flex;flex-direction:column;gap:8px;">
+              <div id="modalCartStepper" class="cart-stepper" style="display:none">
+                <button class="widget-stepper-btn" id="modalDecBtn">−</button>
+                <span class="stepper-qty" id="modalQty">1</span>
+                <button class="widget-stepper-btn" id="modalIncBtn">+</button>
+                <span id="modalCartTotal" style="margin-left:8px;font-weight:600;"></span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button id="modalAddBtn" class="add-to-cart-btn">Add</button>
+                <button id="modalNotifyBtn" class="btn btn-outline-secondary btn-sm" style="display:none">Notify me when more items are available</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reviews section -->
+        <div id="modalReviewsSection" style="display:none;margin-top:1.5rem;border-top:1px solid #dee2e6;padding-top:1rem;">
+          <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:1rem;">
+            <h6 class="fw-bold mb-0">Customer reviews</h6>
+            <small id="modalRating" style="color:#888;display:none;">⭐ <span id="modalRatingValue"></span>/5 (<span id="modalReviewCount"></span> reviews)</small>
+          </div>
+          <div id="modalReviewsList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Organic certification modal -->
+<div class="modal fade" id="certModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title text-success fw-bold">Organic certification</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-2">
+        <p class="text-muted small mb-2" id="certProducerName"></p>
+        <p id="certText" style="font-size:0.9rem;white-space:pre-wrap;color:#2d6a2d;background:#f0faf0;border-radius:8px;padding:1rem;margin:0;"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Notify me toast -->
+<div id="notifyToast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 20px;border-radius:8px;font-size:0.9rem;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+  An email will be sent to <strong id="notifyEmail"></strong> once the item is back in stock!
+</div>
+
+{{ cart_items|json_script:"cart-state-data" }}
+{{ batch_data|json_script:"batch-data" }}
+{{ review_data|json_script:"review-data" }}
+
 <script>
-  document.querySelectorAll('.card').forEach(card => {
-    const stepperInput = card.querySelector('.widget-stepper-input');
-    const hiddenInput = card.querySelector('.quantity-input');
+  let batchData = JSON.parse(document.getElementById('batch-data').textContent);
+  let reviewData = JSON.parse(document.getElementById('review-data').textContent);
+  const userEmail = '{{ request.user.email }}';
 
-    if (stepperInput && hiddenInput) {
-      stepperInput.addEventListener('input', () => {
-        hiddenInput.value = stepperInput.value;
-      });
+function selectBatch(batch) {
+    // Batch-specific section
+    document.getElementById('modalPrice').textContent      = '£' + batch.price + (batch.unit ? '/' + batch.unit : '');
+    document.getElementById('modalBestBefore').textContent = batch.best_before;
+    document.getElementById('modalStockLabel').textContent = 'In stock:';
+    document.getElementById('modalTotalStock').textContent = batch.stock;
+    document.getElementById('modalStockUnit').textContent = batch.unit || '';
+    document.getElementById('modalSurplusBadge').style.display = batch.surplus ? '' : 'none';
+
+    const discRow = document.getElementById('modalDiscountRow');
+    if (batch.quality_class === 'Discounted' && parseFloat(batch.discount) > 0) {
+      discRow.style.display = '';
+      document.getElementById('modalDiscount').textContent = batch.discount;
+    } else {
+      discRow.style.display = 'none';
+    }
+
+    // Switch image to batch image if it has one
+    if (batch.image) document.getElementById('modalImage').src = batch.image;
+
+    // Reveal batch info
+    document.getElementById('modalBatchInfo').style.visibility = 'visible';
+
+    currentBatchId = batch.id;
+    currentItemPrice = parseFloat(batch.price);
+    currentBatchStock = batch.stock;
+    currentBatchUnit = batch.unit || '';
+    localQty = cartState[currentBatchId] || 0;
+    updateModalCartUI();
+  }
+
+  document.getElementById('productModal').addEventListener('show.bs.modal', function(e) {
+    const card = e.relatedTarget;
+    const d = card.dataset;
+    const productId = d.productId;
+    currentProductId = productId;
+
+    // Product-level fields
+    document.getElementById('modalName').textContent        = d.name;
+    document.getElementById('modalProducer').textContent    = d.producer;
+    document.getElementById('modalDescription').textContent = d.description;
+    document.getElementById('modalCategory').textContent    = d.category;
+    const isOrganic = d.organic === 'True';
+    const ratingEl = document.getElementById('modalRating');
+    if (d.avgRating) {
+      document.getElementById('modalRatingValue').textContent = d.avgRating;
+      document.getElementById('modalReviewCount').textContent = d.reviewCount;
+      ratingEl.style.display = '';
+    } else {
+      ratingEl.style.display = 'none';
+    }
+    document.getElementById('modalOrganicInline').style.display = isOrganic ? '' : 'none';
+    document.getElementById('modalCertBtn').style.display = isOrganic ? '' : 'none';
+    document.getElementById('certProducerName').textContent = d.producer || '';
+    document.getElementById('certText').textContent = d.organicInfo || 'No certification details provided yet.';
+
+    const allergenRow = document.getElementById('modalAllergenRow');
+    if (d.allergens) {
+      allergenRow.style.display = '';
+      document.getElementById('modalAllergens').textContent = d.allergens;
+    } else {
+      allergenRow.style.display = 'none';
+    }
+
+    const batches = batchData[productId] || [];
+    const totalStock = batches.reduce((sum, b) => sum + b.stock, 0);
+    const first = batches[0];
+    document.getElementById('modalStockLabel').textContent = 'Total in stock:';
+    document.getElementById('modalTotalStock').textContent = totalStock;
+    document.getElementById('modalStockUnit').textContent = first ? first.unit : '';
+
+    // Availability from first batch (all share same season since inherited from product)
+    if (first) {
+      document.getElementById('modalAvailability').textContent = first.availability;
+      const seasonRow = document.getElementById('modalSeasonRow');
+      if (first.availability === 'Available All Year') {
+        seasonRow.style.display = 'none';
+      } else {
+        seasonRow.style.display = '';
+        document.getElementById('modalSeason').textContent = first.seasonStart + ' → ' + first.seasonEnd;
+      }
+    }
+
+    // Product image: prefer Class A batch image
+    const classA = batches.find(b => b.quality_class === 'A');
+    document.getElementById('modalImage').src = (classA && classA.image) || (first && first.image) || '/static/test.jpg';
+
+    // Reset to pre-selection state
+    document.getElementById('modalBatchInfo').style.visibility = 'hidden';
+    document.getElementById('modalCartStepper').style.display = 'none';
+    document.getElementById('modalAddBtn').textContent = 'Add';
+    currentBatchId = null;
+    currentBatchStock = 0;
+    localQty = 0;
+
+    // Render class dropdown options
+    const classSelect = document.getElementById('modalClassSelect');
+    classSelect.innerHTML = '<option value="" disabled selected>Select class…</option>' +
+      batches.map((b, i) => {
+        const labels = { A: 'Premium', B: 'Standard', C: 'Economy', D: 'Basic', Discounted: 'Surplus / Discount' };
+        return `<option value="${i}">Class ${b.quality_class} — ${labels[b.quality_class] || b.quality_class}</option>`;
+      }).join('');
+
+    classSelect.onchange = function() {
+      selectBatch(batches[parseInt(this.value)]);
+    };
+
+    // Render reviews
+    const reviews = reviewData[productId] || [];
+    const reviewsSection = document.getElementById('modalReviewsSection');
+    const reviewsList = document.getElementById('modalReviewsList');
+    if (reviews.length > 0) {
+      reviewsSection.style.display = '';
+      reviewsList.innerHTML = reviews.map(r => `
+        <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #f0f0f0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span style="color:#f5a623;font-size:1rem;">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+            <strong style="font-size:0.9rem;">${r.title}</strong>
+            <span style="font-size:0.75rem;color:#888;margin-left:auto;">${r.author} · ${r.date}</span>
+          </div>
+          <p style="font-size:0.85rem;color:#555;margin:0;">${r.content}</p>
+        </div>
+      `).join('');
+    } else {
+      reviewsSection.style.display = 'none';
     }
   });
 </script>
+
 <script>
-  document.querySelectorAll('.card').forEach(card => {
-    const stepperInput = card.querySelector('.widget-stepper-input');
-    const hiddenInput = card.querySelector('.quantity-input');
-    const plus = card.querySelector('.widget-stepper-plus');
-    const minus = card.querySelector('.widget-stepper-minus');
+  // ── Allergen icon renderer ─────────────────────────────────────────────────
+  const ALLERGEN_SVGS = {
+    gluten:     `<line x1="12" y1="21" x2="12" y2="5"/><path d="M12 17C9 16 8 13 9 11 10 9 12 9 12 9"/><path d="M12 17C15 16 16 13 15 11 14 9 12 9 12 9"/><path d="M12 11C9 10 8 7 9 5 10 3 12 3 12 3"/><path d="M12 11C15 10 16 7 15 5 14 3 12 3 12 3"/>`,
+    crustacean: `<path d="M16 5C18 7 17 11 15 13L11 16C9 17 8 19 10 21"/><path d="M10 21C9 22 7 21 7 19 7 17 9 16 12 15"/><path d="M16 5L18 4M15 8L18 7M7 19L5 19M8 17L6 16"/>`,
+    egg:        `<path d="M12 4C7 4 5 9 5 13 5 18 8 21 12 21 16 21 19 18 19 13 19 9 17 4 12 4Z"/>`,
+    fish:       `<path d="M5 12C8 8 12 7 15 9 17 10 18 11 18 12 18 13 17 14 15 15 12 17 8 16 5 12Z"/><path d="M18 12L21 9 21 15Z"/><circle cx="9" cy="11" r="1" fill="#555"/>`,
+    peanuts:    `<ellipse cx="12" cy="8.5" rx="4" ry="4.5"/><ellipse cx="12" cy="17" rx="4" ry="4"/><line x1="8.5" y1="12.5" x2="15.5" y2="12.5" stroke-dasharray="2,1"/>`,
+    soya:       `<path d="M12 4C8 4 7 7 8 10 7 13 8 17 12 20 16 17 17 13 16 10 17 7 16 4 12 4Z"/><circle cx="12" cy="8.5" r="1.5"/><circle cx="12" cy="13" r="1.5"/><circle cx="12" cy="17.5" r="1.5"/>`,
+    milk:       `<path d="M9 7L8 21 16 21 15 7Z"/><path d="M9 7L10.5 4 13.5 4 15 7"/><line x1="8.5" y1="10" x2="15.5" y2="10"/>`,
+    nuts:       `<path d="M12 4C7 4 5 8 5 12 5 16.5 8 20 12 20 16 20 19 16.5 19 12 19 8 17 4 12 4Z"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="5" y1="12" x2="19" y2="12"/>`,
+    celery:     `<line x1="9" y1="20" x2="9" y2="13"/><line x1="12" y1="20" x2="12" y2="11"/><line x1="15" y1="20" x2="15" y2="13"/><path d="M7 13Q12 7 17 13" fill="none"/>`,
+    mustard:    `<rect x="10" y="5" width="4" height="9" rx="1"/><path d="M9 14L8 21 16 21 15 14Z"/><circle cx="12" cy="3.5" r="1.5"/>`,
+    sesame:     `<ellipse cx="9" cy="9" rx="2" ry="3" transform="rotate(-20 9 9)"/><ellipse cx="15" cy="8" rx="2" ry="3" transform="rotate(25 15 8)"/><ellipse cx="8" cy="15" rx="2" ry="3" transform="rotate(10 8 15)"/><ellipse cx="15" cy="15" rx="2" ry="3" transform="rotate(-15 15 15)"/><ellipse cx="12" cy="12" rx="2" ry="3"/>`,
+    sulphites:  `<polygon points="12,3 19.5,7.5 19.5,16.5 12,21 4.5,16.5 4.5,7.5"/><text x="12" y="14" text-anchor="middle" font-size="5.5" fill="#444" font-family="Arial" font-weight="bold" stroke="none">E-X</text>`,
+    shellfish:  `<path d="M12 20C8 20 5 17 5 13 5 9 7 6 12 5 17 6 19 9 19 13 19 17 16 20 12 20Z"/><line x1="12" y1="5" x2="12" y2="20"/><path d="M7 8Q12 11 17 8M5.5 12Q12 16 18.5 12M6 16Q12 19.5 18 16" fill="none"/>`,
+    lupins:     `<circle cx="9" cy="10" r="3.5"/><circle cx="15" cy="10" r="3.5"/><circle cx="12" cy="16.5" r="3.5"/>`,
+  };
 
-    if (plus) plus.onclick = () => {
-      stepperInput.stepUp();
-      if (hiddenInput) hiddenInput.value = stepperInput.value;
-    };
+  function getAllergenKey(str) {
+    const a = str.toLowerCase();
+    if (a.includes('gluten') || a.includes('wheat') || a.includes('rye') || a.includes('barley') || a.includes('oat')) return 'gluten';
+    if (a.includes('crustacean') || a.includes('prawn') || a.includes('shrimp') || a.includes('crab') || a.includes('lobster')) return 'crustacean';
+    if (a.includes('egg')) return 'egg';
+    if (a.includes('fish') && !a.includes('shell')) return 'fish';
+    if (a.includes('peanut') || a.includes('groundnut')) return 'peanuts';
+    if (a.includes('soy') || a.includes('soya')) return 'soya';
+    if (a.includes('milk') || a.includes('dairy') || a.includes('lactose') || a.includes('butter') || a.includes('cheese') || a.includes('cream')) return 'milk';
+    if ((a.includes('nut') || a.includes('almond') || a.includes('cashew') || a.includes('walnut') || a.includes('hazelnut') || a.includes('pistachio')) && !a.includes('peanut') && !a.includes('coconut') && !a.includes('donut')) return 'nuts';
+    if (a.includes('celery') || a.includes('celeriac')) return 'celery';
+    if (a.includes('mustard')) return 'mustard';
+    if (a.includes('sesame')) return 'sesame';
+    if (a.includes('sulph') || a.includes('sulfite') || a.includes('dioxide') || a.includes('so2')) return 'sulphites';
+    if (a.includes('shell') || a.includes('mollusc') || a.includes('oyster') || a.includes('clam') || a.includes('mussel')) return 'shellfish';
+    if (a.includes('lupin')) return 'lupins';
+    return null;
+  }
 
-    if (minus) minus.onclick = () => {
-      stepperInput.stepDown();
-      if (hiddenInput) hiddenInput.value = stepperInput.value;
-    };
+  function renderAllergenBadges(card) {
+    card.querySelectorAll('.allergen-badge').forEach(el => el.remove());
+    const raw = card.dataset.allergens || '';
+    if (!raw.trim()) return;
+    const allergens = raw.split(',').map(a => a.trim()).filter(Boolean);
+    const imageDiv = card.querySelector('.image');
+    if (!imageDiv) return;
+    allergens.forEach((allergen, i) => {
+      const key = getAllergenKey(allergen);
+      if (!key) return;
+      const badge = document.createElement('div');
+      badge.className = 'allergen-badge';
+      badge.title = allergen;
+      badge.style.cssText = `position:absolute;bottom:8px;left:${8 + i * 26}px;width:22px;height:22px;background:white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:${10 + i};`;
+      badge.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ALLERGEN_SVGS[key]}</svg>`;
+      imageDiv.appendChild(badge);
+    });
+  }
+</script>
 
-    if (stepperInput && hiddenInput) {
-      stepperInput.addEventListener('input', () => {
-        hiddenInput.value = stepperInput.value;
-      });
+<script>
+  // Cart state — initialised from server-rendered session
+  const cartState = JSON.parse(document.getElementById('cart-state-data').textContent);
+  let currentBatchId = null;
+  let currentItemPrice = 0;
+  let currentBatchStock = 0;
+  let currentBatchUnit = '';
+  let currentProductId = null;
+  let localQty = 0;  // pending qty, not yet committed to server
+
+  function updateCardCartBadge(productId) {
+    const batches = batchData[productId] || [];
+    const qty = batches.reduce((sum, b) => sum + (cartState[b.id] || 0), 0);
+    const card = document.querySelector(`.widget-card-grid .card[data-product-id="${productId}"]`);
+    if (!card) return;
+    const badge = card.querySelector('.card-cart-badge');
+    if (!badge) return;
+    badge.textContent = qty;
+    badge.style.display = qty > 0 ? 'block' : 'none';
+  }
+
+  // Updates stepper display only — no AJAX
+  function updateModalCartUI() {
+    const stepper = document.getElementById('modalCartStepper');
+    const addBtn  = document.getElementById('modalAddBtn');
+    document.getElementById('modalQty').textContent = localQty;
+    document.getElementById('modalCartTotal').textContent = localQty > 0
+      ? '£' + (localQty * currentItemPrice).toFixed(2) + ', ' + localQty + currentBatchUnit : '';
+    stepper.style.display = localQty > 0 ? 'flex' : 'none';
+    addBtn.textContent    = localQty > 0 ? 'Add to cart' : 'Add';
+    document.getElementById('modalIncBtn').disabled = localQty >= currentBatchStock;
+    document.getElementById('modalNotifyBtn').style.display =
+      (localQty > 0 && localQty >= currentBatchStock) ? '' : 'none';
+  }
+
+  // Commits localQty to the server and updates navbar/badge
+  function commitCart() {
+    const delta = localQty - (cartState[currentBatchId] || 0);
+    if (delta === 0) return;
+    fetch(`/cart/update/${currentBatchId}/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      },
+      body: JSON.stringify({delta: delta})
+    })
+    .then(r => {
+      if (r.redirected || r.status === 403) { window.location.href = '/login/'; return null; }
+      return r.json();
+    })
+    .then(data => {
+      if (!data) return;
+      cartState[currentBatchId] = data.quantity;
+      updateCardCartBadge(currentProductId);
+      updateDrawerIfOpen(data);
+      updateNavbarCart(data.total_items, data.total_price);
+    });
+  }
+
+  document.getElementById('modalNotifyBtn').addEventListener('click', () => {
+    document.getElementById('notifyEmail').textContent = userEmail;
+    const toast = document.getElementById('notifyToast');
+    toast.style.display = '';
+    setTimeout(() => { toast.style.display = 'none'; }, 4000);
+  });
+
+  document.getElementById('modalAddBtn').addEventListener('click', () => {
+    if (!currentBatchId) {
+      const sel = document.getElementById('modalClassSelect');
+      sel.focus();
+      sel.click();
+      return;
+    }
+    if (localQty === 0) {
+      // First "Add" — start local counter
+      localQty = 1;
+      updateModalCartUI();
+    } else {
+      // "Add to cart" — commit to server
+      commitCart();
     }
   });
+  document.getElementById('modalIncBtn').addEventListener('click', () => {
+    if (localQty < currentBatchStock) { localQty++; updateModalCartUI(); }
+  });
+  document.getElementById('modalDecBtn').addEventListener('click', () => {
+    if (localQty > 1) { localQty--; updateModalCartUI(); }
+  });
+
+  function attachCardClickHandlers() {
+    document.querySelectorAll('.widget-card-grid .card').forEach(card => {
+      card.addEventListener('click', () => {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('productModal')).show(card);
+      });
+      updateCardCartBadge(card.dataset.productId);
+      renderAllergenBadges(card);
+    });
+  }
+  attachCardClickHandlers();
+</script>
+
+<br/>
+<br/>
+<br/>
+<!--Filter search without reload-->
+<script>
+  const searchInput = document.querySelector('input[name="q"]');
+  let searchTimer;
+
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => fetchResults(), 500);
+  });
+
+  document.querySelectorAll('.filters input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', () => fetchResults());
+  });
+
+  const offerBtn = document.querySelector('.widget-offer-btn');
+  if (offerBtn) {
+    offerBtn.addEventListener('click', () => {
+      const discountCb = document.getElementById('discount');
+      discountCb.checked = !discountCb.checked;
+      fetchResults();
+    });
+  }
+
+  function fetchResults() {
+    const form = searchInput.closest('form');
+    const params = new URLSearchParams(new FormData(form));
+
+    fetch(`?${params.toString()}`, {
+      headers: { 'x-requested-with': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+      // Update count
+      document.querySelector('.home-results b').textContent = `Found ${data.count} matches`;
+
+      // Show/hide spell suggestion
+      const suggestionEl = document.getElementById('search-suggestion');
+      const suggestionLink = document.getElementById('suggestion-link');
+      if (data.suggestion) {
+        suggestionLink.textContent = data.suggestion;
+        suggestionLink.href = `?q=${encodeURIComponent(data.suggestion)}`;
+        suggestionEl.style.display = '';
+      } else {
+        suggestionEl.style.display = 'none';
+      }
+
+      // Rebuild the card grid
+      Object.assign(batchData, data.batch_data);
+      Object.assign(reviewData, data.review_data || {});
+      const grid = document.querySelector('.widget-card-grid');
+      grid.innerHTML = data.items.map(item => `
+        <div class="card" style="display:flex;flex-direction:column;height:320px;width:210px;overflow:hidden;cursor:pointer;"
+             data-name="${item.name}"
+             data-description="${(item.description||'').replace(/"/g,'&quot;')}"
+             data-allergens="${(item.allergens||[]).join(', ')}"
+             data-category="${item.category}"
+             data-organic="${item.organic}"
+             data-producer="${item.producer || ''}"
+             data-organic-info="${item.organic_description || ''}"
+             data-avg-rating="${item.avg_rating || ''}"
+             data-review-count="${item.review_count || 0}"
+             data-product-id="${item.id}">
+          <div class="image" style="height:75%;width:100%;flex-shrink:0;overflow:hidden;position:relative;">
+            ${item.image
+              ? `<img src="${item.image}" style="height:100%;width:100%;object-fit:cover;">`
+              : `<img src="/static/test.jpg" style="height:100%;width:100%;object-fit:cover;">`
+            }
+            ${item.organic ? `<img src="/static/organic_badge.svg" alt="Organic product" style="position:absolute;top:6px;left:6px;width:42px;height:42px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));">` : ''}
+          </div>
+          <div style="display:flex;padding:0 15px;flex-grow:1;width:100%;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex:1;">
+              <div style="display:flex;flex-direction:column;justify-content:center;">
+                <span class="title">${item.name}</span>
+                ${item.producer ? `<span style="display:block;font-size:11px;color:#888;">${item.producer}</span>` : ''}
+                <span class="price">${item.price_display || '£' + item.price}</span>
+                ${item.avg_rating ? `<span style="font-size:11px;color:#888;">⭐ ${item.avg_rating}/5 (${item.review_count})</span>` : ''}
+              </div>
+              <div class="card-btn-wrap">
+                <button type="button" class="add-to-cart-btn">Add</button>
+                <span class="card-cart-badge"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      attachCardClickHandlers();
+    });
+  }
 </script>
 <script src="{% static 'cart.js' %}"></script>
-
 {% endblock %}

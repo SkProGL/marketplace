@@ -8,10 +8,10 @@ from django.http import HttpRequest
 from django.utils import timezone
 from typing import Type, Any
 from django.forms import modelform_factory
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 from django.http import HttpRequest
 from core.forms import PASSWORD_STRENGTH_ERROR, SignupForm
-from core.models import Order, Product
+from core.models import Order, Product, ProductBatch
 
 # Management
 ## Universal readonly fields
@@ -222,8 +222,8 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                             return False
                 else:
                     # Signal unsuccesful field updates using built-in django validation error
-                    # Must mark_safe to render to html
-                    error_html = mark_safe(f"<b>Error on row {str(row_id)[:8]}:</b><br>{form.errors}")
+                    # Must format_html to render to html safely
+                    error_html = format_html("<b>Error on row {}:</b><br>{}", str(row_id)[:8], form.errors)
                     messages.error(request, error_html)
                     _cache_attempt(request, selected_model_name, row_id, row_data)
                     return False
@@ -345,9 +345,9 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
             
             row_cells.append(cell_data)
 
-        # For Product row, set colour class based onm stock threshold status
+        # For ProductBatch row, set colour class based on stock threshold status
         row_class = ''
-        if selected_model_name == 'Product':
+        if selected_model_name == 'ProductBatch':
             stock = getattr(record, 'stock', None)
             threshold = getattr(record, 'stock_alert_threshold', None)
             if stock is not None and threshold is not None:
@@ -395,9 +395,9 @@ def get_low_stock_products(user):
     Get all product records for given User where stock is >= defined threshold. 
     User for alerts and notifications. 
     """
-    return Product.objects.filter(
-        producer=user,
-        stock__lte=models.F('stock_alert_threshold')
+    return ProductBatch.objects.filter(
+        product__producer=user,
+        stock__lte=models.F('product__stock_alert_threshold')
     )
 
 def get_pending_orders(user):
@@ -405,8 +405,8 @@ def get_pending_orders(user):
     Get all pending orders for given producers.
     User for alerts and notifications. 
     """
-    return  Order.objects.filter(
-        orderproduct__product__producer=user,
+    return Order.objects.filter(
+        orderproduct__batch__product__producer=user,
         order_status='PENDING'
     ).distinct()
     
@@ -444,7 +444,8 @@ def get_recurring_orders_context(user):
     today = timezone.now().date()
     orders = Order.objects.filter(
         customer=user,
-    ).exclude(recurrence_type='None').prefetch_related('orderproduct_set__product')
+        recurring=True,
+    ).prefetch_related('orderproduct_set__batch__product')
 
     result = []
     for order in orders:

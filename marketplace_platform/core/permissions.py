@@ -27,7 +27,7 @@ def get_all_models():
 
 MANAGE_MODEL_ACCESS = {
     'Admin':   get_all_models, 
-    'Producer': ['Product', 'Order', 'Recipe', 'StoryPost'],
+    'Producer': ['Product', 'ProductBatch', 'Order', 'Recipe', 'StoryPost'],
     'Restaurant':      [],
     'Community group': [],
     'Customer':        [],

@@ -128,6 +128,59 @@ textarea {
   display: none;
 }
 
+/* season month selects */
+
+.season-months-row {
+  align-items: flex-end;
+}
+
+.season-select {
+  width: 100%;
+  padding: var(--padding-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.season-select[style*="pointer-events: none"] {
+  cursor: not-allowed;
+}
+
+/* tabs */
+
+.form-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #888;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.tab-hint {
+  font-size: 0.82rem;
+  color: #888;
+  margin: 0 0 8px;
+}
+
 /* button */
 
 .form button {

@@ -14,8 +14,11 @@ urlpatterns = [
     # Order URLs
     path('orders/', views.orders, name='orders'),
     path('orders/<uuid:order_id>/reorder/', views.reorder, name='reorder'),
+    path('orders/<uuid:order_id>/', views.order_detail, name='order_detail'),
+    path('add_batch/', views.add_batch, name='add_batch'),
     path('invoice/<str:order_code>/', views.invoice_view, name='invoice'),
-    # Recurring order URLS
+    # Recurring order URLs
+    path('orders/recurring/', views.recurring_orders, name='recurring_orders'),
     path('orders/recurring/<uuid:order_id>/modify/', views.modify_recurring_order, name='modify_recurring_order'),
     path('orders/recurring/<uuid:order_id>/pause/', views.pause_recurring_order, name='pause_recurring_order'),
     path('orders/recurring/<uuid:order_id>/delete/', views.delete_recurring_order, name='delete_recurring_order'),
@@ -31,5 +34,4 @@ urlpatterns = [
     path('management/order/<uuid:order_id>/order_summary/', views.get_order_summary_json, name='order_summary'),
     path('management/search/', views.management_search, name='management_search'),
     path('management/order/<uuid:order_id>/advance/', views.advance_order_status, name='advance_order_status'),
-
 ] 

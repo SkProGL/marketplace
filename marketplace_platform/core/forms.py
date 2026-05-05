@@ -2,7 +2,7 @@ from datetime import timedelta
 from django.utils import timezone
 
 from django import forms
-from .models import Product, User, Review
+from .models import Product, ProductBatch, User, Review
 
 PASSWORD_STRENGTH_ERROR = "Password must be at least 8 characters and include 1 lowercase and 1 uppercase letter."
 
@@ -13,6 +13,10 @@ class SignupForm(forms.ModelForm):
     organization_name = forms.CharField(required=False)
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'})
+    )
+    remember_me = forms.BooleanField(
+        required=False, 
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
     accept_policy = forms.BooleanField(
         required=True,
@@ -80,6 +84,10 @@ class LoginForm(forms.Form):
         widget=forms.PasswordInput(
             attrs={'class': 'form-control', 'placeholder': 'Password'})
     )
+    remember_me = forms.BooleanField(
+        required=False, 
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
 class CheckoutForm(forms.Form):
     
     delivery_date = forms.DateTimeField(
@@ -105,7 +113,7 @@ class ProductForm(forms.ModelForm):
         fields = [
             'name', 'category', 'description', 'price',
             'unit', 'all_year', 'seasonStart', 'seasonEnd',
-            'best_before', 'stock', 'stock_alert_threshold',
+             'stock', 'stock_alert_threshold',
             'allergens', 'organic', 'surplus', 'discount_percentage',
             'discount_expiry', 'discount_note', 'image'
         ]
@@ -125,3 +133,14 @@ class ReviewForm(forms.ModelForm):
             "anonymous": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
         labels = {"anonymous": "Post anonymously"}
+
+
+class ProductBatchForm(forms.ModelForm):
+    class Meta:
+        model = ProductBatch
+        fields = [
+            'quality_class', 'stock', 'stock_alert_threshold', 'image',
+            'best_before', 'surplus', 'discount_percentage',
+            'discount_expiry', 'discount_note',
+            'seasonStart', 'seasonEnd',
+        ]
