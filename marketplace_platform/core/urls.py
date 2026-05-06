@@ -7,8 +7,11 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('signup/', views.signup_view, name='signup'),
     path('profile/', views.profile_view, name='profile'),
+    path('profile/edit/', views.edit_profile, name='edit_profile'),
     path('terms/', views.terms_view, name='terms'),
     path('review/<uuid:product_id>/', views.add_review, name='add_review'),
+    path('review/<uuid:review_id>/edit/', views.edit_review, name='edit_review'),
+    path('review/<uuid:review_id>/delete/', views.delete_review, name='delete_review'),
     path('community/', views.community, name='community'),
     path('inventory_upload/', views.upload_item, name='inventory_upload'),
     # Order URLs

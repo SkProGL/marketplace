@@ -69,6 +69,11 @@ class User(AbstractUser):
         max_length=128, blank=True, default="")
     # Organic certification description (for producers)
     organic_description = models.TextField(blank=True, default="")
+    # Profile image shown on the user's profile page
+    profile_image = models.ImageField(upload_to='profile_images/', blank=True)
+
+    # Charity or education status for community groups
+    charity_status = models.CharField(max_length=128, blank=True, default="")
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='custom_user_set',
