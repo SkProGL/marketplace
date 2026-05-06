@@ -422,14 +422,8 @@ def format_for_display(field, raw_value):
         
 
 def get_low_stock_products(user):
-    """
-    Get all product records for given User where stock is >= defined threshold. 
-    User for alerts and notifications. 
-    """
-    return ProductBatch.objects.filter(
-        product__producer=user,
-        stock__lte=models.F('product__stock_alert_threshold')
-    )
+    """Returns Products whose total in-date stock is at or below their alert threshold."""
+    return [p for p in Product.objects.filter(producer=user) if p.stock <= p.stock_alert_threshold]
 
 def get_pending_orders(user):
     """

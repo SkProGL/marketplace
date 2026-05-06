@@ -19,8 +19,9 @@ const STATUS_ICON_MAP = {
     DELIVERED: '<i class="bi bi-check2-circle ms-1"></i>',
     CANCELLED: '<i class="bi bi-x-circle ms-1"></i>',
 };
+
 // statusEl.className = `status-pill ms-2 status-pill-${data.status.toLowerCase()}`;
-const pill = s => `<span class="status-pill ms-2 status-pill-${s.toLowerCase()}">${s}${STATUS_ICON_MAP[s]||''}</span>`;
+const pill = s => `<span class="status-pill ms-2 status-pill-${s.toLowerCase()}" style="padding: 0.25em; margin: 0.25em; font-size: 0.85em;">${s}${STATUS_ICON_MAP[s]||''}</span>`;
 
 buttons.forEach(button => {
     button.addEventListener('click', function () {
@@ -61,28 +62,34 @@ buttons.forEach(button => {
 
                     
                     const showStock = data.next_status !== null;
-                    const stockCols = showStock
-                        ? `<th class="text-end">Stock now</th><th class="text-end">After</th>`
-                        : '';
-                    let html = `<table class="table table-sm table-bordered table-striped">
+                    const producerCol = data.show_producer_col;
+                    const producerTh = producerCol ? `<th>Producer</th>` : '';
+                    const totalColspan = producerCol ? 7 : 6;
+                    let html = `<table class="table table  table-bordered table-striped">
                         <thead class="table-light"><tr>
-                            <th>Item</th>
+                            ${producerTh}
+                        <th>Item</th>
                             <th>Grade</th>
                             <th>Best Before</th>
                             <th class="text-center">Quantity</th>
                             <th class="text-end">Current Stock</th>
                             <th class="text-end">Unit Price</th>
                             <th class="text-end">Line Total</th>
-                            </tr></thead><tbody>`;
+                            </tr>
+                            </thead>
+                            <tbody class="align-middle">`;
                     data.receipt.forEach(item => {
                         const stockAfterClass = item.stock_after < 0 ? 'text-danger fw-bold' : item.stock_after === 0 ? 'text-warning' : '';
                         const stockCells = showStock
                             ? `<td class="text-end text-success">${item.stock_now} <span class="text-black"><i class="bi bi-arrow-right"></i></span>
                             <span class="text-end ${stockAfterClass}">${item.stock_after}</span></td>`
                             : '<td class="text-end">N/A</td>';
+                        const producerTd = producerCol ? `<td class="text-muted" style="font-size:.8rem;">${item.producer || '—'}</td>` : '';
                         const batchUrl = `/management/?model=ProductBatch&q=${encodeURIComponent(item.batch_number)}`;
                         html += `<tr style="cursor:pointer;" onclick="window.open('${batchUrl}', '_blank')" title="Open batch ${item.batch_number} in management">
-                            <td>${item.name} <small class="text-muted">${item.batch_number}</small></td>
+                                                    ${producerTd}
+    
+                        <td>${item.name} <small class="text-muted" style="font-size:.8rem;">${item.batch_number}</small></td>
                             <td><span class="badge bg-success text-white">${item.quality_class}</span></td>
                             <td class="text-muted" style="font-size:.8rem;">${item.best_before || '—'}</td>
                             <td class="text-center">${item.qty}</td>
@@ -91,10 +98,11 @@ buttons.forEach(button => {
                             <td class="text-end text-success">£${item.total}</td>
                         </tr>`;
                     });
+                    const displayTotal = data.visible_total;
                     html += `
                         <tr class="table-light fw-bold">
-                            <td colspan="6" class="text-end text-uppercase">Total</td>
-                            <td class="text-end text-success">£${data.total_price}</td>
+                            <td colspan="${totalColspan}" class="text-end text-uppercase">Total</td>
+                            <td class="text-end text-success">£${displayTotal}</td>
                         </tr>
                     `;
                     html += '</tbody></table>';
@@ -139,7 +147,7 @@ buttons.forEach(button => {
                     progressBar.className = `progress-bar bg-${statusClass} progress-bar-striped progress-bar-animated`;
                     progressBar.innerText = `${percent}%`;
                     
-                    // Highlight the current text label underneath
+                    // Highlight the current text label e
                     ['PENDING', 'CONFIRMED', 'READY', 'DELIVERED'].forEach(stage => {
                         const labelEl = document.getElementById(`label-${stage}`);
                         const stageClass = stage.toLowerCase();
@@ -159,7 +167,6 @@ buttons.forEach(button => {
                 // Advance section — only shown for PENDING / CONFIRMED
                 if (data.advance_url && data.next_status) {
                     const section = document.getElementById('advance-section');
-
 
                     document.getElementById('advance-label').innerHTML =
                         `Advance to ${pill(data.next_status)} `;

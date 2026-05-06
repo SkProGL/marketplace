@@ -472,10 +472,8 @@ def clear_cart(request):
 @login_required
 def clear_notifications(request):
     if request.method == 'POST':
-        keys = request.POST.getlist('keys')
-        dismissed = set(request.session.get('dismissed_notifications', []))
-        dismissed.update(keys)
-        request.session['dismissed_notifications'] = list(dismissed)
+        request.user.notifications_cleared_at = timezone.now()
+        request.user.save(update_fields=['notifications_cleared_at'])
     return redirect(request.META.get('HTTP_REFERER', 'home'))
 
 
@@ -807,12 +805,15 @@ def get_order_summary_json(request, order_id):
         order = Order.objects.select_related('customer').get(pk=order_id)
 
         # Get products attached to this order for receipt
-        items = order.orderproduct_set.all().select_related('batch__product')
+        is_producer = not request.user.is_superuser and getattr(request.user, 'category', None) == 'Producer'
+        items = order.orderproduct_set.all().select_related('batch__product__producer')
+        if is_producer:
+            items = items.filter(batch__product__producer=request.user)
 
         receipt_data = []
         for item in items:
             stock_now = item.batch.stock
-            receipt_data.append({
+            entry = {
                 'name': item.batch.product.name,
                 'quality_class': item.batch.get_quality_class_display(),
                 'best_before': item.batch.best_before.strftime('%Y-%m-%d') if item.batch.best_before else '',
@@ -822,7 +823,13 @@ def get_order_summary_json(request, order_id):
                 'total': f"{item.numPurchased * item.batch.price:.2f}",
                 'stock_now': stock_now,
                 'stock_after': stock_now - item.numPurchased,
-            })
+            }
+            if not is_producer:
+                producer = item.batch.product.producer
+                entry['producer'] = producer.organisation_name or producer.full_name or producer.email
+            receipt_data.append(entry)
+
+        visible_total = sum(item.numPurchased * item.batch.price for item in items)
         data = {
             'status': order.order_status,
             'advance_url': f"/management/order/{order_id}/advance/" if order.order_status in ('PENDING', 'CONFIRMED') else None,
@@ -837,6 +844,8 @@ def get_order_summary_json(request, order_id):
             'delivery_date': order.delivery_date.strftime('%Y-%m-%d') if order.delivery_date else '',
             'recurrence': f"{order.get_recurrence_day_display()} ({order.recurrence_type})" if order.recurrence_type != 'None' else '',
             'total_price': f"{order.total_price:.2f}",
+            'visible_total': f"{visible_total:.2f}",
+            'show_producer_col': not is_producer,
             'receipt': receipt_data
         }
         data['status_history'] = [

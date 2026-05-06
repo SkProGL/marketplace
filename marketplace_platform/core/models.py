@@ -83,7 +83,7 @@ class User(AbstractUser):
         help_text='Specific permissions for this user.',
         verbose_name='user permissions',
     )
-
+    notifications_cleared_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.email
@@ -205,10 +205,10 @@ class Product(models.Model):
 
 class ProductBatch(models.Model):
     class QualityClass(models.TextChoices):
-        A = "A", "A — Premium"
-        B = "B", "B — Standard"
-        C = "C", "C — Economy"
-        D = "D", "D — Basic"
+        A = "A", "A - Premium"
+        B = "B", "B - Standard"
+        C = "C", "C - Economy"
+        D = "D", "D - Basic"
         Discounted = "Discounted", "Surplus / Discount"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
