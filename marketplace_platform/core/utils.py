@@ -22,7 +22,8 @@ PRODUCER_ID_FIELDS = {'Product': 'producer', 'StoryPost': 'user', 'Recipe': 'use
 MODEL_FIELD_PRIORITY = {
     'User': ['email', 'password', 'full_name', 'category', 'organisation_name','phone', 'addrss', 'postcode^'],
     'Product': ['name', 'category', 'price', 'stock', 'alert_threshold', 'all_year', 'seasonStart', 'seasonEnd'],
-    'Order': ['customer','order_status']
+    'Order': ['customer','order_status'],
+    'ProducerOrder': ['order', 'producer', 'order_status', 'delivery_date'],
 }
 
 def create_draft_entry(request, headers, selected_model: Type[models.Model], cached_update_attempt=None, readonly_fields=None) -> dict[str, Any]:
@@ -262,7 +263,8 @@ def _cache_attempt(request, selected_model_name, row_id, row_data):
 
 def get_management_context(request:HttpRequest, selected_model: Type[models.Model],
                            selected_model_name, add_new=False, row_filter=None,
-                           distinct=False, readonly_fields=None, hidden_fields=['id', 'is_active', 'is_superuser']) -> dict[str, Any]:
+                           distinct=False, readonly_fields=None, hidden_fields=['id', 'is_active', 'is_superuser'],
+                           modal_id_field=None) -> dict[str, Any]:
     """
     Construct display data for selected model for management view table.
     Additionally handles row sorting logic.
@@ -385,7 +387,8 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
                 elif stock <= threshold:
                     row_class = 'table-warning'
 
-        rows.append({'id': record.pk, 'cells': row_cells, 'row_class': row_class})
+        modal_id = str(getattr(record, modal_id_field)) if modal_id_field else str(record.pk)
+        rows.append({'id': record.pk, 'modal_id': modal_id, 'cells': row_cells, 'row_class': row_class})
 
     # If new row button selected, add draft row
     if add_new:
@@ -422,24 +425,13 @@ def format_for_display(field, raw_value):
         
 
 def get_low_stock_products(user):
-    """
-    Get all product records for given User where stock is >= defined threshold. 
-    User for alerts and notifications. 
-    """
-    return ProductBatch.objects.filter(
-        product__producer=user,
-        stock__lte=models.F('product__stock_alert_threshold')
-    )
+    """Returns Products whose total in-date stock is at or below their alert threshold."""
+    return [p for p in Product.objects.filter(producer=user) if p.stock <= p.stock_alert_threshold]
 
 def get_pending_orders(user):
-    """
-    Get all pending orders for given producers.
-    User for alerts and notifications. 
-    """
-    return Order.objects.filter(
-        orderproduct__batch__product__producer=user,
-        order_status='PENDING'
-    ).distinct()
+    """Returns pending ProducerOrders for the given producer/superuser."""
+    from core.models import ProducerOrder
+    return ProducerOrder.objects.filter(producer=user, order_status='PENDING')
     
 def get_next_occurrence(order: Order) -> date | None:
     """Calculate the next delivery date based on recurrence type."""
