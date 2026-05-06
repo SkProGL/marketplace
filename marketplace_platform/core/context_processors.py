@@ -29,8 +29,8 @@ def navbar_alerts(request):
             })
         for order in get_pending_orders(request.user):
             key = f"order_{order.id}"
-            items = order.orderproduct_set.select_related("product")
-            item_summary = ", ".join(f"{item.product.name} ({item.numPurchased})" for item in items)
+            items = order.orderproduct_set.select_related("batch__product")
+            item_summary = ", ".join(f"{item.batch.product.name} ({item.numPurchased})" for item in items)
             alerts.append({
                 "key": key,
                 "icon": "bag-check-fill",

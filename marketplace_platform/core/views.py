@@ -137,8 +137,7 @@ def get_next_occurrence(order):
 def recurring_orders(request):
     orders = Order.objects.filter(
         customer=request.user,
-        recurring=True
-    ).prefetch_related('orderproduct_set__batch__product')
+    ).exclude(recurrence_type='None').prefetch_related('orderproduct_set__batch__product')
 
     orders_with_next = []
     for order in orders:
@@ -173,7 +172,7 @@ def modify_recurring_order(request, order_id):
                     next_date, timezone.datetime.min.time())
             ),
             order_status='PENDING',
-            recurring=False,  # This is a one-off modification, not a template
+            recurrence_type='None',
         )
 
         # Copy items with updated quantities from POST
@@ -182,7 +181,6 @@ def modify_recurring_order(request, order_id):
             OrderProduct.objects.create(
                 order=new_order,
                 batch=op.batch,
-                product=op.product,
                 numPurchased=new_qty,
                 price_at_purchase=op.price_at_purchase,
             )
@@ -238,9 +236,9 @@ def reorder(request, order_id):
     cart = {}
     names = []
     # Get all OrderProduct rows for this order and fetch their related Product
-    for order_product in old_order.orderproduct_set.select_related('product').all():
-        cart[str(order_product.product.id)] = order_product.numPurchased
-        names.append(f"{order_product.numPurchased} {order_product.product.name}")
+    for order_product in old_order.orderproduct_set.select_related('batch__product').all():
+        cart[str(order_product.batch.id)] = order_product.numPurchased
+        names.append(f"{order_product.numPurchased} {order_product.batch.product.name}")
     request.session['cart'] = cart
     request.session.modified = True
     messages.success(request, f"Added to cart: {', '.join(names)}.")
@@ -290,7 +288,6 @@ def checkout(request):
                     order=new_order,
                     batch=batch,
                     numPurchased=item['quantity'],
-                    product_price_at_purchase=item['product'].price,
                     price_at_purchase=batch.price,
                 )
 
@@ -530,7 +527,6 @@ def upload_item(request):
                     'description': request.POST.get('description', ''),
                     'price': Decimal(request.POST.get('price') or '0'),
                     'unit': request.POST.get('unit', 'kg'),
-                    'food_miles': 0,
                     'stock_alert_threshold': 0,
                     'allergens': allergens,
                     'organic': 'organic' in request.POST,
@@ -760,7 +756,7 @@ def management_view(request: HttpResponse):
             # Get producer account specific rows for selected model
             row_filter = {
                 'Product':   {'producer': request.user},
-                'Order':     {'orderproduct__product__producer': request.user}, # Order ownership identified via bridging Order => OrderProduct => Product => Producer
+                'Order':     {'orderproduct__batch__product__producer': request.user},
                 'StoryPost': {'user': request.user},
                 'Recipe':    {'user': request.user},
             }.get(selected_model_name, {})
@@ -786,7 +782,6 @@ def management_view(request: HttpResponse):
             'selected_model_name': selected_model_name,
         })
     instructions = MODEL_INSTRUCTIONS.get(selected_model_name, '')
-    print(instructions)
     return render(
         request, 'management.html', {
             'model_names': model_names,
@@ -795,7 +790,6 @@ def management_view(request: HttpResponse):
             'selected_data': selected_data,
             'model_instructions': instructions,
         })
-
 
 @login_required
 def community(request):
@@ -813,16 +807,19 @@ def get_order_summary_json(request, order_id):
         order = Order.objects.select_related('customer').get(pk=order_id)
 
         # Get products attached to this order for receipt
-        items = order.orderproduct_set.all().select_related('product')
+        items = order.orderproduct_set.all().select_related('batch__product')
 
         receipt_data = []
         for item in items:
-            stock_now = item.product.stock
+            stock_now = item.batch.stock
             receipt_data.append({
-                'name': item.product.name,
+                'name': item.batch.product.name,
+                'quality_class': item.batch.get_quality_class_display(),
+                'best_before': item.batch.best_before.strftime('%Y-%m-%d') if item.batch.best_before else '',
+                'batch_number': item.batch.batch_number,
                 'qty': item.numPurchased,
-                'price': f"{item.product.price:.2f}",
-                'total': f"{item.numPurchased * item.product.price:.2f}",
+                'price': f"{item.batch.price:.2f}",
+                'total': f"{item.numPurchased * item.batch.price:.2f}",
                 'stock_now': stock_now,
                 'stock_after': stock_now - item.numPurchased,
             })
@@ -830,7 +827,7 @@ def get_order_summary_json(request, order_id):
             'status': order.order_status,
             'advance_url': f"/management/order/{order_id}/advance/" if order.order_status in ('PENDING', 'CONFIRMED') else None,
             'next_status': {'PENDING': 'CONFIRMED', 'CONFIRMED': 'READY'}.get(order.order_status),
-            'customer_name': order.customer.username,
+            'customer_name': order.customer.full_name or order.customer.email,
             'customer_type': order.customer.category,
             'email': order.customer.email,
             'phone': order.customer.phone,
@@ -893,7 +890,7 @@ def advance_order_status(request, order_id):
 
     # Producer can only advance orders that contain their products
     if not request.user.is_superuser and getattr(request.user, 'category', None) == 'Producer':
-        if not order.products.filter(producer=request.user).exists():
+        if not order.products.filter(product__producer=request.user).exists():
             return JsonResponse({'error': 'Access denied'}, status=403)
 
     current = order.order_status

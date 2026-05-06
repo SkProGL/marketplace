@@ -102,6 +102,10 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
     if user_category == 'Producer' and selected_model_name == "Order" and 'delete' in request.POST:
         messages.error(request, "Producers cannot delete orders.")
         return False
+    print("="*50)
+    print(request.POST)
+    print("="*50)
+
     # DELETE
     if 'delete' in request.POST:
         delete_id = request.POST.get('delete')
@@ -444,8 +448,7 @@ def get_recurring_orders_context(user):
     today = timezone.now().date()
     orders = Order.objects.filter(
         customer=user,
-        recurring=True,
-    ).prefetch_related('orderproduct_set__batch__product')
+    ).exclude(recurrence_type='None').prefetch_related('orderproduct_set__batch__product')
 
     result = []
     for order in orders:

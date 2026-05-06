@@ -53,25 +53,14 @@
                     {% elif cell.is_password %}
 
                     <!-- PASSWORD SETTING FORMS -->
-                    <div class="dropdown">
-                        <button
-                            class="status-advance-btn btn btn-sm d-flex align-items-center justify-content-between px-2 border-success-subtle"
-                            type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
-                            <i class="bi bi-key-fill"></i> {% if row.id == 'draft' %}Set Password{% else %}{{ cell.value}}{% endif %}
-                        </button>
-                        <div class="dropdown-menu p-1 shadow-sm border-2 border-secondary" style="min-width:280px;">
-                            <div class="d-flex flex-column gap-1">
-                                <small class="text-muted px-1">{% for cell in row.cells %}{% if cell.name == 'email' %}{{ cell.value }}{% endif %}{% endfor %}</small>
-                                <p class="m-1 bg-body"><b>Set new password</b></p>
-                                <input type="password" name="cell_{{ row.id }}_{{ cell.name }}"
-                                    placeholder="New password…" class="form-control form-control-sm">
-                                <input type="password" name="cell_{{ row.id }}_confirm_password"
-                                    placeholder="Confirm password…" class="form-control form-control-sm">
-                                <button type="submit" form="management-form" name="update"
-                                    class="btn btn-sm btn-outline-success w-100">Confirm</button>
-                            </div>
-                        </div>
-                    </div>
+                    <button class="btn btn-sm btn-warning w-100"
+                        type="button"
+                        data-bs-toggle="modal" data-bs-target="#passwordModal"
+                        data-row-id="{{ row.id }}"
+                        data-email="{% for cell in row.cells %}{% if cell.name == 'email' %}{{ cell.value }}{% endif %}{% endfor %}"
+                        data-category="{% for cell in row.cells %}{% if cell.name == 'category' %}{{ cell.value }}{% endif %}{% endfor %}">
+                        <small class="text-muted"><i class="bi bi-key-fill"></i> {{ cell.value|slice:":7" }}</small>
+                    </button>
 
                     <!-- FK DROP-DOWNS -->
                     {% elif cell.is_fk %}

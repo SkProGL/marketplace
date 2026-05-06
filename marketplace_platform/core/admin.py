@@ -42,7 +42,7 @@ app_models = apps.get_app_config('core').get_models()
 # class OrderProductInline(admin.TabularInline):
 #     model = OrderProduct
 #     extra = 0
-#     readonly_fields = ('product_price_at_purchase', 'id')
+#     readonly_fields = ('product_at_purchase', 'id')
 
 # @admin.register(Order)
 # class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
@@ -55,7 +55,7 @@ app_models = apps.get_app_config('core').get_models()
 
 # @admin.register(OrderProduct)
 # class OrderProductAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
-#     list_display = ('id', 'order', 'product', 'numPurchased', 'product_price_at_purchase')
+#     list_display = ('id', 'order', 'product', 'numPurchased', 'product_at_purchase')
 #     search_fields = ('order__id', 'product__name')
 
 

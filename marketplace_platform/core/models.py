@@ -180,6 +180,12 @@ class Product(models.Model):
         max_length=128, blank=True), default=list, blank=True)
     # Whether the product is organic-certified
     organic = models.BooleanField(default=False)
+    # Surplus / discount fields (mirrored on ProductBatch; kept here for product-level defaults)
+    surplus = models.BooleanField(default=False)
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0, blank=True)
+    discount_expiry = models.DateTimeField(blank=True, null=True)
+    discount_note = models.TextField(blank=True)
+    image = models.ImageField(upload_to='item_images/', blank=True)
 
     @property
     def base_price(self):
@@ -208,7 +214,7 @@ class ProductBatch(models.Model):
     # Stock quantity
     stock = models.IntegerField()
     # Absolute number of units before a low-stock alert is sent
-    stock_alert_threshold = models.IntegerField(default=0)
+    stock_alert_threshold = models.IntegerField(default=0, verbose_name="Alert Threshold")
     # Associated image
     image = models.ImageField(upload_to='item_images/', blank=True)
     # Harvest date
@@ -235,12 +241,12 @@ class ProductBatch(models.Model):
     availability = models.CharField(
         max_length=20,
         choices=Product.SeasonalAvailability.choices,
-        default=Product.SeasonalAvailability.AV)
+        default=Product.SeasonalAvailability.AVAILABLE)
     # Season start and end
     seasonStart = models.CharField(
-        max_length=20, choices=Product.Months.choices, default=Product.Months.JAN)
+        max_length=20, choices=Product.Months.choices, default=Product.Months.JAN, verbose_name="Season Start")
     seasonEnd = models.CharField(
-        max_length=20, choices=Product.Months.choices, default=Product.Months.DEC)
+        max_length=20, choices=Product.Months.choices, default=Product.Months.DEC, verbose_name="Season End")
     created_at = models.DateTimeField(auto_now_add=True)
 
     # --- Convenience properties so templates can use batch.name, batch.producer etc. ---
@@ -291,10 +297,10 @@ class ProductBatch(models.Model):
         start = month_order.get(self.seasonStart, 1)
         end = month_order.get(self.seasonEnd, 12)
         if start == 1 and end == 12:
-            return Product.SeasonalAvailability.AAY
+            return Product.SeasonalAvailability.ALL_YEAR
         current = timezone.now().month
         in_season = (start <= current <= end) if start <= end else (current >= start or current <= end)
-        return Product.SeasonalAvailability.AV if in_season else Product.SeasonalAvailability.UN
+        return Product.SeasonalAvailability.AVAILABLE if in_season else Product.SeasonalAvailability.UNAVAILABLE
 
     def _compress_image(self):
         from PIL import Image

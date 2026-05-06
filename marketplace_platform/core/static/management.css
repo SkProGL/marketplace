@@ -17,6 +17,7 @@
 
 /* Replace your existing .table-sm .form-select padding override with this: */
 /* 2. Strip Bootstrap's minimum height constraints from the inputs */
+
 .table-sm .form-control,
 .table-sm .form-select {
   margin: 0;
@@ -41,6 +42,12 @@
     --bs-table-accent-bg: transparent;
     background-color: #f8d7da !important; /* Standard Bootstrap danger red */
 }
+
+
+#search-input { box-shadow: none; }
+
+#search-input:focus,
+#search-input:hover,
 .table-sm .form-control:focus,
 .table-sm .form-control:hover,
 .table-sm .form-select:focus,
@@ -51,6 +58,13 @@
   border-radius: 0.2em;
   box-shadow: 0 0 0 0.2rem var(--primary-focus-glow);
 }
+
+.management-btns .input-group:has(#search-input:focus) .input-group-text,
+.management-btns .input-group:has(#search-input:hover) .input-group-text {
+  border-color: var(--primary-bg-color);
+  background-color: rgb(239, 247, 239);
+}
+
 
 .table-sm .status-advance-btn {
   cursor: pointer;
@@ -77,13 +91,25 @@
   margin-top: 1rem;
 }
 
-.management-btns button,
-.management-btns a {
-  width: 50%;
+.management-btns > * {
+  flex: 1;
+}
+
+/* Search bar matches button height and border style */
+.management-btns .input-group .input-group-text,
+.management-btns .input-group .form-control {
+    border-color: var(--bs-border-color);
+    border-radius: 0;
+}
+.management-btns .input-group .input-group-text {
+    border-radius: var(--bs-border-radius) 0 0 var(--bs-border-radius);
+}
+.management-btns .input-group .form-control {
+    border-radius: 0 var(--bs-border-radius) var(--bs-border-radius) 0;
 }
 
 .management-btns :only-child {
-    width: 100%;
+    flex: 1;
 }
 
 tr[data-dirty="true"] td {
@@ -134,36 +160,6 @@ tr.order-summary-row input,
 tr.order-summary-row select,
 tr.order-summary-row .status-pill {
     pointer-events: none; /* Clicks pass right through to the <tr> */
-}
-/* Search palette */
-#search-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.4);
-    z-index: 1300;
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: 12vh;
-}
-#search-overlay.active { display: flex; }
-
-#search-palette {
-    background: white;
-    border-radius: 12px;
-    width: min(600px, 90vw);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    overflow: hidden;
-}
-
-#search-input {
-    width: 100%;
-    border: none;
-    outline: none;
-    padding: 1rem 1.25rem;
-    font-size: 1rem;
-    font-family: monospace;
-    border-radius: 12px;
 }
 
 /* Order status pills — shared by table cells and history timeline */

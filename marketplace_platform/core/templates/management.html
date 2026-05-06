@@ -65,14 +65,17 @@
                     {% if selected_data.rows %}
 
                 <div class="management-btns">
-                    <button type="button" class="btn btn-outline-secondary" onclick="openSearch()" title="Search (Ctrl+K)">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                    </button>
-                    {% if user.is_superuser or user.category == 'Producer' %}
+                                        {% if user.is_superuser or user.category == 'Producer' %}
                     <button type="submit" name="update" class="btn btn-outline-primary"
                         onclick="return confirm('Are you sure you want to save all changes {{ selected_model_name }}?');"
                         title="Save changes"><i class="bi bi-floppy-fill"></i></button>
                     {% endif %}
+                    <div class="border border-secondary-subtle rounded" style="position:relative; min-width:160px;">
+                        <i class="bi bi-search" style="position:absolute; left:0.6rem; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.50"></i>
+                        <input id="search-input" type="text" placeholder="Search…" autocomplete="off"
+                            class="form-control border-0" style="padding-left:1.8rem">
+                    </div>
+
                     {% endif %}
                     {% if user.is_superuser %}
                     <a href="?model={{ selected_model_name }}&draft=true" class="btn btn-outline-success">
@@ -188,34 +191,113 @@
 <script defer src="{% static 'js/management_order_modal.js' %}"></script>
 {% endif %}
 
-<!-- Search palette -->
-<div id="search-overlay" onclick="if(event.target===this)closeSearch()">
-    <div id="search-palette">
-        <input id="search-input" type="text" placeholder="Filter rows…" autocomplete="off">
+<!-- Password modal -->
+<!-- Password modal -->
+<div class="modal fade" id="passwordModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title"><i class="bi bi-key-fill me-1"></i> Set Password</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <span class="text-muted">Reset password for:</span>
+                <small class="d-block mb-2 text-break" id="pw-modal-email"></small>
+                <hr>
+                 <input type="hidden" id="pw-modal-hidden-email" form="management-form">
+                <input type="hidden" id="pw-modal-hidden-category" form="management-form">
+
+                <input type="password" id="pw-modal-input" form="management-form" placeholder="New password…" class="form-control mb-1 border-success-subtle">
+                <input type="password" id="pw-modal-confirm" form="management-form" placeholder="Confirm password…" class="form-control mb-1 border-success-subtle">
+                
+                <small id="pw-match-msg" class="text-danger d-none"><i class="bi bi-x-circle-fill me-1"></i>Passwords do not match</small>
+            </div>
+            
+            <div class="modal-footer py-2 d-flex justify-content-between">
+                <button type="button" id="pw-modal-reset-btn" class="btn btn-sm btn-outline-primary" title="Send a password reset link to the user's email">
+                    <i class="bi bi-envelope me-1"></i>Send link
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <!-- CRITICAL: form="management-form" added here -->
+                    <button type="submit" id="pw-modal-confirm-btn" class="btn btn-sm btn-success" form="management-form" name="update">Confirm</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordModal = document.getElementById('passwordModal');
+    
+    passwordModal.addEventListener('show.bs.modal', function (e) {
+        const btn = e.relatedTarget;
+        console.log("Button Data:", btn.dataset);
+        const rowId = btn.dataset.rowId;
+        const email = btn.dataset.email;
+        const category = btn.dataset.category; // Get the category
+        
+        // Populate text
+        document.getElementById('pw-modal-email').textContent = email;
+        
+        // Name and populate the hidden fields to satisfy Django's validation!
+        const hiddenEmail = document.getElementById('pw-modal-hidden-email');
+        hiddenEmail.name = `cell_${rowId}_email`;
+        hiddenEmail.value = email;
+
+        const hiddenCategory = document.getElementById('pw-modal-hidden-category');
+        hiddenCategory.name = `cell_${rowId}_category`;
+        hiddenCategory.value = category;
+
+        // Dynamically name the password inputs
+        document.getElementById('pw-modal-input').name = `cell_${rowId}_password`;
+        document.getElementById('pw-modal-confirm').name = `cell_${rowId}_confirm_password`;
+        
+        // Clear old values and hide errors
+        document.getElementById('pw-modal-input').value = '';
+        document.getElementById('pw-modal-confirm').value = '';
+        document.getElementById('pw-match-msg').classList.add('d-none');
+
+        // Handle Reset Email
+        document.getElementById('pw-modal-reset-btn').onclick = () => {
+            if (!email) {
+                alert("No email address found for this user.");
+                return;
+            }
+            if (!confirm(`Send a password reset email to ${email}?`)) return;
+            
+            const csrf = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+            fetch('/accounts/password_reset/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ csrfmiddlewaretoken: csrf, email }),
+            }).then(() => {
+                bootstrap.Modal.getInstance(passwordModal).hide();
+                alert(`Reset email sent to ${email}.`);
+            });
+        };
+    });
+
+    // Validate Passwords on Submit
+    document.getElementById('pw-modal-confirm-btn').addEventListener('click', function(e) {
+        const pw1 = document.getElementById('pw-modal-input').value;
+        const pw2 = document.getElementById('pw-modal-confirm').value;
+        const errorMsg = document.getElementById('pw-match-msg');
+
+        // Stop the form submission if they are empty or don't match
+        if (pw1 === '' || pw1 !== pw2) {
+            e.preventDefault(); 
+            errorMsg.classList.remove('d-none');
+        } else {
+            errorMsg.classList.add('d-none');
+            // If they match, the browser will naturally submit #management-form
+        }
+    });
+});
+</script>
 
 <script>
-const searchOverlay = document.getElementById('search-overlay');
-const searchInput   = document.getElementById('search-input');
-
-function openSearch() {
-    searchOverlay.classList.add('active');
-    searchInput.focus();
-    searchInput.select();
-}
-function closeSearch() {
-    searchOverlay.classList.remove('active');
-    searchInput.value = '';
-    filterRows('');
-}
-
-document.addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); openSearch(); return; }
-    if (e.key === 'Escape' && searchOverlay.classList.contains('active')) { closeSearch(); }
-});
-
-searchInput.addEventListener('input', () => filterRows(searchInput.value.trim().toLowerCase()));
+const searchInput = document.getElementById('search-input');
 
 function filterRows(q) {
     document.querySelectorAll('tbody tr[data-row-id]').forEach(row => {
@@ -224,6 +306,16 @@ function filterRows(q) {
             .map(el => el.value).join(' ').toLowerCase();
         row.style.display = (!q || text.includes(q) || inputVals.includes(q)) ? '' : 'none';
     });
+}
+
+if (searchInput) {
+    searchInput.addEventListener('input', () => filterRows(searchInput.value.trim().toLowerCase()));
+    document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); searchInput.focus(); searchInput.select(); }
+        if (e.key === 'Escape') { searchInput.value = ''; filterRows(''); }
+    });
+    const _preQ = new URLSearchParams(location.search).get('q');
+    if (_preQ) { searchInput.value = _preQ; filterRows(_preQ.toLowerCase()); }
 }
 </script>
 {% endblock %}

@@ -67,6 +67,8 @@ buttons.forEach(button => {
                     let html = `<table class="table table-sm table-bordered table-striped">
                         <thead class="table-light"><tr>
                             <th>Item</th>
+                            <th>Grade</th>
+                            <th>Best Before</th>
                             <th class="text-center">Quantity</th>
                             <th class="text-end">Current Stock</th>
                             <th class="text-end">Unit Price</th>
@@ -75,23 +77,23 @@ buttons.forEach(button => {
                     data.receipt.forEach(item => {
                         const stockAfterClass = item.stock_after < 0 ? 'text-danger fw-bold' : item.stock_after === 0 ? 'text-warning' : '';
                         const stockCells = showStock
-                            ? `<td class="text-end text-success">${item.stock_now} <span class=text-black><i class="bi bi-arrow-right"></span></i> 
-                            <span class="text-end text-danger ${stockAfterClass}">${item.stock_after}</span></td>
-                               `
+                            ? `<td class="text-end text-success">${item.stock_now} <span class="text-black"><i class="bi bi-arrow-right"></i></span>
+                            <span class="text-end ${stockAfterClass}">${item.stock_after}</span></td>`
                             : '<td class="text-end">N/A</td>';
-                        html += `<tr>
-                            <td>${item.name}</td>
+                        const batchUrl = `/management/?model=ProductBatch&q=${encodeURIComponent(item.batch_number)}`;
+                        html += `<tr style="cursor:pointer;" onclick="window.open('${batchUrl}', '_blank')" title="Open batch ${item.batch_number} in management">
+                            <td>${item.name} <small class="text-muted">${item.batch_number}</small></td>
+                            <td><span class="badge bg-success text-white">${item.quality_class}</span></td>
+                            <td class="text-muted" style="font-size:.8rem;">${item.best_before || '—'}</td>
                             <td class="text-center">${item.qty}</td>
                             ${stockCells}
                             <td class="text-end text-success">£${item.price}</td>
                             <td class="text-end text-success">£${item.total}</td>
                         </tr>`;
                     });
-                        const emptyStockCells = showStock ? `<td></td>` : '';    
-           html += `
+                    html += `
                         <tr class="table-light fw-bold">
-                            <!-- Changed colspan to 4 to push the price to the 5th column -->
-                            <td colspan="4" class="text-end text-uppercase">Total</td>
+                            <td colspan="6" class="text-end text-uppercase">Total</td>
                             <td class="text-end text-success">£${data.total_price}</td>
                         </tr>
                     `;
