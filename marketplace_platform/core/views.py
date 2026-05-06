@@ -1,18 +1,21 @@
 import json
 import os
 import difflib
-from django.db.models import Q, Sum, Subquery, OuterRef, Prefetch, Avg, Count
+from collections import defaultdict
+from django.db.models import Q, Sum, Subquery, OuterRef, Prefetch, Avg, Count, F
 from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login
 from django.http import Http404, HttpResponse, JsonResponse
+from django.core.paginator import Paginator
 from django.conf import settings
 from .models import User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory
 from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
@@ -55,9 +58,20 @@ def update_cart_ajax(request, product_id):
         cart = request.session.get('cart', {})
         pid = str(product_id)
 
-        cart[pid] = cart.get(pid, 0) + delta
-        if cart[pid] <= 0:
-            del cart[pid]
+        new_qty = cart.get(pid, 0) + delta
+        if new_qty <= 0:
+            cart.pop(pid, None)
+        else:
+            # Enforce max_order_qty cap for standard customers
+            is_bulk_buyer = getattr(request.user, 'category', None) in ('Restaurant', 'Community')
+            if not is_bulk_buyer:
+                try:
+                    batch = ProductBatch.objects.get(pk=product_id)
+                    if batch.max_order_qty is not None:
+                        new_qty = min(new_qty, batch.max_order_qty)
+                except ProductBatch.DoesNotExist:
+                    pass
+            cart[pid] = new_qty
 
         request.session['cart'] = cart
         request.session.modified = True
@@ -94,11 +108,12 @@ def cart_contents(request):
     cart_items_data = []
     total_price = 0
     if cart:
-        batches = ProductBatch.objects.select_related('product').filter(id__in=cart.keys())
+        batches = ProductBatch.objects.select_related('product__producer').filter(id__in=cart.keys())
         for batch in batches:
             qty = cart.get(str(batch.id), 0)
             subtotal = float(batch.price) * qty
             total_price += subtotal
+            producer = batch.product.producer
             cart_items_data.append({
                 'id': str(batch.id),
                 'name': batch.name,
@@ -106,6 +121,8 @@ def cart_contents(request):
                 'quantity': qty,
                 'subtotal': round(subtotal, 2),
                 'image': batch.image.url if batch.image else None,
+                'producer': getattr(producer, 'organisation_name', None) or str(producer),
+                'producer_id': str(producer.id),
             })
     return JsonResponse({
         'total_items': sum(cart.values()),
@@ -258,9 +275,15 @@ def checkout(request):
     cart_items = []
 
     for pid, qty in cart.items():
-        batch = get_object_or_404(ProductBatch, id=pid)
+        batch = get_object_or_404(ProductBatch.objects.select_related('product__producer'), id=pid)
         total_price += batch.price * qty
         cart_items.append({'product': batch, 'quantity': qty})
+
+    groups = defaultdict(list)
+    for item in cart_items:
+        producer = item['product'].product.producer
+        groups[producer].append(item)
+    cart_by_producer = [{'producer': p, 'items': items} for p, items in groups.items()]
 
     min_delivery_date = (timezone.now() + timedelta(hours=48)
                          ).strftime('%Y-%m-%dT%H:%M')
@@ -272,46 +295,71 @@ def checkout(request):
         if form.is_valid():
             recurrence_type = request.POST.get('recurrence_type', 'None')
             recurrence_day = request.POST.get('recurrence_day', None)
-            new_order = Order.objects.create(
-                customer=request.user,
-                total_price=round(total_price, 2),
-                delivery_date=form.cleaned_data['delivery_date'],
-                order_status='PENDING',
-                recurrence_type=recurrence_type,
-                recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
-            )
+            try:
+                with transaction.atomic():
+                    # Lock all batch rows for the duration of this transaction
+                    batch_ids = [str(item['product'].pk) for item in cart_items]
+                    locked = {
+                        str(b.pk): b
+                        for b in ProductBatch.objects.select_for_update().filter(pk__in=batch_ids)
+                    }
 
-            # 3. Group cart items by producer, create one ProducerOrder each
-            producer_orders = {}
-            for item in cart_items:
-                batch = item['product']
-                producer = batch.product.producer
-                if producer.id not in producer_orders:
-                    producer_orders[producer.id] = ProducerOrder.objects.create(
-                        order=new_order,
-                        producer=producer,
-                        order_status='PENDING',
+                    # Validate stock before touching anything
+                    short = []
+                    for item in cart_items:
+                        b = locked[str(item['product'].pk)]
+                        if b.stock < item['quantity']:
+                            short.append(
+                                f"{item['product'].name}: only {b.stock} available, "
+                                f"you requested {item['quantity']}"
+                            )
+                    if short:
+                        raise ValueError(short)
+
+                    new_order = Order.objects.create(
+                        customer=request.user,
+                        total_price=round(total_price, 2),
                         delivery_date=form.cleaned_data['delivery_date'],
+                        order_status='PENDING',
+                        recurrence_type=recurrence_type,
+                        recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
                     )
-                OrderProduct.objects.create(
-                    order=new_order,
-                    producer_order=producer_orders[producer.id],
-                    batch=batch,
-                    numPurchased=item['quantity'],
-                    price_at_purchase=batch.price,
-                )
 
-            # Clear the memory now that the order is placed!
-            request.session['cart'] = {}
+                    # One ProducerOrder per producer, then assign each item to its slice
+                    producer_orders = {}
+                    for item in cart_items:
+                        batch = item['product']
+                        producer = batch.product.producer
+                        if producer.id not in producer_orders:
+                            producer_orders[producer.id] = ProducerOrder.objects.create(
+                                order=new_order,
+                                producer=producer,
+                                order_status='PENDING',
+                                delivery_date=form.cleaned_data['delivery_date'],
+                            )
+                        OrderProduct.objects.create(
+                            order=new_order,
+                            producer_order=producer_orders[producer.id],
+                            batch=batch,
+                            numPurchased=item['quantity'],
+                            price_at_purchase=batch.price,
+                        )
+                        ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - item['quantity'])
 
-            messages.success(request, "Order placed successfully!")
-            return redirect('orders')
+                    request.session['cart'] = {}
+                    messages.success(request, "Order placed successfully!")
+                    return redirect('orders')
+
+            except ValueError as e:
+                for msg in e.args[0]:
+                    messages.error(request, msg)
     else:
         form = CheckoutForm()
 
     return render(request, 'checkout.html', {
         'form': form,
-        'cart_items': cart_items,  # Pass the list to HTML so you can show what they are buying
+        'cart_items': cart_items,
+        'cart_by_producer': cart_by_producer,
         'total_price': total_price,
         'min_delivery_date': min_delivery_date,
         'user_address': request.user.address,
@@ -358,10 +406,17 @@ def home_view(request):
     if request.GET.get('discounted'):
         items = items.filter(batches__surplus=True).distinct()
 
+    if request.GET.get('organic'):
+        items = items.filter(organic=True)
+
     if request.GET.get('in_season'):
         items = items.filter(
             batches__availability__in=['Available', 'Available All Year']
         ).distinct()
+
+    exclude_allergens = request.GET.getlist('exclude_allergen')
+    for allergen in exclude_allergens:
+        items = items.exclude(allergens__contains=[allergen])
 
     suggestion = None
     if q and not items.exists():
@@ -370,7 +425,11 @@ def home_view(request):
         if matches:
             suggestion = matches[0]
 
-    items_list = list(items)
+    total_count = items.count()
+    paginator = Paginator(items, 12)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    items_list = list(page_obj)
 
     def _batch_dict(b, unit=''):
         return {
@@ -386,6 +445,7 @@ def home_view(request):
             'availability': b.availability,
             'seasonStart': b.seasonStart,
             'seasonEnd': b.seasonEnd,
+            'max_order_qty': b.max_order_qty,
         }
 
     batch_data = {
@@ -410,7 +470,7 @@ def home_view(request):
         pid = str(r.product_id)
         if pid not in review_data:
             review_data[pid] = []
-        if len(review_data[pid]) < 5:
+        if True:
             review_data[pid].append({
                 'rating': r.rating,
                 'title': r.title,
@@ -435,8 +495,22 @@ def home_view(request):
             'avg_rating': round(item.avg_rating, 1) if item.avg_rating else None,
             'review_count': item.review_count,
         } for item in items_list]
-        return JsonResponse({'items': data, 'count': len(data), 'suggestion': suggestion, 'batch_data': batch_data, 'review_data': review_data})
+        return JsonResponse({
+            'items': data,
+            'count': total_count,
+            'suggestion': suggestion,
+            'batch_data': batch_data,
+            'review_data': review_data,
+            'page': page_obj.number,
+            'total_pages': paginator.num_pages,
+            'has_next': page_obj.has_next(),
+            'has_prev': page_obj.has_previous(),
+        })
 
+    allergen_list = [
+        'Celery', 'Gluten', 'Crustaceans', 'Eggs', 'Fish', 'Lupin', 'Milk',
+        'Molluscs', 'Mustard', 'Nuts', 'Peanuts', 'Sesame', 'Soya', 'Sulphites',
+    ]
     return render(request, 'home.html', {
         'items': items_list,
         'batch_data': batch_data,
@@ -446,9 +520,14 @@ def home_view(request):
         'selected_categories': categories,
         'in_stock': request.GET.get('in_stock'),
         'discounted': request.GET.get('discounted'),
+        'organic': request.GET.get('organic'),
         'in_season': request.GET.get('in_season'),
+        'exclude_allergens': exclude_allergens,
+        'allergen_list': allergen_list,
         'search_query': q,
         'suggestion': suggestion,
+        'page_obj': page_obj,
+        'total_count': total_count,
     })
 
     
@@ -524,8 +603,7 @@ def upload_item(request):
 
         if form_type == 'new_product':
             active_tab = 'new'
-            allergens_raw = request.POST.get('allergens', '').strip()
-            allergens = [a.strip() for a in allergens_raw.split(',') if a.strip()]
+            allergens = request.POST.getlist('allergens')
 
             product, created = Product.objects.get_or_create(
                 name=request.POST.get('name', '').strip(),
@@ -550,6 +628,10 @@ def upload_item(request):
                     best_before=date.today() + timedelta(days=365),
                     image=image,
                 )
+            if created:
+                messages.success(request, f'"{product.name}" was created successfully!')
+            else:
+                messages.warning(request, f'A product named "{product.name}" already exists.')
             return redirect('inventory_upload')
 
         elif form_type == 'new_batch':
@@ -579,13 +661,20 @@ def upload_item(request):
                 discount_percentage=discount_pct,
                 discount_note=request.POST.get('discount_note', ''),
                 image=request.FILES.get('image'),
+                max_order_qty=int(request.POST['max_order_qty']) if request.POST.get('max_order_qty') else None,
+                surplus_discount_percentage=Decimal(request.POST.get('surplus_discount_percentage') or '20'),
             )
             return redirect('home')
 
+    allergen_list = [
+        'Celery', 'Gluten', 'Crustaceans', 'Eggs', 'Fish', 'Lupin', 'Milk',
+        'Molluscs', 'Mustard', 'Nuts', 'Peanuts', 'Sesame', 'Soya', 'Sulphites',
+    ]
     return render(request, 'inventory_upload.html', {
         'months': Product.Months.choices,
         'products': products,
         'active_tab': active_tab,
+        'allergen_list': allergen_list,
     })
 
 

@@ -222,6 +222,8 @@ class ProductBatch(models.Model):
     stock = models.IntegerField()
     # Absolute number of units before a low-stock alert is sent
     stock_alert_threshold = models.IntegerField(default=0, verbose_name="Alert Threshold")
+    # Max qty a standard customer can order; null = no limit (bulk buyers always unrestricted)
+    max_order_qty = models.PositiveIntegerField(null=True, blank=True)
     # Associated image
     image = models.ImageField(upload_to='item_images/', blank=True)
     # Harvest date
@@ -230,6 +232,8 @@ class ProductBatch(models.Model):
     best_before = models.DateField(default="2026-04-04")
     # Whether the product is surplus and thus eligible for discounts
     surplus = models.BooleanField(default=False)
+    # Discount % to apply automatically when this batch enters the surplus window
+    surplus_discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('20.00'))
     # Discount percentage (e.g. 20.00 = 20%)
     discount_percentage = models.DecimalField(
             max_digits=5,       # Increased to 5 to allow '100.xx'

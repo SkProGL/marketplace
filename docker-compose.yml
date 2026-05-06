@@ -35,6 +35,21 @@ services:
         restart: true
     env_file:
       - .env
+  scheduler:
+    build: .
+    command: >
+      sh -c 'while true; do
+        uv run python manage.py auto_surplus;
+        sleep 3600;
+      done'
+    volumes:
+      - ./marketplace_platform:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+
   api:
     build:
       context: .
