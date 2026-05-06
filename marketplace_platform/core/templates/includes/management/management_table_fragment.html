@@ -1,7 +1,7 @@
 {% include 'includes/management/management_table.html' %}
 {% with p=selected_data.page_obj sort_params=selected_data.current_sort|yesno:"true," %}
 {% if p.paginator.num_pages > 1 %}
-{% with base="?model="|add:selected_model_name sort="&sortby="|add:selected_data.current_sort|add:"&direction="|add:selected_data.current_direction %}
+{% with base="?model="|add:selected_model_name sort="&sortby="|add:selected_data.current_sort|add:"&direction="|add:selected_data.current_direction q_param=selected_data.q %}
 <style>
    .flip-horizontal {
   transform: scaleX(-1);
@@ -11,16 +11,16 @@
 </style>
 <nav class="d-flex justify-content-center align-items-center gap-2 mt-3">
     {% if p.has_previous %}
-    <a href="{{ base }}&page=1{% if selected_data.current_sort %}{{ sort }}{% endif %}"
+    <a href="{{ base }}&page=1{% if selected_data.current_sort %}{{ sort }}{% endif %}{% if q_param %}&q={{ q_param }}{% endif %}"
        class="btn btn-sm btn-outline-secondary pagination-link"><i class="bi bi-skip-end-fill flip-horizontal"></i></a>
-    <a href="{{ base }}&page={{ p.previous_page_number }}{% if selected_data.current_sort %}{{ sort }}{% endif %}"
+    <a href="{{ base }}&page={{ p.previous_page_number }}{% if selected_data.current_sort %}{{ sort }}{% endif %}{% if q_param %}&q={{ q_param }}{% endif %}"
        class="btn btn-sm btn-outline-secondary pagination-link"><i class="bi bi-arrow-left"></i></a>
     {% endif %}
     <span class="text-muted" style="font-size:0.85rem;">Page {{ p.number }} of {{ p.paginator.num_pages }} &nbsp;({{ p.paginator.count }} total)</span>
     {% if p.has_next %}
-    <a href="{{ base }}&page={{ p.next_page_number }}{% if selected_data.current_sort %}{{ sort }}{% endif %}"
+    <a href="{{ base }}&page={{ p.next_page_number }}{% if selected_data.current_sort %}{{ sort }}{% endif %}{% if q_param %}&q={{ q_param }}{% endif %}"
        class="btn btn-sm btn-outline-secondary pagination-link"><i class="bi bi-arrow-right"></i></a>
-    <a href="{{ base }}&page={{ p.paginator.num_pages }}{% if selected_data.current_sort %}{{ sort }}{% endif %}"
+    <a href="{{ base }}&page={{ p.paginator.num_pages }}{% if selected_data.current_sort %}{{ sort }}{% endif %}{% if q_param %}&q={{ q_param }}{% endif %}"
        class="btn btn-sm btn-outline-secondary pagination-link"><i class="bi bi-skip-end-fill"></i></a>
     {% endif %}
 </nav>
