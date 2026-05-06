@@ -14,15 +14,22 @@
                     <div class="card mb-3 shadow-sm">
                         <div class="card-body">
 
-                            {% for item in cart_items %}
-                                <div class="mb-3 border-bottom pb-2">
-                                    <h6 class="text-muted mb-0" style="font-size: 0.85rem;">
-                                        Producer: {{ item.product.producer.organisation_name|default:"Local Farm" }}
-                                    </h6>
-                                    <p class="mb-0"><strong>{{ item.product.name }}</strong></p>
-                                    <p class="mb-0 text-muted">
-                                        Qty: {{ item.quantity }} @ £{{ item.product.price }} each
-                                    </p>
+                            {% for group in cart_by_producer %}
+                                <div class="mb-3">
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                                        <span style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#198754;">
+                                            {{ group.producer.organisation_name|default:group.producer }}
+                                        </span>
+                                        <div style="flex:1;height:1px;background:#e0e0e0;"></div>
+                                    </div>
+                                    {% for item in group.items %}
+                                        <div class="mb-2 pb-2 {% if not forloop.last %}border-bottom{% endif %}" style="padding-left:8px;">
+                                            <p class="mb-0"><strong>{{ item.product.name }}</strong></p>
+                                            <p class="mb-0 text-muted" style="font-size:0.88rem;">
+                                                Qty: {{ item.quantity }} &nbsp;·&nbsp; £{{ item.product.price }} each
+                                            </p>
+                                        </div>
+                                    {% endfor %}
                                 </div>
                             {% endfor %}
 
