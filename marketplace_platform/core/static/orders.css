@@ -1,3 +1,5 @@
+@import 'globals.css';
+
 .oh-header { padding: 32px 0 16px; }
 .oh-header h1 { font-size: 1.8rem; font-weight: 600; margin-bottom: 4px; }
 .oh-header p { color: #888; font-size: 0.9rem; }
@@ -12,7 +14,7 @@
 .oh-card-header-row[aria-expanded="true"] .oh-chevron { transform: rotate(180deg); }
 .oh-card-header { padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; }
 .oh-card-buttons .btn:hover {
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow);
     transform: translateY(-1px);
     transition: all 0.15s ease;
 }

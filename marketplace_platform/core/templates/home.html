@@ -211,7 +211,7 @@
 </div>
 
 <!-- Notify me toast -->
-<div id="notifyToast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 20px;border-radius:8px;font-size:0.9rem;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+<div id="notifyToast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 20px;border-radius:8px;font-size:0.9rem;z-index:9999;box-shadow:var(--shadow);">
   An email will be sent to <strong id="notifyEmail"></strong> once the item is back in stock!
 </div>
 
@@ -404,7 +404,7 @@ function selectBatch(batch) {
       const badge = document.createElement('div');
       badge.className = 'allergen-badge';
       badge.title = allergen;
-      badge.style.cssText = `position:absolute;bottom:8px;left:${8 + i * 26}px;width:22px;height:22px;background:white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:${10 + i};`;
+      badge.style.cssText = `position:absolute;bottom:8px;left:${8 + i * 26}px;width:22px;height:22px;background:white;border-radius:50%;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;z-index:${10 + i};`;
       badge.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ALLERGEN_SVGS[key]}</svg>`;
       imageDiv.appendChild(badge);
     });

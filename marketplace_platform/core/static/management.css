@@ -58,7 +58,7 @@
   border-color: var(--primary-bg-color);
   background-color: rgb(239, 247, 239);
   border-radius: 0.2em;
-  box-shadow: 0 0 0 0.2rem var(--primary-focus-glow);
+  box-shadow: var(--shadow);
 }
 
 .custom-success-check:checked {
@@ -68,7 +68,7 @@
 
 .custom-success-check:focus {
     border-color: var(--primary-bg-color) !important;
-    box-shadow: 0 0 0 0.2rem var(--primary-focus-glow) !important; 
+    box-shadow: var(--shadow) !important; 
 }
 
 .management-btns .input-group:has(#search-input:focus) .input-group-text,
@@ -80,12 +80,12 @@
 
 .table-sm .status-advance-btn {
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+  box-shadow: var(--shadow);
   transition: filter 0.15s, box-shadow 0.15s;
 }
 .table-sm .status-advance-btn:hover {
   filter: brightness(1.15);
-  box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+  box-shadow: var(--shadow);
 }
 
 /* Non-clickable pills are visually flatter */
