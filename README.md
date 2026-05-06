@@ -14,7 +14,7 @@
 > ```bash
 > // Hard Reset script
 > // Deletes and rebuilds docker containers from scratch.
-> // Additionally creates django superuser (root@example.com, password123), makes migrations and boots system.
+> // Additionally creates django superuser (root@example.com, Password123), makes migrations and boots system.
 > 
 > // WINDOWS
 > .\scripts\hard_reset_server.bat
