@@ -168,8 +168,6 @@ class Product(models.Model):
         return self.SeasonalAvailability.AVAILABLE if in_season else self.SeasonalAvailability.UNAVAILABLE
     # Best before date
     best_before = models.DateField(default="2026-04-04")
-    # Stock quantity
-    stock = models.IntegerField(default=50)
     # Percentage to indicate how much stock is left before an alert is sent
     # stock_alert_threshold = models.DecimalField(
         # max_digits=5, decimal_places=2, default=0)
