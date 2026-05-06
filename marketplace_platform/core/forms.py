@@ -113,7 +113,7 @@ class ProductForm(forms.ModelForm):
         fields = [
             'name', 'category', 'description', 'price',
             'unit', 'all_year', 'seasonStart', 'seasonEnd',
-             'stock', 'stock_alert_threshold',
+            'stock_alert_threshold',
             'allergens', 'organic', 'surplus', 'discount_percentage',
             'discount_expiry', 'discount_note', 'image'
         ]

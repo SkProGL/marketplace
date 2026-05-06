@@ -7,7 +7,8 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.utils import timezone
 import uuid
 from simple_history.models import HistoricalRecords
-
+from django.db.models import Sum
+from django.utils import timezone
 
 
 # Define Custom UserManager to set emial as username
@@ -156,20 +157,8 @@ class Product(models.Model):
         max_length=20, choices=Months.choices, default=Months.DEC, verbose_name="Season End"
     )
 
-    @property
-    def availability(self):
-        if self.all_year:
-            return "Available All Year"
-        month_order = list(self.Months.values)
-        start = month_order.index(self.seasonStart)
-        end = month_order.index(self.seasonEnd)
-        current = timezone.now().month - 1
-        in_season = (start <= current <= end) if start <= end else (current >= start or current <= end)
-        return self.SeasonalAvailability.AVAILABLE if in_season else self.SeasonalAvailability.UNAVAILABLE
     # Best before date
     best_before = models.DateField(default="2026-04-04")
-    # Stock quantity
-    stock = models.IntegerField(default=50)
     # Percentage to indicate how much stock is left before an alert is sent
     # stock_alert_threshold = models.DecimalField(
         # max_digits=5, decimal_places=2, default=0)
@@ -187,6 +176,24 @@ class Product(models.Model):
     discount_note = models.TextField(blank=True)
     image = models.ImageField(upload_to='item_images/', blank=True)
 
+    @property
+    def availability(self):
+        if self.all_year:
+            return "Available All Year"
+        month_order = list(self.Months.values)
+        start = month_order.index(self.seasonStart)
+        end = month_order.index(self.seasonEnd)
+        current = timezone.now().month - 1
+        in_season = (start <= current <= end) if start <= end else (current >= start or current <= end)
+        return self.SeasonalAvailability.AVAILABLE if in_season else self.SeasonalAvailability.UNAVAILABLE
+
+    @property
+    def stock(self):
+        # Aggregate stock from all batches
+        return self.batches.filter(
+            best_before__gte=timezone.now().date()
+        ).aggregate(total=Sum('stock'))['total'] or 0
+        
     @property
     def base_price(self):
         batch = self.batches.filter(quality_class='A').order_by('-created_at').first()

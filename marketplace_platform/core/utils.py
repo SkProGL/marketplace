@@ -131,7 +131,7 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
         try:
             # Create a dynamic form class for current model
             # Exclude ID and 'password' for special handling
-            exclude_fields = ['id', 'password', 'date_joined', 'last_login', 'products']
+            exclude_fields = ['id', 'password', 'date_joined', 'last_login', 'products', 'groups', 'user_permissions']
             DynamicForm = modelform_factory(model, exclude=exclude_fields)
 
             #Extract unqiue row_ids and iterate through rows
@@ -177,27 +177,48 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                     row_data.setdefault('seasonStart', getattr(model_instance, 'seasonStart', 'January'))
                     row_data.setdefault('seasonEnd', getattr(model_instance, 'seasonEnd', 'December'))
 
+                # Backfill fields not submitted (e.g. password modal only sends a few fields)
+                # so the form sees all required fields and validates correctly.
+                if not is_new_record:
+                    for f in DynamicForm.base_fields:
+                        if f not in row_data:
+                            val = getattr(model_instance, f, None)
+                            if val is None:
+                                row_data.setdefault(f, '')
+                            elif isinstance(val, bool):
+                                row_data.setdefault(f, str(val))
+                            elif isinstance(val, list):
+                                row_data.setdefault(f, val)
+                            else:
+                                row_data.setdefault(f, str(val))
+
+                # Password-only update - bypass the form entirely to avoid interference
+                password_provided = bool(selected_model_name == 'User' and row_data.get('password'))
+                if password_provided:
+                    password = row_data.get('password')
+                    if password != row_data.get('confirm_password'):
+                        error_msg = f"Passwords do not match."
+                    elif not SignupForm.validate_password(password):
+                        error_msg = PASSWORD_STRENGTH_ERROR
+                    else:
+                        #TODO DELETE DISPLAYING RAW PW
+                        model_instance.set_password(password)
+                        print(f"[pw_debug] set_password called, new hash prefix: {model_instance.password[:30]}")
+                        model_instance.save(update_fields=['password'])
+                        fresh = model_instance.__class__.objects.get(pk=model_instance.pk)
+                        print(f"[pw_debug] DB hash after save: {fresh.password[:30]}, check_password: {fresh.check_password(password)}")
+                        messages.success(request, f"Password updated for row {str(row_id)[:8]}.")
+                        continue
+                    if error_msg:
+                        messages.error(request, error_msg)
+                        return False
+
                 # Apply data to model form
                 form = DynamicForm(row_data, instance=model_instance)
                 # Use built-in data validation
                 if form.is_valid():
-                    # Force trigger on pw change
-                    password_provided = bool(selected_model_name == 'User' and row_data.get('password'))
-                    
-                    # if form.has_changed() or is_new_record or password_provided:
                     print(f"[has_changed] { {f: (form.initial.get(f), form.cleaned_data.get(f)) for f in form.changed_data} }")
-                    saved_record = form.save(commit=False)         
-
-                    # User - Validate entered passwords and apply built-in password hashing
-                    if selected_model_name == 'User' and password_provided:
-                        password = row_data.get('password')
-                        if password == row_data.get('confirm_password'):
-                            if SignupForm.validate_password(password):
-                                    saved_record.set_password(password)
-                            else:
-                                error_msg = PASSWORD_STRENGTH_ERROR
-                        else:
-                            error_msg = f"Passwords do not match for row {str(row_id)[:8]}."
+                    saved_record = form.save(commit=False)
                     if error_msg:
                         messages.error(request, error_msg)
                         # Store data from update attempt to continue editing
@@ -209,13 +230,7 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                             if is_new_record:
                                 messages.success(request, f"New {selected_model_name} created!")
                             else:
-                                # Signal success field updates
-                                # Manually include 'password' in the text since it's excluded
-                                changed_list = list(form.changed_data)
-                                if password_provided:
-                                    changed_list.append('password')
-                                
-                                changes = ",".join(changed_list)
+                                changes = ",".join(form.changed_data)
                                 messages.success(request, f"Updated row {str(row_id)[:8]}: {changes}")
                             # Clear update attempt on success
                             cached_update_attempt = request.session.get('cached_update_attempt', {})
@@ -293,6 +308,16 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
         else:
             records = records.order_by(sort_field)
 
+    q = request.GET.get('q', '').strip()
+    if q:
+        from django.db.models import Q as DQ
+        search_filter = DQ()
+        for field in visible_fields:
+            if isinstance(field, (models.CharField, models.TextField)):
+                search_filter |= DQ(**{f'{field.name}__icontains': q})
+        if search_filter:
+            records = records.filter(search_filter)
+
     paginator = Paginator(records, PAGE_SIZE)
     page_obj = paginator.get_page(request.GET.get('page', 1))
     records = page_obj
@@ -367,7 +392,7 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
         draft_data = create_draft_entry(request, final_headers, selected_model, cached_update_attempt.get('draft', {}), readonly_fields)
         rows.insert(0, draft_data)
 
-    return {'headers': final_headers, 'header_labels': header_labels, 'rows': rows, 'current_sort': sort_field, 'current_direction': sort_direction, 'page_obj': page_obj}
+    return {'headers': final_headers, 'header_labels': header_labels, 'rows': rows, 'current_sort': sort_field, 'current_direction': sort_direction, 'page_obj': page_obj, 'q': q}
     
 def format_for_display(field, raw_value):
     """
@@ -387,7 +412,9 @@ def format_for_display(field, raw_value):
         return raw_value.strftime('%Y-%m-%d')
 
     elif field.name == 'password':
-        display_value = raw_value[20:29] + "..."  
+        # Skip past the fixed Argon2 params prefix to show the unique salt portion
+        salt_start = raw_value.rfind('$', 0, -1) + 1  # second-to-last '$' separates params from salt
+        display_value = raw_value[salt_start:salt_start + 10] + "..."
     else:
         display_value = raw_value
 

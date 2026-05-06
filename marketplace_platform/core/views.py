@@ -35,7 +35,7 @@ MANAGEMENT_SEARCH_FIELDS = {
                    lambda obj: f"£{obj.amount} · {obj.status}"),
 }
 MODEL_INSTRUCTIONS = {
-    # 'User': 'Display individuals interacting with the platform (customers, producers, admins). Handles authentication, contact details and role types.',  
+    'User': 'Select password field buttons to set, or send reset link for, new password for respective user.',  
     # 'Product': 'Display the physical items available for purchase. Stores core details like name, current price, description, and active stock levels.',  
     'Order': 'Select a row to manage order details. Tracks the delivery details, total cost, assigned customer and the current overall progression status. <br> Select a heading to alternate between sort direction.', 
     # 'OrderProduct': 'Displays the bridge connecting an Order to specific Products. Captures the exact quantity purchased and locks in the price of the item at the exact time of checkout.',

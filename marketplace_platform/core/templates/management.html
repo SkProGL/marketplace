@@ -62,21 +62,18 @@
 
                 <!-- Actions for update and new entry creation -->
                 {% if selected_model_name %}
-                    {% if selected_data.rows %}
-
                 <div class="management-btns">
-                                        {% if user.is_superuser or user.category == 'Producer' %}
+                    {% if user.is_superuser or user.category == 'Producer' %}
                     <button type="submit" name="update" class="btn btn-outline-primary"
                         onclick="return confirm('Are you sure you want to save all changes {{ selected_model_name }}?');"
-                        title="Save changes"><i class="bi bi-floppy-fill"></i></button>
+                        title="Save changes" {% if not selected_data.rows %}disabled{% endif %}>
+                        <i class="bi bi-floppy-fill"></i></button>
                     {% endif %}
                     <div class="border border-secondary-subtle rounded" style="position:relative; min-width:160px;">
                         <i class="bi bi-search" style="position:absolute; left:0.6rem; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.50"></i>
                         <input id="search-input" type="text" placeholder="Search…" autocomplete="off"
                             class="form-control border-0" style="padding-left:1.8rem">
                     </div>
-
-                    {% endif %}
                     {% if user.is_superuser %}
                     <a href="?model={{ selected_model_name }}&draft=true" class="btn btn-outline-success">
                         <i class="bi bi-plus-square-fill"></i>
@@ -84,8 +81,7 @@
                     {% endif %}
                 </div>
             </div>
-
-            {% endif %}
+                {% endif %}
             
     </div>
     </form>
@@ -192,7 +188,6 @@
 {% endif %}
 
 <!-- Password modal -->
-<!-- Password modal -->
 <div class="modal fade" id="passwordModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
@@ -200,7 +195,7 @@
                 <h6 class="modal-title"><i class="bi bi-key-fill me-1"></i> Set Password</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body text-center">
                 <span class="text-muted">Reset password for:</span>
                 <small class="d-block mb-2 text-break" id="pw-modal-email"></small>
                 <hr>
@@ -209,12 +204,19 @@
 
                 <input type="password" id="pw-modal-input" form="management-form" placeholder="New password…" class="form-control mb-1 border-success-subtle">
                 <input type="password" id="pw-modal-confirm" form="management-form" placeholder="Confirm password…" class="form-control mb-1 border-success-subtle">
-                
+                <div class="align-items-center m-2 ">
+                    <input class="form-check-input custom-success-check" type="checkbox" id="pw-show"
+                        onchange="['pw-modal-input','pw-modal-confirm'].forEach(id=>{document.getElementById(id).type=this.checked?'text':'password'})">
+                    <label class="text-muted" for="pw-show" style="cursor: pointer;">
+                        <small>Show password</small>
+                    </label>
+                </div>
+                <small class="text-muted">Min. 8 characters, 1 uppercase and 1 lowercase letter.</small>
                 <small id="pw-match-msg" class="text-danger d-none"><i class="bi bi-x-circle-fill me-1"></i>Passwords do not match</small>
             </div>
             
             <div class="modal-footer py-2 d-flex justify-content-between">
-                <button type="button" id="pw-modal-reset-btn" class="btn btn-sm btn-outline-primary" title="Send a password reset link to the user's email">
+                <button type="button" id="pw-modal-reset-btn" class="btn btn-sm btn-outline-success" title="Send a password reset link to the user's email">
                     <i class="bi bi-envelope me-1"></i>Send link
                 </button>
                 <div class="d-flex gap-2">
@@ -308,11 +310,23 @@ function filterRows(q) {
     });
 }
 
+function submitSearch(q) {
+    const params = new URLSearchParams(location.search);
+    if (q) params.set('q', q); else params.delete('q');
+    params.delete('page');
+    location.href = '?' + params.toString();
+}
+
 if (searchInput) {
-    searchInput.addEventListener('input', () => filterRows(searchInput.value.trim().toLowerCase()));
+    searchInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); submitSearch(searchInput.value.trim()); }
+    });
     document.addEventListener('keydown', e => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); searchInput.focus(); searchInput.select(); }
-        if (e.key === 'Escape') { searchInput.value = ''; filterRows(''); }
+        if (e.key === 'Escape') {
+            if (searchInput.value) { submitSearch(''); }
+            else { searchInput.value = ''; filterRows(''); }
+        }
     });
     const _preQ = new URLSearchParams(location.search).get('q');
     if (_preQ) { searchInput.value = _preQ; filterRows(_preQ.toLowerCase()); }
