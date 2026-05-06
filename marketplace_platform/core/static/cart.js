@@ -101,29 +101,39 @@ function renderDrawer(data) {
     return;
   }
 
-  itemsEl.innerHTML = data.cart_items
-    .map(
-      (item) => `
-        <div class="cart-drawer-item">
-            ${
-              item.image
-                ? `<img src="${item.image}" alt="${item.name}">`
-                : `<div style="width:50px;height:50px;background:#f0f0f0;border-radius:6px;"></div>`
-            }
-            <div class="cart-drawer-item-info">
-                <div class="cart-drawer-item-name">${item.name}</div>
-                <div class="cart-drawer-item-qty">£${item.price.toFixed(2)} each</div>
-            </div>
-            <div class="cart-drawer-stepper">
-                <button class="widget-stepper-btn" onclick="drawerUpdateCart('${item.id}', -1, this)">−</button>
-                <span class="stepper-qty">${item.quantity}</span>
-                <button class="widget-stepper-btn" onclick="drawerUpdateCart('${item.id}', 1, this)">+</button>
-        </div>
-        <span class="cart-drawer-item-price">£${item.subtotal.toFixed(2)}</span>
-    </div>
-    `,
-    )
-    .join("");
+  // Group items by producer
+  const groups = {};
+  const groupOrder = [];
+  data.cart_items.forEach(item => {
+    const key = item.producer_id || 'unknown';
+    if (!groups[key]) { groups[key] = { name: item.producer || 'Producer', items: [] }; groupOrder.push(key); }
+    groups[key].items.push(item);
+  });
+
+  itemsEl.innerHTML = groupOrder.map(key => {
+    const group = groups[key];
+    const itemsHtml = group.items.map(item => `
+      <div class="cart-drawer-item">
+          ${item.image
+            ? `<img src="${item.image}" alt="${item.name}">`
+            : `<div style="width:50px;height:50px;background:#f0f0f0;border-radius:6px;"></div>`}
+          <div class="cart-drawer-item-info">
+              <div class="cart-drawer-item-name">${item.name}</div>
+              <div class="cart-drawer-item-qty">£${item.price.toFixed(2)} each</div>
+          </div>
+          <div class="cart-drawer-stepper">
+              <button class="widget-stepper-btn" onclick="drawerUpdateCart('${item.id}', -1, this)">−</button>
+              <span class="stepper-qty">${item.quantity}</span>
+              <button class="widget-stepper-btn" onclick="drawerUpdateCart('${item.id}', 1, this)">+</button>
+          </div>
+          <span class="cart-drawer-item-price">£${item.subtotal.toFixed(2)}</span>
+      </div>`).join('');
+    return `
+      <div class="cart-producer-group">
+          <div class="cart-producer-label">${group.name}</div>
+          ${itemsHtml}
+      </div>`;
+  }).join('');
 
   totalEl.innerText = `£${data.total_price.toFixed(2)}`;
   footerEl.style.display = "flex";
@@ -148,11 +158,25 @@ function drawerUpdateCart(productId, delta, btn) {
   })
     .then((r) => r.json())
     .then((data) => {
-      // Re-render the whole drawer so totals update
       renderDrawer(data);
-      // Also sync the product card on the page if visible
-      syncCardWidget(productId, data.quantity);
-      updateNavbarCart(data.total_items);
+      updateNavbarCart(data.total_items, data.total_price);
+
+      // Sync cartState and card badge on the home page if available
+      if (typeof cartState !== "undefined") {
+        if (data.quantity <= 0) {
+          delete cartState[productId];
+        } else {
+          cartState[productId] = data.quantity;
+        }
+        if (typeof batchData !== "undefined" && typeof updateCardCartBadge === "function") {
+          for (const [pid, batches] of Object.entries(batchData)) {
+            if (batches.some((b) => b.id === productId)) {
+              updateCardCartBadge(pid);
+              break;
+            }
+          }
+        }
+      }
     });
 }
 
