@@ -945,7 +945,7 @@ def add_review(request, product_id):
             return redirect("orders")
 
     delivered_purchase = OrderProduct.objects.filter(
-        product=product,
+        batch__product=product,
         order__customer=request.user,
         order__order_status=Order.Status.DELIVERED
     ).exists()
@@ -1011,3 +1011,26 @@ def management_search(request):
             })
 
     return JsonResponse({'results': results})
+
+
+@login_required
+def edit_review(request, review_id):
+    review = get_object_or_404(Review, id=review_id, user=request.user)
+    if request.method == "POST":
+        form = ReviewForm(request.POST, instance=review)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Review updated.")
+            return redirect("orders")
+    else:
+        form = ReviewForm(instance=review)
+    return render(request, "edit_review.html", {"form": form, "product": review.product})
+
+
+@login_required
+def delete_review(request, review_id):
+    review = get_object_or_404(Review, id=review_id, user=request.user)
+    if request.method == "POST":
+        review.delete()
+        messages.success(request, "Review deleted.")
+    return redirect("orders")
