@@ -1,7 +1,7 @@
 from datetime import timedelta
 from django.utils import timezone
-
 from django import forms
+from django.contrib.auth.forms import PasswordChangeForm
 from .models import Product, ProductBatch, User, Review
 
 PASSWORD_STRENGTH_ERROR = "Password must be at least 8 characters and include 1 lowercase and 1 uppercase letter."
@@ -73,7 +73,29 @@ class SignupForm(forms.ModelForm):
         if commit:
             user.save()
         return user
-
+class ProfileEditForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = [
+            "full_name",
+            "phone",
+            "address",
+            "postcode",
+            "organisation_name",
+            "organic_description",
+            "charity_status",
+            "profile_image",
+        ]
+        widgets = {
+            "full_name": forms.TextInput(attrs={"class": "form-control"}),
+            "phone": forms.TextInput(attrs={"class": "form-control"}),
+            "address": forms.TextInput(attrs={"class": "form-control"}),
+            "postcode": forms.TextInput(attrs={"class": "form-control"}),
+            "organisation_name": forms.TextInput(attrs={"class": "form-control"}),
+            "organic_description": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+            "charity_status": forms.TextInput(attrs={"class": "form-control"}),
+            "profile_image": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
 
 class LoginForm(forms.Form):
     email = forms.EmailField(

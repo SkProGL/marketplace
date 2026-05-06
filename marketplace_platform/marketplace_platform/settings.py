@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "api",  # added app
     'django_browser_reload',
     'axes',
+    'django.contrib.postgres',
 ]
 
 MIDDLEWARE = [

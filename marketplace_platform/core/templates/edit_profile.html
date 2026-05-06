@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container py-5" style="max-width:700px;">
+
+<h2>Edit Profile</h2>
+
+<form method="POST">
+{% csrf_token %}
+<input type="hidden" name="update_profile" value="1">
+
+{{ profile_form.as_p }}
+
+<button type="submit" class="btn btn-success">
+Save Changes
+</button>
+</form>
+
+<hr>
+
+<h3>Change Password</h3>
+
+<form method="POST">
+{% csrf_token %}
+<input type="hidden" name="change_password" value="1">
+
+{{ password_form.as_p }}
+
+<button type="submit" class="btn btn-dark">
+Update Password
+</button>
+</form>
+
+</div>
+
+{% endblock %}
