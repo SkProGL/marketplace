@@ -16,7 +16,7 @@
 <div class="row justify-content-center">
     <div class="col-11">
         <!--Define form-->
-        <form method="POST" action="{% url 'management' %}?model={{ selected_model_name }}">
+        <form id="management-form" method="POST" action="{% url 'management' %}?model={{ selected_model_name }}">
             <!-- Pass auth token for POST -->
             {% csrf_token %}
             <!-- Primary card -->
@@ -28,7 +28,7 @@
                     <input type="radio" class="btn-check " name="btnradio" id="btnradio{{ forloop.counter }}"
                         onchange="location.href='?model={{ model_name }}'" {% if model_name == selected_model_name%}checked{% endif %}>
                     <label class="btn btn-outline-success" for="btnradio{{ forloop.counter }}">
-                        {{ model_name }}
+                        {{ model_display_names|slice:forloop.counter|last }}
                         <!-- Producers - Show alert badges indicating stock and pending order counts -->
                         {% if model_name == "Product" %}
                             {% if stock_alert.warning_count > 0 %}
@@ -40,47 +40,144 @@
                         {% endif %}
                         {% if model_name == "Order" %}
                             {% if stock_alert.pending_orders > 0 %}
-                            <span class="badge bg-info">{{ stock_alert.pending_orders }}</span>
+                            <span class="badge bg-danger">{{ stock_alert.pending_orders }}</span>
                             {% endif %}
                         {% endif %}
                     </label>
                     {% endfor %}
                 </div>
+                {% if selected_data.rows %}
+                <small class="text-center text-muted">{{ model_instructions|safe }}</small>
+                {% endif %}
                 <!-- Construct selected model table -->
+                <div id="management-table-container">
                 {% if selected_data %}
-                {% include 'includes/management/management_table.html' %}
+                {% include 'includes/management/management_table_fragment.html' %}
                 {% else %}
                 <div class="p-5 text-center text-muted">
                     Select a table from the header above.
                 </div>
                 {% endif %}
-                <!-- Disable actions if Order and user is Producer -->
-                {% if selected_model_name %}
+                </div>
+
                 <!-- Actions for update and new entry creation -->
+                {% if selected_model_name %}
+                    {% if selected_data.rows %}
+
                 <div class="management-btns">
-                    {% if user.is_superuser or user.category == 'Producer' %}
+                                        {% if user.is_superuser or user.category == 'Producer' %}
                     <button type="submit" name="update" class="btn btn-outline-primary"
                         onclick="return confirm('Are you sure you want to save all changes {{ selected_model_name }}?');"
                         title="Save changes"><i class="bi bi-floppy-fill"></i></button>
                     {% endif %}
+                    <div class="border border-secondary-subtle rounded" style="position:relative; min-width:160px;">
+                        <i class="bi bi-search" style="position:absolute; left:0.6rem; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.50"></i>
+                        <input id="search-input" type="text" placeholder="Search…" autocomplete="off"
+                            class="form-control border-0" style="padding-left:1.8rem">
+                    </div>
+
+                    {% endif %}
                     {% if user.is_superuser %}
-                    <a href="?model={{ selected_model_name }}&draft=true" class="btn btn-outline-success" >
+                    <a href="?model={{ selected_model_name }}&draft=true" class="btn btn-outline-success">
                         <i class="bi bi-plus-square-fill"></i>
                     </a>
                     {% endif %}
                 </div>
             </div>
+
             {% endif %}
+            
     </div>
     </form>
 </div>
 </div>
 <script>
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && document.activeElement.tagName === 'INPUT') {
+    function syncAllYear(allYearSelect) {
+        const row = allYearSelect.closest('tr');
+        const isAllYear = allYearSelect.value === 'True';
+        row.querySelectorAll('[name$="_seasonStart"], [name$="_seasonEnd"]').forEach(el => {
+            el.disabled = isAllYear;
+            el.style.opacity = isAllYear ? '0.4' : '';
+        });
+    }
+
+    function attachDirtyListeners() {
+        document.querySelectorAll('[name^="cell_"]').forEach(input => {
+            input.addEventListener('change', function () {
+                this.closest('tr').dataset.dirty = 'true';
+            });
+        });
+        // Draft rows are always submitted so server-side validation can run
+        const draftRow = document.querySelector('tr[data-row-id="draft"]');
+        if (draftRow) draftRow.dataset.dirty = 'true';
+        // Sync all_year toggles on load and after AJAX swaps
+        document.querySelectorAll('[name$="_all_year"]').forEach(sel => {
+            syncAllYear(sel);
+            sel.addEventListener('change', () => syncAllYear(sel));
+        });
+    }
+    attachDirtyListeners();
+
+    let isSubmitting = false;
+
+    // On submit, disable inputs in clean rows so they are excluded from POST
+    document.getElementById('management-form').addEventListener('submit', function () {
+        isSubmitting = true;
+        document.querySelectorAll('tr[data-row-id]').forEach(row => {
+            if (row.dataset.dirty !== 'true') {
+                row.querySelectorAll('[name^="cell_"]').forEach(input => {
+                    input.disabled = true;
+                });
+            }
+        });
+    });
+
+    // AJAX pagination and sorting — swap table container without full reload
+    document.addEventListener('click', function (e) {
+        const link = e.target.closest('.pagination-link, #management-table-container a[href*="sortby"]');
+        if (!link) return;
+        e.preventDefault();
+        if (document.querySelector('tr:not([data-row-id="draft"])[data-dirty="true"]') &&
+            !confirm('You have unsaved changes. Navigate away?')) return;
+        fetch(link.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.text())
+            .then(html => {
+                document.getElementById('management-table-container').innerHTML = html;
+                attachDirtyListeners();
+                history.pushState({}, '', link.href);
+            });
+    });
+
+    // Warn on full page navigation (model switch, sort, etc.) with unsaved rows
+    window.addEventListener('beforeunload', function (e) {
+        if (!isSubmitting && document.querySelector('tr:not([data-row-id="draft"])[data-dirty="true"]')) {
             e.preventDefault();
-            document.querySelector('[name="update"]').click();
         }
+    });
+
+    // Enter key submits the form as if the save button was clicked
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && document.activeElement.tagName === 'INPUT'
+                && document.activeElement.id !== 'search-input') {
+            e.preventDefault();
+            document.activeElement.dispatchEvent(new Event('change', { bubbles: true }));
+            document.getElementById('management-form').querySelector('[name="update"]').click();
+        }
+    });
+
+    // Advance order status — uses fetch() to avoid nested-form issues
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-advance-url]');
+        if (!btn) return;
+        e.preventDefault();
+        const url = btn.dataset.advanceUrl;
+        const note = btn.closest('.dropdown-menu').querySelector('textarea').value;
+        const csrf = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ csrfmiddlewaretoken: csrf, note }),
+        }).then(() => window.location.reload());
     });
 </script>
 {% endblock %}
@@ -91,7 +188,134 @@
 <!-- Order modal window for expanded order view -->
 {% if selected_model_name == "Order" %}
 {% include 'includes/management/management_order_modal.html' %}
-<!-- defer is best practice to wait until html is parsed before loading script-->
 <script defer src="{% static 'js/management_order_modal.js' %}"></script>
 {% endif %}
+
+<!-- Password modal -->
+<!-- Password modal -->
+<div class="modal fade" id="passwordModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title"><i class="bi bi-key-fill me-1"></i> Set Password</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <span class="text-muted">Reset password for:</span>
+                <small class="d-block mb-2 text-break" id="pw-modal-email"></small>
+                <hr>
+                 <input type="hidden" id="pw-modal-hidden-email" form="management-form">
+                <input type="hidden" id="pw-modal-hidden-category" form="management-form">
+
+                <input type="password" id="pw-modal-input" form="management-form" placeholder="New password…" class="form-control mb-1 border-success-subtle">
+                <input type="password" id="pw-modal-confirm" form="management-form" placeholder="Confirm password…" class="form-control mb-1 border-success-subtle">
+                
+                <small id="pw-match-msg" class="text-danger d-none"><i class="bi bi-x-circle-fill me-1"></i>Passwords do not match</small>
+            </div>
+            
+            <div class="modal-footer py-2 d-flex justify-content-between">
+                <button type="button" id="pw-modal-reset-btn" class="btn btn-sm btn-outline-primary" title="Send a password reset link to the user's email">
+                    <i class="bi bi-envelope me-1"></i>Send link
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <!-- CRITICAL: form="management-form" added here -->
+                    <button type="submit" id="pw-modal-confirm-btn" class="btn btn-sm btn-success" form="management-form" name="update">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordModal = document.getElementById('passwordModal');
+    
+    passwordModal.addEventListener('show.bs.modal', function (e) {
+        const btn = e.relatedTarget;
+        console.log("Button Data:", btn.dataset);
+        const rowId = btn.dataset.rowId;
+        const email = btn.dataset.email;
+        const category = btn.dataset.category; // Get the category
+        
+        // Populate text
+        document.getElementById('pw-modal-email').textContent = email;
+        
+        // Name and populate the hidden fields to satisfy Django's validation!
+        const hiddenEmail = document.getElementById('pw-modal-hidden-email');
+        hiddenEmail.name = `cell_${rowId}_email`;
+        hiddenEmail.value = email;
+
+        const hiddenCategory = document.getElementById('pw-modal-hidden-category');
+        hiddenCategory.name = `cell_${rowId}_category`;
+        hiddenCategory.value = category;
+
+        // Dynamically name the password inputs
+        document.getElementById('pw-modal-input').name = `cell_${rowId}_password`;
+        document.getElementById('pw-modal-confirm').name = `cell_${rowId}_confirm_password`;
+        
+        // Clear old values and hide errors
+        document.getElementById('pw-modal-input').value = '';
+        document.getElementById('pw-modal-confirm').value = '';
+        document.getElementById('pw-match-msg').classList.add('d-none');
+
+        // Handle Reset Email
+        document.getElementById('pw-modal-reset-btn').onclick = () => {
+            if (!email) {
+                alert("No email address found for this user.");
+                return;
+            }
+            if (!confirm(`Send a password reset email to ${email}?`)) return;
+            
+            const csrf = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+            fetch('/accounts/password_reset/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ csrfmiddlewaretoken: csrf, email }),
+            }).then(() => {
+                bootstrap.Modal.getInstance(passwordModal).hide();
+                alert(`Reset email sent to ${email}.`);
+            });
+        };
+    });
+
+    // Validate Passwords on Submit
+    document.getElementById('pw-modal-confirm-btn').addEventListener('click', function(e) {
+        const pw1 = document.getElementById('pw-modal-input').value;
+        const pw2 = document.getElementById('pw-modal-confirm').value;
+        const errorMsg = document.getElementById('pw-match-msg');
+
+        // Stop the form submission if they are empty or don't match
+        if (pw1 === '' || pw1 !== pw2) {
+            e.preventDefault(); 
+            errorMsg.classList.remove('d-none');
+        } else {
+            errorMsg.classList.add('d-none');
+            // If they match, the browser will naturally submit #management-form
+        }
+    });
+});
+</script>
+
+<script>
+const searchInput = document.getElementById('search-input');
+
+function filterRows(q) {
+    document.querySelectorAll('tbody tr[data-row-id]').forEach(row => {
+        const text = row.innerText.toLowerCase();
+        const inputVals = [...row.querySelectorAll('input:not([type="hidden"]), select, textarea')]
+            .map(el => el.value).join(' ').toLowerCase();
+        row.style.display = (!q || text.includes(q) || inputVals.includes(q)) ? '' : 'none';
+    });
+}
+
+if (searchInput) {
+    searchInput.addEventListener('input', () => filterRows(searchInput.value.trim().toLowerCase()));
+    document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); searchInput.focus(); searchInput.select(); }
+        if (e.key === 'Escape') { searchInput.value = ''; filterRows(''); }
+    });
+    const _preQ = new URLSearchParams(location.search).get('q');
+    if (_preQ) { searchInput.value = _preQ; filterRows(_preQ.toLowerCase()); }
+}
+</script>
 {% endblock %}

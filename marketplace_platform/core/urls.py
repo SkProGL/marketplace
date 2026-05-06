@@ -28,7 +28,10 @@ urlpatterns = [
     path('cart/update/<uuid:product_id>/', views.update_cart_ajax, name='update_cart_ajax'),
     path('cart/clear/', views.clear_cart, name='clear_cart'),
     path('checkout/', views.checkout, name='checkout'),
+    path('notifications/clear/', views.clear_notifications, name='clear_notifications'),
     # Management URLs
     path('management/', views.management_view, name="management"),
     path('management/order/<uuid:order_id>/order_summary/', views.get_order_summary_json, name='order_summary'),
-]
+    path('management/search/', views.management_search, name='management_search'),
+    path('management/order/<uuid:order_id>/advance/', views.advance_order_status, name='advance_order_status'),
+] 

@@ -1,39 +1,62 @@
 
 from core.utils import get_low_stock_products, get_pending_orders
+from .models import OrderStatusHistory
 
 def navbar_alerts(request):
     """
     Navigation bar notification bell.
-    Pass incoming order and stock warning counts for given user
+    Producers: low stock + pending orders.
+    Customers: order status changes.
     """
-    # validate that user is authenticated AND a producer
-    if not request.user.is_authenticated or getattr(request.user, 'category', None) != 'Producer':
-        return {"navbar_alerts": [], "navbar_alert_count": 0}
+    LIMIT = 4
+    if not request.user.is_authenticated:
+        return {"navbar_alerts": [], "navbar_alert_count": 0, "navbar_total_alert_count": 0}
 
+    dismissed = set(request.session.get('dismissed_notifications', []))
     alerts = []
+    category = getattr(request.user, 'category', None)
 
-    # Iterate over all producer products and append stock alerts (stock threshold or stock == 0)
-    for product in get_low_stock_products(request.user):
-        alerts.append({
-            "icon": "exclamation-triangle-fill",
-            "colour": "warning" if product.stock > 0 else "danger",
-            "message": f"Low stock: {product.name} ({product.stock} left)" if product.stock > 0 else f"No stock: {product.name}",
-            "link_url": '/management/?model=Product',
-            "link_label": "Manage products",
-        })
+    if request.user.is_superuser or category in ('Producer', 'Admin'):
+        for product in get_low_stock_products(request.user):
+            key = f"stock_{product.id}"
+            alerts.append({
+                "key": key,
+                "icon": "exclamation-triangle-fill",
+                "colour": "warning" if product.stock > 0 else "danger",
+                "message": f"Low stock: {product.name} ({product.stock} left)" if product.stock > 0 else f"No stock: {product.name}",
+                "link_url": '/management/?model=Product',
+                "link_label": "Manage products",
+            })
+        for order in get_pending_orders(request.user):
+            key = f"order_{order.id}"
+            items = order.orderproduct_set.select_related("batch__product")
+            item_summary = ", ".join(f"{item.batch.product.name} ({item.numPurchased})" for item in items)
+            alerts.append({
+                "key": key,
+                "icon": "bag-check-fill",
+                "colour": "success",
+                "message": f"Outstanding order: {item_summary}",
+                "link_url": '/management/?model=Order',
+                "link_label": "View orders",
+            })
 
-    # Iterate through all assigned orders and append pending order alerts
-    for order in get_pending_orders(request.user):
-        items = order.orderproduct_set.select_related("batch__product")
-        item_summary = ", ".join(f"{item.batch.product.name} x {item.numPurchased}" for item in items)
-        alerts.append({
-            "icon": "bag-check-fill",
-            "colour": "success",
-            "message": f"New order {order.customer.email}: {item_summary}",
-            "link_url": '/management/?model=Order',
-            "link_label": "View orders",
-        })
-    return {"navbar_alerts": alerts, "navbar_alert_count": len(alerts)}
+    if category == 'Customer':
+        recent_changes = (OrderStatusHistory.objects
+                          .filter(order__customer=request.user, changed_by__isnull=False)
+                          .select_related('order')
+                          .order_by('-changed_at')[:5])
+        for h in recent_changes:
+            key = f"status_{h.id}"
+            alerts.append({
+                "key": key,
+                "icon": "bag-check-fill",
+                "colour": "success",
+                "message": f"Order status updated: {h.from_status.title()} → {h.to_status.title()}",
+                "link_url": '/orders/',
+                "link_label": "View your orders",
+            })
+    visible = [a for a in alerts if a["key"] not in dismissed][-LIMIT:]
+    return {"navbar_alerts": visible, "navbar_alert_count": len(visible), "navbar_total_alert_count": len(alerts)}
 
 
 def get_producer_alerts(request):

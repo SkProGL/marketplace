@@ -1,9 +1,14 @@
-from django.db import models
+from decimal import Decimal
+
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.utils import timezone
 import uuid
+from simple_history.models import HistoricalRecords
+
+
 
 # Define Custom UserManager to set emial as username
 class UserManager(BaseUserManager):
@@ -94,9 +99,9 @@ class Product(models.Model):
 
     # Seasonal availability options
     class SeasonalAvailability(models.TextChoices):
-        AV = "Available"
-        UN = "Unavailable"
-        AAY = "Available All Year"
+        AVAILABLE = "Available"
+        UNAVAILABLE = "Unavailable"
+        ALL_YEAR = "Available All Year"
 
     # Months of the year for seasonal availability
     class Months(models.TextChoices):
@@ -142,17 +147,45 @@ class Product(models.Model):
     unit = models.CharField(
         max_length=20, choices=Units.choices, default=Units.KG
     )
-    # Food miles - distance food travels from producer to customer
-    food_miles = models.IntegerField(default=0)
+    # Season start and end
+    all_year = models.BooleanField(default=False, verbose_name="Year-round")
+    seasonStart = models.CharField(
+        max_length=20, choices=Months.choices, default=Months.JAN, verbose_name="Season Start"
+    )
+    seasonEnd = models.CharField(
+        max_length=20, choices=Months.choices, default=Months.DEC, verbose_name="Season End"
+    )
+
+    @property
+    def availability(self):
+        if self.all_year:
+            return "Available All Year"
+        month_order = list(self.Months.values)
+        start = month_order.index(self.seasonStart)
+        end = month_order.index(self.seasonEnd)
+        current = timezone.now().month - 1
+        in_season = (start <= current <= end) if start <= end else (current >= start or current <= end)
+        return self.SeasonalAvailability.AVAILABLE if in_season else self.SeasonalAvailability.UNAVAILABLE
+    # Best before date
+    best_before = models.DateField(default="2026-04-04")
     # Stock quantity
     stock = models.IntegerField(default=50)
-    # Absolute number of units before a low-stock alert is sent
-    stock_alert_threshold = models.IntegerField(default=0)
+    # Percentage to indicate how much stock is left before an alert is sent
+    # stock_alert_threshold = models.DecimalField(
+        # max_digits=5, decimal_places=2, default=0)
+    # Replace with absolute number as perecentage needs max stock
+    stock_alert_threshold = models.IntegerField(verbose_name="Alert Threshold")
     # List of food allergens
     allergens = ArrayField(models.CharField(
-        max_length=128, blank=True), default=list)
+        max_length=128, blank=True), default=list, blank=True)
     # Whether the product is organic-certified
     organic = models.BooleanField(default=False)
+    # Surplus / discount fields (mirrored on ProductBatch; kept here for product-level defaults)
+    surplus = models.BooleanField(default=False)
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0, blank=True)
+    discount_expiry = models.DateTimeField(blank=True, null=True)
+    discount_note = models.TextField(blank=True)
+    image = models.ImageField(upload_to='item_images/', blank=True)
 
     @property
     def base_price(self):
@@ -181,7 +214,7 @@ class ProductBatch(models.Model):
     # Stock quantity
     stock = models.IntegerField()
     # Absolute number of units before a low-stock alert is sent
-    stock_alert_threshold = models.IntegerField(default=0)
+    stock_alert_threshold = models.IntegerField(default=0, verbose_name="Alert Threshold")
     # Associated image
     image = models.ImageField(upload_to='item_images/', blank=True)
     # Harvest date
@@ -192,7 +225,14 @@ class ProductBatch(models.Model):
     surplus = models.BooleanField(default=False)
     # Discount percentage (e.g. 20.00 = 20%)
     discount_percentage = models.DecimalField(
-        max_digits=4, decimal_places=2, default=0)
+            max_digits=5,       # Increased to 5 to allow '100.xx'
+            decimal_places=2, 
+            default=Decimal('0.00'), 
+            validators=[
+                MinValueValidator(Decimal('0.00')),
+                MaxValueValidator(Decimal('100.00')),
+          
+            ],   verbose_name="Discount %")
     # Discount expiry date
     discount_expiry = models.DateTimeField(blank=True, null=True)
     # Note attached to discounts
@@ -201,12 +241,12 @@ class ProductBatch(models.Model):
     availability = models.CharField(
         max_length=20,
         choices=Product.SeasonalAvailability.choices,
-        default=Product.SeasonalAvailability.AV)
+        default=Product.SeasonalAvailability.AVAILABLE)
     # Season start and end
     seasonStart = models.CharField(
-        max_length=20, choices=Product.Months.choices, default=Product.Months.JAN)
+        max_length=20, choices=Product.Months.choices, default=Product.Months.JAN, verbose_name="Season Start")
     seasonEnd = models.CharField(
-        max_length=20, choices=Product.Months.choices, default=Product.Months.DEC)
+        max_length=20, choices=Product.Months.choices, default=Product.Months.DEC, verbose_name="Season End")
     created_at = models.DateTimeField(auto_now_add=True)
 
     # --- Convenience properties so templates can use batch.name, batch.producer etc. ---
@@ -257,10 +297,10 @@ class ProductBatch(models.Model):
         start = month_order.get(self.seasonStart, 1)
         end = month_order.get(self.seasonEnd, 12)
         if start == 1 and end == 12:
-            return Product.SeasonalAvailability.AAY
+            return Product.SeasonalAvailability.ALL_YEAR
         current = timezone.now().month
         in_season = (start <= current <= end) if start <= end else (current >= start or current <= end)
-        return Product.SeasonalAvailability.AV if in_season else Product.SeasonalAvailability.UN
+        return Product.SeasonalAvailability.AVAILABLE if in_season else Product.SeasonalAvailability.UNAVAILABLE
 
     def _compress_image(self):
         from PIL import Image
@@ -297,6 +337,7 @@ class Order(models.Model):
         CONFIRMED = "CONFIRMED"
         READY = "READY"
         DELIVERED = "DELIVERED"
+        CANCELLED = "CANCELLED"
 
     class Recurrence(models.TextChoices):
         NONE = "None"
@@ -326,17 +367,16 @@ class Order(models.Model):
     delivery_date = models.DateTimeField()
     order_status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING)
-    special_instructions = models.TextField(blank=True)
-    recurring = models.BooleanField(default=False)
-    paused = models.BooleanField(default=False)  
+    special_instructions = models.TextField(blank=True, verbose_name="Instructions")
+    paused = models.BooleanField(default=False)
     recurrence_type = models.CharField(
-        max_length=20, choices=Recurrence.choices, default=Recurrence.NONE)
+        max_length=20, choices=Recurrence.choices, default=Recurrence.NONE, verbose_name="Recurrence")
     recurrence_day = models.IntegerField(
-        choices=Weekday.choices, null=True, blank=True)
+        choices=Weekday.choices, null=True, blank=True, verbose_name="Rec. day")
+    # Food miles - distance food travels from producer to customer
+    food_miles = models.IntegerField(default=0)
 
-    @property
-    def calculated_total(self):
-        return sum(op.get_total_item_price for op in self.orderproduct_set.all())
+    # last_generated=models.DateTimeField(null=True,blank=True)
 
     @property
     def calculated_total(self):
@@ -345,21 +385,22 @@ class Order(models.Model):
     def __str__(self):
         return f"{self.customer} ({str(self.id)[:8]}) - {self.order_status} ({self.order_date.strftime('%d-%m-%Y %H:%M:%S')})"
 
+    # history = HistoricalRecords()
 
 class OrderProduct(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     batch = models.ForeignKey(ProductBatch, on_delete=models.CASCADE)
-    numPurchased = models.IntegerField()
-    product_price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)  
-    price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    numPurchased = models.IntegerField(verbose_name="# Purchased")
+    price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Price at Purchase")
 
     class Meta:
         unique_together = ("order", "batch")
-
+        verbose_name_plural = "Order Items"
     @property
     def product(self):
         return self.batch.product
+        
 
     @property
     def get_total_item_price(self):
@@ -368,6 +409,7 @@ class OrderProduct(models.Model):
     def __str__(self):
         return f"{self.batch.batch_number} x{self.numPurchased}"
 
+    # history = HistoricalRecords()
 
 class StoryPost(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -378,6 +420,9 @@ class StoryPost(models.Model):
     content = models.TextField()
     image = models.ImageField(upload_to='item_images/', blank=True)
     date_posted = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Stories"
 
 
 class Recipe(models.Model):
@@ -409,6 +454,7 @@ class RecipeIngredients(models.Model):
 
     class Meta:
         unique_together = ("recipe", "product")
+        verbose_name_plural = "Recipe Ingredients"
 
 
 class Review(models.Model):
@@ -448,6 +494,7 @@ class Payment(models.Model):
         max_length=20, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
+    # history = HistoricalRecords()
 
 class OrderPayment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -456,3 +503,17 @@ class OrderPayment(models.Model):
     class Meta:
         unique_together = ("order", "payment")
     date_posted=models.DateTimeField(auto_now_add=True)
+    # history = HistoricalRecords()
+
+
+class OrderStatusHistory(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='status_history')
+    from_status = models.CharField(max_length=20)
+    to_status = models.CharField(max_length=20)
+    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    changed_at = models.DateTimeField(auto_now_add=True)
+    note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['changed_at']

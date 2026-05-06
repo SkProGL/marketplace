@@ -110,7 +110,13 @@ class CheckoutForm(forms.Form):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['name', 'category', 'description', 'price', 'unit', 'food_miles', 'allergens', 'organic']
+        fields = [
+            'name', 'category', 'description', 'price',
+            'unit', 'all_year', 'seasonStart', 'seasonEnd',
+             'stock', 'stock_alert_threshold',
+            'allergens', 'organic', 'surplus', 'discount_percentage',
+            'discount_expiry', 'discount_note', 'image'
+        ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
         }

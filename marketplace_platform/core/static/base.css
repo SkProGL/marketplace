@@ -7,8 +7,55 @@ body {
   font-family: monospace;
 }
 
+#toast-container {
+  position: fixed;
+  top: 5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1055;
+  width: 80vw;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .alert {
   border-radius: 20px;
+}
+
+#toast-container .alert {
+  animation: toast-slide-down 0.3s ease both;
+}
+
+@keyframes toast-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#toast-container .alert.hiding {
+  animation: toast-slide-up-out 0.25s ease both;
+}
+
+@keyframes toast-slide-up-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes toast-slide-up-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-20px); }
 }
 
 
@@ -266,7 +313,7 @@ body {
   justify-content: space-between;
   width: 100%;
   padding: 0 1rem;
-  gap: 1rem;
+  /* gap: 1rem; */
   position: relative;
   background: white;
 }
@@ -330,18 +377,18 @@ body {
   text-wrap-mode: nowrap;
   height: 30px;
   line-height: 28px;
+
 }
 .base-btn-group {
   background: rgb(0 128 0 / 10%);
-  box-shadow:
-    1px 1px 2px -1px #fff inset,
-    /* 0 2px 1px #00000010,
-    0 4px 2px #00000010,
-    0 8px 4px #00000010,
-    0 16px 8px #00000010,
-    0 32px 16px #00000010; */
+  /* box-shadow: 1px 1px 2px -1px #fff inset, */
+    /* 0 2px 1px #00000010, */
+    /* 0 4px 2px #00000010, */
+    /* 0 8px 4px #00000010, */
+    /* 0 16px 8px #00000010, */
+    /* 0 32px 16px #00000010; */
 }
-.base-btn-group span,
+.base-btn-group span:not(.badge),
 .base-btn-group a {
   padding: 12px 12px;
   user-select: none;
@@ -439,6 +486,8 @@ body {
       hue-rotate(139deg) brightness(82%) contrast(94%);
   }
 }
+
+
 
 #alert-bell-btn {
   background: #d8ff7c;

@@ -43,7 +43,7 @@ class Command(BaseCommand):
                             order=order,
                             batch=b,
                             numPurchased=1,
-                            product_price_at_purchase=b.price,
+                            product_at_purchase=b.price,
                             price_at_purchase=b.price,
                         )
                         for b in batches_for_order
