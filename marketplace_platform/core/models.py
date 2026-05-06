@@ -389,14 +389,52 @@ class Order(models.Model):
     def calculated_total(self):
         return sum(op.get_total_item_price for op in self.orderproduct_set.all())
 
+    def sync_status(self):
+        """Derive overall order status from constituent ProducerOrders."""
+        statuses = set(self.producer_orders.values_list('order_status', flat=True))
+        if not statuses or statuses <= {'CANCELLED'}:
+            derived = 'CANCELLED'
+        elif statuses <= {'DELIVERED', 'CANCELLED'}:
+            derived = 'DELIVERED'
+        elif statuses <= {'READY', 'DELIVERED', 'CANCELLED'}:
+            derived = 'READY'
+        elif 'CONFIRMED' in statuses:
+            derived = 'CONFIRMED'
+        else:
+            derived = 'PENDING'
+        if self.order_status != derived:
+            self.order_status = derived
+            self.save(update_fields=['order_status'])
+
     def __str__(self):
         return f"{self.customer} ({str(self.id)[:8]}) - {self.order_status} ({self.order_date.strftime('%d-%m-%Y %H:%M:%S')})"
 
     # history = HistoricalRecords()
 
+class ProducerOrder(models.Model):
+    """One producer's fulfilment slice of a customer Order."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='producer_orders')
+    producer = models.ForeignKey('User', on_delete=models.CASCADE, related_name='producer_orders')
+    order_status = models.CharField(max_length=20, choices=Order.Status.choices, default=Order.Status.PENDING)
+    delivery_date = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('order', 'producer')
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.order.sync_status()
+
+    def __str__(self):
+        name = getattr(self.producer, 'organisation_name', '') or self.producer.email
+        return f"{name} – {str(self.order_id)[:8]} ({self.order_status})"
+
+
 class OrderProduct(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    producer_order = models.ForeignKey(ProducerOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name='items')
     batch = models.ForeignKey(ProductBatch, on_delete=models.CASCADE)
     numPurchased = models.IntegerField(verbose_name="# Purchased")
     price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Price at Purchase")
@@ -515,7 +553,8 @@ class OrderPayment(models.Model):
 
 class OrderStatusHistory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='status_history')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='status_history', null=True, blank=True)
+    producer_order = models.ForeignKey('ProducerOrder', on_delete=models.CASCADE, related_name='status_history', null=True, blank=True)
     from_status = models.CharField(max_length=20)
     to_status = models.CharField(max_length=20)
     changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)

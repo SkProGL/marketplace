@@ -1,12 +1,13 @@
 
 from core.utils import get_low_stock_products, get_pending_orders
-from .models import OrderStatusHistory, ProductBatch
+from .models import OrderStatusHistory, ProductBatch, ProducerOrder
 def navbar_alerts(request):
     """
     Navigation bar notification bell.
     Producers: low stock + pending orders.
     Customers: order status changes.
     """
+    # Define notification display limit
     LIMIT = 4
     if not request.user.is_authenticated:
         return {"navbar_alerts": [], "navbar_alert_count": 0, "navbar_total_alert_count": 0}
@@ -26,16 +27,16 @@ def navbar_alerts(request):
                 "link_url": '/management/?model=Product',
                 "link_label": "Manage products",
             })
-        pending_qs = get_pending_orders(request.user)
+        pending_orders = get_pending_orders(request.user)
         if cleared_at:
-            pending_qs = pending_qs.filter(order_date__gt=cleared_at)
-        for order in pending_qs:
-            key = f"order_{order.id}"
-            items = list(order.orderproduct_set.select_related("batch__product"))
+            pending_orders = pending_orders.filter(order__order_date__gt=cleared_at)
+        for pending_order in pending_orders.select_related('order').prefetch_related('items__batch__product'):
+            items = list(pending_order.items.all())
+            # Item 1, Item 2, + x more...
             names = [i.batch.product.name for i in items[:2]]
             suffix = f" +{len(items) - 2} more" if len(items) > 2 else ""
             alerts.append({
-                "key": key,
+                "key": f"order_{pending_order.id}",
                 "icon": "bag-check-fill",
                 "colour": "success",
                 "message": "Outstanding order:",
@@ -46,17 +47,17 @@ def navbar_alerts(request):
 
     if category == 'Customer':
         cleared_at = request.user.notifications_cleared_at
-        qs_filter = {'order__customer': request.user, 'changed_by__isnull': False}
+        qs_filter = {'producer_order__order__customer': request.user, 'changed_by__isnull': False}
         if cleared_at:
             qs_filter['changed_at__gt'] = cleared_at
         recent_changes = (OrderStatusHistory.objects
                           .filter(**qs_filter)
-                          .select_related('order')
-                          .prefetch_related('order__orderproduct_set__batch__product')
+                          .select_related('producer_order__order')
+                          .prefetch_related('producer_order__items__batch__product')
                           .order_by('-changed_at')[:5])
         for h in recent_changes:
             key = f"status_{h.id}"
-            items = list(h.order.orderproduct_set.all())
+            items = list(h.producer_order.items.all())
             names = [i.batch.product.name for i in items[:2]]
             suffix = f" +{len(items) - 2} more" if len(items) > 2 else ""
             item_summary = ", ".join(names) + suffix
@@ -87,7 +88,10 @@ def get_producer_alerts(request):
     if not (request.user.is_superuser or category == 'Producer'):
         return {'stock_alert': {'warning_count': 0, 'error_count': 0, 'pending_orders': 0, 'total': 0}}
 
-    pending_orders = get_pending_orders(request.user).count()
+    if request.user.is_superuser:
+        pending_orders = ProducerOrder.objects.filter(order_status='PENDING').count()
+    else:
+        pending_orders = get_pending_orders(request.user).count()
     for product in get_low_stock_products(request.user):
         if product.stock == 0:
             error_count += 1
