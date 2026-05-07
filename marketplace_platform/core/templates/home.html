@@ -17,7 +17,7 @@
   </div>
 
   <div class="filters home-filter-row">
-    <span class="home-allergen-label">Include categories:</span>
+    <span class="home-allergen-label" stlye="align-content:center">Include categories:</span>
     <input type="checkbox" id="fruit" name="category" value="Fruit"
            {% if "Fruit" in selected_categories %}checked{% endif %}>
     <label for="fruit">Fruits</label>
@@ -52,7 +52,7 @@
   </div>
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding-top:4px;border-top:1px solid #f0f0f0;">
     <div class="filters" style="margin:0;flex:1;">
-      <span class="home-allergen-label">Exclude allergens:</span>
+      <span class="home-allergen-label" style="align-content:center">Exclude allergens:</span>
       {% for allergen in allergen_list %}
         <input type="checkbox" name="exclude_allergen" value="{{ allergen }}"
                id="exc-{{ allergen }}"
