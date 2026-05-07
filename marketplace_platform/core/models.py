@@ -410,7 +410,7 @@ class Order(models.Model):
     delivery_address = models.CharField(max_length=256, blank=True)
     delivery_postcode = models.CharField(max_length=20, blank=True)
     # Food miles - distance food travels from producer to customer
-    food_miles = models.IntegerField(default=0)
+    food_miles = models.FloatField(default=0.0)
     # last_generated=models.DateTimeField(null=True,blank=True)
 
     @property

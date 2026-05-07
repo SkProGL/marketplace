@@ -138,8 +138,6 @@ def cart_contents(request):
             'image': batch.image.url if batch.image else None,
             'producer': getattr(producer, 'organisation_name', None) or str(producer),
             'producer_id': str(producer.id),
-
-            # IMPORTANT
             'food_miles': float(food_miles) if food_miles is not None else None,
         })
     return JsonResponse({
@@ -275,151 +273,271 @@ def loading(request):
 def checkout(request):
     cart = request.session.get('cart', {})
 
-    # If memory is empty, kick them back home
     if not cart:
         messages.error(request, "You haven't selected any items.")
         return redirect('home')
 
-    # 1. Gather all batches and calculate the total price
-    total_price = 0
+    total_price = Decimal('0.00')
     cart_items = []
 
-    for pid, qty in cart.items():
-            batch = get_object_or_404(
-                ProductBatch.objects.select_related('product__producer'),
-                id=pid
-            )
+    producer_miles_cache = {}
 
-            subtotal = batch.price * qty
-            total_price += subtotal
-            producer = batch.product.producer
-            food_miles = None
+    for pid, qty in cart.items():
+
+        batch = get_object_or_404(
+            ProductBatch.objects.select_related('product__producer'),
+            id=pid
+        )
+
+        producer = batch.product.producer
+
+        if producer.id not in producer_miles_cache:
 
             if request.session.get("user_coords"):
+
                 coords = request.session["user_coords"]
-                food_miles = get_producer_food_miles(
+
+                producer_miles_cache[producer.id] = get_producer_food_miles(
                     producer,
                     (coords["lat"], coords["lon"])
                 )
 
-            cart_items.append({
-                'product': batch,
-                'quantity': qty,
-                'food_miles': food_miles,
-            })
+            else:
+                producer_miles_cache[producer.id] = 0
+
+        food_miles = producer_miles_cache[producer.id]
+
+        subtotal = batch.price * qty
+        total_price += subtotal
+
+        cart_items.append({
+            'product': batch,
+            'quantity': qty,
+            'food_miles': food_miles,
+        })
 
     groups = defaultdict(list)
+
     for item in cart_items:
         producer = item['product'].product.producer
         groups[producer].append(item)
 
     cart_by_producer = []
-    total_commission = Decimal('0')
+    total_commission = Decimal('0.00')
+
     for producer, items in groups.items():
-        subtotal = sum(item['product'].price * item['quantity'] for item in items)
-        commission = (subtotal * Decimal('0.05')).quantize(Decimal('0.01'))
+
+        subtotal = sum(
+            item['product'].price * item['quantity']
+            for item in items
+        )
+
+        commission = (
+            subtotal * Decimal('0.05')
+        ).quantize(Decimal('0.01'))
+
         cart_by_producer.append({
             'producer': producer,
             'items': items,
             'subtotal': subtotal,
             'commission': commission,
         })
+
         total_commission += commission
 
-    min_delivery_date = (timezone.now().date() + timedelta(days=2)).strftime('%Y-%m-%d')
+    min_delivery_date = (
+        timezone.now().date() + timedelta(days=2)
+    ).strftime('%Y-%m-%d')
 
     if request.method == "POST":
+
         form = CheckoutForm(request.POST)
+
         if form.is_valid():
-            # Validate a delivery date per producer
+
+            total_food_miles = sum(
+                item['food_miles'] or 0
+                for item in cart_items
+            )
+
             min_date = date_type.today() + timedelta(days=2)
+
             producer_dates = {}
             date_errors = []
+
             for group in cart_by_producer:
+
                 pid = str(group['producer'].id)
-                raw = request.POST.get(f'delivery_date_{pid}', '').strip()
-                producer_name = group['producer'].organisation_name or str(group['producer'])
+
+                raw = request.POST.get(
+                    f'delivery_date_{pid}',
+                    ''
+                ).strip()
+
+                producer_name = (
+                    group['producer'].organisation_name
+                    or str(group['producer'])
+                )
+
                 try:
                     d = date_type.fromisoformat(raw)
+
                     if d < min_date:
-                        date_errors.append(f"Delivery date for {producer_name} must be at least 48 hours from now.")
+                        date_errors.append(
+                            f"Delivery date for {producer_name} "
+                            f"must be at least 48 hours from now."
+                        )
                     else:
                         producer_dates[pid] = d
+
                 except ValueError:
-                    date_errors.append(f"Please select a valid delivery date for {producer_name}.")
+                    date_errors.append(
+                        f"Please select a valid delivery date "
+                        f"for {producer_name}."
+                    )
 
             if date_errors:
+
                 for msg in date_errors:
                     messages.error(request, msg)
+
             else:
-                recurrence_type = request.POST.get('recurrence_type', 'None')
-                recurrence_day = request.POST.get('recurrence_day', None)
+
+                recurrence_type = request.POST.get(
+                    'recurrence_type',
+                    'None'
+                )
+
+                recurrence_day = request.POST.get(
+                    'recurrence_day',
+                    None
+                )
+
                 earliest_date = min(producer_dates.values())
+
                 try:
+
                     with transaction.atomic():
-                        # Lock all batch rows for the duration of this transaction
-                        batch_ids = [str(item['product'].pk) for item in cart_items]
+
+                        batch_ids = [
+                            str(item['product'].pk)
+                            for item in cart_items
+                        ]
+
                         locked = {
                             str(b.pk): b
-                            for b in ProductBatch.objects.select_for_update().filter(pk__in=batch_ids)
+                            for b in ProductBatch.objects
+                            .select_for_update()
+                            .filter(pk__in=batch_ids)
                         }
 
-                        # Validate stock before touching anything
                         short = []
+
                         for item in cart_items:
+
                             b = locked[str(item['product'].pk)]
+
                             if b.stock < item['quantity']:
+
                                 short.append(
-                                    f"{item['product'].name}: only {b.stock} available, "
-                                    f"you requested {item['quantity']}"
+                                    f"{item['product'].name}: "
+                                    f"only {b.stock} available, "
+                                    f"you requested "
+                                    f"{item['quantity']}"
                                 )
+
                         if short:
                             raise ValueError(short)
 
                         new_order = Order.objects.create(
                             customer=request.user,
                             total_price=round(total_price, 2),
+                            food_miles=round(total_food_miles, 2),
                             delivery_date=timezone.make_aware(
-                                datetime_type.combine(earliest_date, datetime_type.min.time())
+                                datetime_type.combine(
+                                    earliest_date,
+                                    datetime_type.min.time()
+                                )
                             ),
-                            delivery_address=form.cleaned_data['delivery_address'],
-                            delivery_postcode=form.cleaned_data['delivery_postcode'],
+                            delivery_address=form.cleaned_data[
+                                'delivery_address'
+                            ],
+                            delivery_postcode=form.cleaned_data[
+                                'delivery_postcode'
+                            ],
                             order_status='PENDING',
                             recurrence_type=recurrence_type,
-                            recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
+                            recurrence_day=(
+                                int(recurrence_day)
+                                if recurrence_day
+                                and recurrence_type != 'None'
+                                else None
+                            ),
                         )
 
-                        # One ProducerOrder per producer, each with its own delivery date
                         producer_orders = {}
-                        producer_subtotals = defaultdict(Decimal)
+
+                        producer_subtotals = defaultdict(
+                            Decimal
+                        )
+
                         for item in cart_items:
+
                             batch = item['product']
+
                             producer = batch.product.producer
+
                             pid = str(producer.id)
+
                             if producer.id not in producer_orders:
-                                producer_orders[producer.id] = ProducerOrder.objects.create(
-                                    order=new_order,
-                                    producer=producer,
-                                    order_status='PENDING',
-                                    delivery_date=timezone.make_aware(
-                                        datetime_type.combine(producer_dates[pid], datetime_type.min.time())
-                                    ),
+
+                                producer_orders[producer.id] = (
+                                    ProducerOrder.objects.create(
+                                        order=new_order,
+                                        producer=producer,
+                                        order_status='PENDING',
+                                        delivery_date=timezone.make_aware(
+                                            datetime_type.combine(
+                                                producer_dates[pid],
+                                                datetime_type.min.time()
+                                            )
+                                        ),
+                                    )
                                 )
                             OrderProduct.objects.create(
                                 order=new_order,
-                                producer_order=producer_orders[producer.id],
+                                producer_order=producer_orders[
+                                    producer.id
+                                ],
                                 batch=batch,
                                 numPurchased=item['quantity'],
                                 price_at_purchase=batch.price,
                             )
-                            producer_subtotals[producer.id] += batch.price * item['quantity']
-                            ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - item['quantity'])
 
-                        # Record a Payment (95% of subtotal) for each producer
+                            producer_subtotals[
+                                producer.id
+                            ] += (
+                                batch.price * item['quantity']
+                            )
+
+                            ProductBatch.objects.filter(
+                                pk=batch.pk
+                            ).update(
+                                stock=F('stock') - item['quantity']
+                            )
+
                         now = timezone.now()
+
                         for prod_id, prod_order in producer_orders.items():
-                            prod_subtotal = producer_subtotals[prod_id]
-                            producer_amount = (prod_subtotal * Decimal('0.95')).quantize(Decimal('0.01'))
+
+                            prod_subtotal = producer_subtotals[
+                                prod_id
+                            ]
+
+                            producer_amount = (
+                                prod_subtotal * Decimal('0.95')
+                            ).quantize(Decimal('0.01'))
+
                             Payment.objects.create(
                                 producer=prod_order.producer,
                                 order=new_order,
@@ -429,12 +547,21 @@ def checkout(request):
                             )
 
                         request.session['cart'] = {}
-                        confirm_url = reverse('order_confirmation', args=[new_order.id])
-                        return redirect(f'/loading/?next={confirm_url}')
+
+                        confirm_url = reverse(
+                            'order_confirmation',
+                            args=[new_order.id]
+                        )
+
+                        return redirect(
+                            f'/loading/?next={confirm_url}'
+                        )
 
                 except ValueError as e:
+
                     for msg in e.args[0]:
                         messages.error(request, msg)
+
     else:
         form = CheckoutForm()
 
@@ -448,7 +575,6 @@ def checkout(request):
         'user_address': request.user.address,
         'user_postcode': request.user.postcode
     })
-
 
 @login_required
 def order_confirmation(request, order_id):
@@ -566,7 +692,6 @@ def home_view(request):
         else:
             item.food_miles = None
 
-        # apply filter only if needed
         if customer_coords and (min_miles or max_miles):
             if item.food_miles is None:
                 continue
