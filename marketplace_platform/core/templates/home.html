@@ -86,13 +86,19 @@
          data-review-count="{{ item.review_count }}"
          data-product-id="{{ item.id }}">
       <div class="image">
-        {% if item.primary_image %}
-          <img src="/media/{{ item.primary_image }}" alt="{{ item.name }}">
+        {% if item.in_stock_batches.0.image %}
+          <img src="{{ item.in_stock_batches.0.thumbnail.url }}" 
+               data-src="{{ item.in_stock_batches.0.image.url }}" 
+               alt="{{ item.name }}" 
+               loading="lazy" 
+               class="product-image">
+        {% elif item.primary_image %}
+          <img src="{{ item.thumbnail.url }}" data-src="/media/{{ item.primary_image }}" alt="{{ item.name }}" loading="lazy" class="product-image">
         {% else %}
-          <img src="{% static 'test.jpg' %}" alt="{{ item.name }}">
+          <img src="{% static 'test.jpg' %}" alt="{{ item.name }}" loading="lazy">
         {% endif %}
         {% if item.organic %}
-          <img src="{% static 'organic_badge.svg' %}" alt="Organic" class="organic-badge">
+          <img src="{% static 'organic_badge.svg' %}" alt="Organic" class="organic-badge" loading="lazy">
         {% endif %}
       </div>
       <div class="card-info">
@@ -107,6 +113,7 @@
           {% else %}
             <span class="card-rating card-rating--none">No reviews yet</span>
           {% endif %}
+	  <br>
         </div>
         <div class="card-btn-wrap">
           <button type="button" class="add-to-cart-btn">Add</button>
@@ -156,7 +163,7 @@
       <div class="pm-body">
         <div class="pm-layout">
           <div class="pm-image-wrap">
-            <img id="modalImage" src="" alt="" class="pm-image">
+            <img id="modalImage" src="" alt="" class="pm-image" loading="lazy">
           </div>
           <div class="pm-details">
             <div class="pm-class-area">
@@ -377,10 +384,16 @@
 
     const classSelect = document.getElementById('modalClassSelect');
     const labels = { A: 'Premium', B: 'Standard', C: 'Economy', D: 'Basic', Discounted: 'Surplus / Discount' };
-    classSelect.innerHTML = '<option value="" disabled selected>Select class…</option>' +
-      mergedBatches.map((b, i) =>
-        `<option value="${i}">Class ${b.quality_class} — ${labels[b.quality_class] || b.quality_class}</option>`
+    
+    if (mergedBatches.length > 0) {
+      classSelect.innerHTML = mergedBatches.map((b, i) =>
+        `<option value="${i}" ${i === 0 ? 'selected' : ''}>Class ${b.quality_class} — ${labels[b.quality_class] || b.quality_class}</option>`
       ).join('');
+      selectBatch(mergedBatches[0]);
+    } else {
+      classSelect.innerHTML = '<option value="" disabled selected>No classes available</option>';
+    }
+
     classSelect.onchange = function() {
       selectBatch(mergedBatches[parseInt(this.value)]);
     };
@@ -622,6 +635,16 @@
       renderAllergenBadges(card);
       updateCardDiscountBadge(card);
     });
+    
+    // Auto-swap to high-res images
+    document.querySelectorAll('.product-image[data-src]').forEach(img => {
+      const highRes = img.dataset.src;
+      const tempImg = new Image();
+      tempImg.src = highRes;
+      tempImg.onload = () => {
+        img.src = highRes;
+      };
+    });
   }
   attachCardClickHandlers();
 </script>
@@ -702,11 +725,11 @@
              data-review-count="${item.review_count || 0}"
              data-product-id="${item.id}">
           <div class="image">
-            ${item.image
-              ? `<img src="${item.image}" alt="${item.name}">`
-              : `<img src="/static/test.jpg" alt="${item.name}">`
+            ${item.thumbnail
+              ? `<img src="${item.thumbnail}" data-src="${item.image}" alt="${item.name}" loading="lazy" class="product-image">`
+              : `<img src="/static/test.jpg" alt="${item.name}" loading="lazy">`
             }
-            ${item.organic ? `<img src="/static/organic_badge.svg" alt="Organic" class="organic-badge">` : ''}
+            ${item.organic ? `<img src="/static/organic_badge.svg" alt="Organic" class="organic-badge" loading="lazy">` : ''}
           </div>
           <div class="card-info">
             <div class="card-info-left">
@@ -724,9 +747,10 @@
           </div>
         </div>
       `).join('');
-      attachCardClickHandlers();
-
-      const pag = document.getElementById('homePagination');
+       attachCardClickHandlers();
+       initProgressiveImages();
+ 
+       const pag = document.getElementById('homePagination');
       pag.innerHTML = '';
       if (data.has_prev) {
         const btn = document.createElement('button');

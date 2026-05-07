@@ -1,6 +1,8 @@
 from decimal import Decimal
 
 from django.db import models
+from imagekit.models import ImageSpecField
+from imagekit.processors import ResizeToFill
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import AbstractUser, BaseUserManager
@@ -180,6 +182,10 @@ class Product(models.Model):
     discount_expiry = models.DateTimeField(blank=True, null=True)
     discount_note = models.TextField(blank=True)
     image = models.ImageField(upload_to='item_images/', blank=True)
+    thumbnail = ImageSpecField(source='image',
+                               processors=[ResizeToFill(100, 100)],
+                               format='JPEG',
+                               options={'quality': 80})
     image_url = models.URLField(max_length=700,blank=True)
 
     @property
@@ -232,6 +238,14 @@ class ProductBatch(models.Model):
     max_order_qty = models.PositiveIntegerField(null=True, blank=True)
     # Associated image
     image = models.ImageField(upload_to='item_images/', blank=True)
+    thumbnail = ImageSpecField(source='image',
+                               processors=[ResizeToFill(100, 100)],
+                               format='JPEG',
+                               options={'quality': 80})
+    medium = ImageSpecField(source='image',
+                            processors=[ResizeToFill(400, 400)],
+                            format='JPEG',
+                            options={'quality': 80})
     # Harvest date
     harvest_date = models.DateField(blank=True, null=True)
     # Best before date
@@ -323,29 +337,10 @@ class ProductBatch(models.Model):
         in_season = (start <= current <= end) if start <= end else (current >= start or current <= end)
         return Product.SeasonalAvailability.AVAILABLE if in_season else Product.SeasonalAvailability.UNAVAILABLE
 
-    def _compress_image(self):
-        from PIL import Image
-        import io
-        import os
-        from django.core.files.base import ContentFile
-        img = Image.open(self.image)
-        if img.mode in ('RGBA', 'P'):
-            img = img.convert('RGB')
-        img.thumbnail((800, 800), Image.LANCZOS)
-        buffer = io.BytesIO()
-        img.save(buffer, format='JPEG', quality=80, optimize=True)
-        buffer.seek(0)
-        filename = os.path.splitext(os.path.basename(self.image.name))[0] + '.jpg'
-        self.image.save(filename, ContentFile(buffer.read()), save=False)
-
     def save(self, *args, **kwargs):
         if not self.batch_number:
             self.batch_number = self._generate_batch_number()
         self.availability = self._compute_availability()
-        if self.image:
-            from django.core.files.uploadedfile import UploadedFile
-            if isinstance(getattr(self.image, 'file', None), UploadedFile):
-                self._compress_image()
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -480,6 +475,10 @@ class StoryPost(models.Model):
     )
     content = models.TextField()
     image = models.ImageField(upload_to='item_images/', blank=True)
+    thumbnail = ImageSpecField(source='image',
+                               processors=[ResizeToFill(100, 100)],
+                               format='JPEG',
+                               options={'quality': 80})
     date_posted = models.DateTimeField(auto_now_add=True)
     is_flagged = models.BooleanField(default=False)
 
@@ -501,6 +500,10 @@ class Recipe(models.Model):
     title = models.CharField(max_length=128)
     description = models.TextField()
     image = models.ImageField(upload_to='item_images/', blank=True)
+    thumbnail = ImageSpecField(source='image',
+                               processors=[ResizeToFill(100, 100)],
+                               format='JPEG',
+                               options={'quality': 80})
     instructions = models.TextField()
     season = models.CharField(
         max_length=20, choices=Season.choices, default=Season.SPRING)
