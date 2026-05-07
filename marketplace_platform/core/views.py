@@ -1,17 +1,16 @@
 import json
-import os
 import difflib
 from collections import defaultdict
 from django.db.models import Q, Sum, Subquery, OuterRef, Prefetch, Avg, Count, F
 from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from django.contrib.auth import authenticate, get_user_model, login
-from django.http import Http404, HttpResponse, JsonResponse
+from django.contrib.auth import authenticate, login, update_session_auth_hash
+from django.http import HttpResponse, JsonResponse
 from django.core.paginator import Paginator
-from django.conf import settings
+from django.contrib.auth.forms import PasswordChangeForm
 from .models import User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory
-from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm
+from core.forms import LoginForm,  ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from django.contrib.auth.decorators import login_required
@@ -1060,6 +1059,37 @@ def profile_view(request):
     return render(request, 'profile.html', {'product_count': product_count})
 
 
+
+@login_required
+def edit_profile(request):
+    category = getattr(request.user, 'category', None)
+    if request.method == "POST":
+        profile_form = ProfileEditForm(request.POST, request.FILES, instance=request.user, category=category)
+        password_form = PasswordChangeForm(request.user, request.POST)
+
+        if "update_profile" in request.POST:
+            if profile_form.is_valid():
+                profile_form.save()
+                messages.success(request, "Profile updated successfully.")
+                return redirect("profile")
+
+        elif "change_password" in request.POST:
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, "Password changed successfully.")
+                return redirect("profile")
+
+    else:
+        profile_form = ProfileEditForm(instance=request.user, category=category)
+        password_form = PasswordChangeForm(request.user)
+
+    return render(request, "edit_profile.html", {
+        "profile_form": profile_form,
+        "password_form": password_form,
+    })
+
+
 def terms_view(request):
     """Display the terms and conditions / cookie policy page."""
     return render(request, 'terms.html')
@@ -1075,7 +1105,7 @@ def add_review(request, product_id):
             return redirect("orders")
 
     delivered_purchase = OrderProduct.objects.filter(
-        product=product,
+        batch__product=product,
         order__customer=request.user,
         order__order_status=Order.Status.DELIVERED
     ).exists()
@@ -1141,3 +1171,26 @@ def management_search(request):
             })
 
     return JsonResponse({'results': results})
+
+
+@login_required
+def edit_review(request, review_id):
+    review = get_object_or_404(Review, id=review_id, user=request.user)
+    if request.method == "POST":
+        form = ReviewForm(request.POST, instance=review)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Review updated.")
+            return redirect("orders")
+    else:
+        form = ReviewForm(instance=review)
+    return render(request, "edit_review.html", {"form": form, "product": review.product})
+
+
+@login_required
+def delete_review(request, review_id):
+    review = get_object_or_404(Review, id=review_id, user=request.user)
+    if request.method == "POST":
+        review.delete()
+        messages.success(request, "Review deleted.")
+    return redirect("orders")
