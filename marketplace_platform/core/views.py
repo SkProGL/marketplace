@@ -5,15 +5,14 @@ from django.db.models import Q, Sum, Subquery, OuterRef, Prefetch, Avg, Count, F
 from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe
-from core.forms import ComplaintForm, LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
-from django.contrib.auth import authenticate, login, update_session_auth_hash
+from django.contrib.auth import authenticate, get_user_model, login, update_session_auth_hash
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.conf import settings
 from django.contrib.auth.forms import PasswordChangeForm
-from core.forms import ComplaintForm, LoginForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
+from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe, Payment
+from core.forms import ComplaintForm, LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from django.contrib.auth.decorators import login_required
@@ -344,6 +343,18 @@ def checkout(request):
                         )
                         ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - qty)
 
+                    # Record a Payment (95% of subtotal) for each producer
+                    now = timezone.now()
+                    for entry in cart_by_producer:
+                        producer_amount = (entry['subtotal'] * Decimal('0.95')).quantize(Decimal('0.01'))
+                        Payment.objects.create(
+                            producer=entry['producer'],
+                            order=new_order,
+                            amount=producer_amount,
+                            status=Payment.Status.PROCESSED,
+                            processed_at=now,
+                        )
+
                     request.session['cart'] = {}
                     confirm_url = reverse('order_confirmation', args=[new_order.id])
                     return redirect(f'/loading/?next={confirm_url}')
@@ -387,12 +398,16 @@ def order_confirmation(request, order_id):
             'items': ops,
             'subtotal': subtotal,
             'commission': commission,
+            'producer_payment': (subtotal * Decimal('0.95')).quantize(Decimal('0.01')),
         })
+
+    payment_processed = Payment.objects.filter(order=order, status=Payment.Status.PROCESSED).exists()
 
     return render(request, 'order_confirmation.html', {
         'order': order,
         'cart_by_producer': cart_by_producer,
         'total_commission': total_commission,
+        'payment_processed': payment_processed,
     })
 
 
@@ -1337,36 +1352,6 @@ def profile_view(request):
         'recipe_count': recipe_count,
         'story_count': story_count,
         'saved_recipes': saved_recipes,
-    })
-
-
-
-@login_required
-def edit_profile(request):
-    if request.method == "POST":
-        profile_form = ProfileEditForm(request.POST, request.FILES, instance=request.user)
-        password_form = PasswordChangeForm(request.user, request.POST)
-
-        if "update_profile" in request.POST:
-            if profile_form.is_valid():
-                profile_form.save()
-                messages.success(request, "Profile updated successfully.")
-                return redirect("profile")
-
-        elif "change_password" in request.POST:
-            if password_form.is_valid():
-                user = password_form.save()
-                update_session_auth_hash(request, user)
-                messages.success(request, "Password changed successfully.")
-                return redirect("profile")
-
-    else:
-        profile_form = ProfileEditForm(instance=request.user)
-        password_form = PasswordChangeForm(request.user)
-
-    return render(request, "edit_profile.html", {
-        "profile_form": profile_form,
-        "password_form": password_form,
     })
 
 
