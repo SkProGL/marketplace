@@ -177,6 +177,8 @@ class Product(models.Model):
     discount_note = models.TextField(blank=True)
     # Associated image
     image = models.ImageField(upload_to='item_images/', blank=True)
+    # Associated image URL
+    image_url = models.URLField(max_length=700,blank=True)
 
     def __str__(self):
         return f"{self.name} ({self.producer}) £{self.price}"
@@ -327,17 +329,21 @@ class Payment(models.Model):
         User,
         on_delete=models.CASCADE
     )
-    orders = models.ManyToManyField("Order", blank=True)
+    #orders = models.ManyToManyField("Order", through="OrderPayment")
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE
+    )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
 
-class OrderPayment(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    payment = models.ForeignKey(Payment, on_delete=models.CASCADE)
-    class Meta:
-        unique_together = ("order", "payment")
-    date_posted=models.DateTimeField(auto_now_add=True)
+# class OrderPayment(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     order = models.ForeignKey(Order, on_delete=models.CASCADE)
+#     payment = models.ForeignKey(Payment, on_delete=models.CASCADE)
+#     class Meta:
+#         unique_together = ("order", "payment")
+#     date_posted=models.DateTimeField(auto_now_add=True)

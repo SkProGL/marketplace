@@ -107,7 +107,7 @@ class ProductForm(forms.ModelForm):
             'unit', 'availability', 'seasonStart', 'seasonEnd',
             'best_before', 'stock', 'stock_alert_threshold',
             'allergens', 'organic', 'surplus', 'discount_percentage',
-            'discount_expiry', 'discount_note', 'image'
+            'discount_expiry', 'discount_note', 'image', 'image_url'
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),

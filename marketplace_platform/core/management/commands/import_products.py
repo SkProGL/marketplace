@@ -39,7 +39,8 @@ class Command(BaseCommand):
                         allergens=[],
                         organic=row["organic"]=="True",
                         surplus=row["surplus"]=="True",
-                        discount_percentage=to_decimal(row["discount_percentage"])
+                        discount_percentage=to_decimal(row["discount_percentage"]),
+                        image_url=row["images"]
                     ))
                     print(f"Created: {name}")
                 except Exception as e:
