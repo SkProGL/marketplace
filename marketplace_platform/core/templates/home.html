@@ -4,82 +4,67 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'home.css' %}">
 
-<!-- From Uiverse.io by adamgiebl --> 
+<div class="home-header">
+  <h1>Browse Products</h1>
+  <p>Fresh from local producers &mdash; filter, search, and add to your basket</p>
+</div>
+
 <form method="GET" action="">
   <div class="form-control">
-    <input class="input input-alt" placeholder="Search" type="text" 
+    <input class="input input-alt" placeholder="Search products&hellip;" type="text"
            name="q" value="{{ request.GET.q }}">
     <span class="input-border input-border-alt"></span>
   </div>
 
-  <div>
-    <div class="filters">
-      <input type="checkbox" id="fruit" name="category" value="Fruit"
-             {% if "Fruit" in selected_categories %}checked{% endif %}>
-      <label for="fruit">Fruits</label>
+  <div class="filters home-filter-row">
+    <span class="home-allergen-label">Include categories:</span>
+    <input type="checkbox" id="fruit" name="category" value="Fruit"
+           {% if "Fruit" in selected_categories %}checked{% endif %}>
+    <label for="fruit">Fruits</label>
+    <input type="checkbox" id="vegetable" name="category" value="Vegetable"
+           {% if "Vegetable" in selected_categories %}checked{% endif %}>
+    <label for="vegetable">Vegetables</label>
+    <input type="checkbox" id="dairy" name="category" value="Dairy"
+           {% if "Dairy" in selected_categories %}checked{% endif %}>
+    <label for="dairy">Dairy</label>
+    <input type="checkbox" id="bakery" name="category" value="Bakery"
+           {% if "Bakery" in selected_categories %}checked{% endif %}>
+    <label for="bakery">Bakery</label>
+    <input type="checkbox" id="preserve" name="category" value="Preserve"
+           {% if "Preserve" in selected_categories %}checked{% endif %}>
+    <label for="preserve">Preserve</label>
+    <input type="checkbox" id="in_season" name="in_season" value="1"
+           {% if in_season %}checked{% endif %}>
+    <label for="in_season">In Season</label>
 
-      <input type="checkbox" id="vegetable" name="category" value="Vegetable"
-             {% if "Vegetable" in selected_categories %}checked{% endif %}>
-      <label for="vegetable">Vegetables</label>
+    <span class="home-filter-divider"></span>
 
-      <input type="checkbox" id="dairy" name="category" value="Dairy"
-             {% if "Dairy" in selected_categories %}checked{% endif %}>
-      <label for="dairy">Dairy</label>
+    <input type="checkbox" id="stock" name="in_stock" value="1"
+           {% if in_stock %}checked{% endif %}>
+    <label for="stock">In Stock</label>
+    <input type="checkbox" id="discount" name="discounted" value="1"
+           {% if discounted %}checked{% endif %}>
+    <label for="discount">Discounted</label>
+    <input type="checkbox" id="organic" name="organic" value="1"
+           {% if organic %}checked{% endif %}>
+    <label for="organic">Organic</label>
 
-      <input type="checkbox" id="bakery" name="category" value="Bakery"
-             {% if "Bakery" in selected_categories %}checked{% endif %}>
-      <label for="bakery">Bakery</label>
-
-      <input type="checkbox" id="preserve" name="category" value="Preserve"
-             {% if "Preserve" in selected_categories %}checked{% endif %}>
-      <label for="preserve">Preserve</label>
-
-      <input type="checkbox" id="in_season" name="in_season" value="1"
-             {% if in_season %}checked{% endif %}>
-      <label for="in_season">In Season</label>
-    </div>
   </div>
-
-  <div class="custom-filters">
-    <div class="filters">
-      <input type="checkbox" id="stock" name="in_stock" value="1"
-             {% if in_stock %}checked{% endif %}>
-      <label for="stock">In Stock</label>
-
-      <input type="checkbox" id="discount" name="discounted" value="1"
-             {% if discounted %}checked{% endif %}>
-      <label for="discount">Discounted %</label>
-
-      <input type="checkbox" id="organic" name="organic" value="1"
-             {% if organic %}checked{% endif %}>
-      <label for="organic">Organic</label>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding-top:4px;border-top:1px solid #f0f0f0;">
+    <div class="filters" style="margin:0;flex:1;">
+      <span class="home-allergen-label">Exclude allergens:</span>
+      {% for allergen in allergen_list %}
+        <input type="checkbox" name="exclude_allergen" value="{{ allergen }}"
+               id="exc-{{ allergen }}"
+               {% if allergen in exclude_allergens %}checked{% endif %}>
+        <label for="exc-{{ allergen }}" class="allergen-label">{{ allergen }}</label>
+      {% endfor %}
     </div>
-
     {% include "components/widget-food-miles.html" %}
-    {% include "components/widget-tree.html" %}
-    {#% include "components/widget-offer.html" %#}
-
-    <div class="allergen-filter-wrap">
-      <button type="button" class="allergen-filter-toggle" id="allergenToggle" onclick="toggleAllergenPanel()">
-        Avoid allergens
-        {% if exclude_allergens %}<span class="allergen-active-count">{{ exclude_allergens|length }}</span>{% endif %}
-        <span id="allergenArrow" style="margin-left:auto;transition:transform 0.2s;">▾</span>
-      </button>
-      <div id="allergenPanel" style="display:none;">
-        <p class="allergen-filter-hint">Products containing the selected allergens will be hidden.</p>
-        <div class="filters">
-          {% for allergen in allergen_list %}
-            <input type="checkbox" name="exclude_allergen" value="{{ allergen }}"
-                   id="exc-{{ allergen }}"
-                   {% if allergen in exclude_allergens %}checked{% endif %}>
-            <label for="exc-{{ allergen }}" class="allergen-label">{{ allergen }}</label>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-    <br/>
   </div>
 </form>
+
+
 <div class="home-results">
   <b>Found {{ total_count }} matches</b>
   <p id="search-suggestion" {% if not suggestion %}style="display:none"{% endif %}>
@@ -87,10 +72,9 @@
   </p>
 </div>
 
-<!--This is the product image styling and positioning-->
 <div class="widget-card-grid">
   {% for item in items %}
-    <div class="card" style="display: flex; flex-direction: column; height:320px; width:210px;overflow: hidden; cursor:pointer;"
+    <div class="card"
          data-name="{{ item.name }}"
          data-description="{{ item.description }}"
          data-allergens="{{ item.allergens|join:', ' }}"
@@ -101,174 +85,182 @@
          data-avg-rating="{{ item.avg_rating|default:'' }}"
          data-review-count="{{ item.review_count }}"
          data-product-id="{{ item.id }}">
-
-      <div class="image" style="height: 75%; width: 100%; flex-shrink: 0;  overflow: hidden; position: relative;">
+      <div class="image">
         {% if item.primary_image %}
-          <img src="/media/{{ item.primary_image }}" style="height: 100%; width: 100%; object-fit: cover; display: block;">
+          <img src="/media/{{ item.primary_image }}" alt="{{ item.name }}">
         {% else %}
-          <img src="{% static 'test.jpg' %}" style="height: 100%; width: 100%; object-fit: cover; display: block;">
+          <img src="{% static 'test.jpg' %}" alt="{{ item.name }}">
         {% endif %}
         {% if item.organic %}
-          <img src="{% static 'organic_badge.svg' %}" alt="Organic product" style="position:absolute;top:6px;left:6px;width:42px;height:42px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));">
+          <img src="{% static 'organic_badge.svg' %}" alt="Organic" class="organic-badge">
         {% endif %}
       </div>
-
-      <div style="display: flex; padding: 0 15px; flex-grow: 1; width: 100%;">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex: 1;">
-            <div style="display: flex; flex-direction: column; justify-content: center;">
-                <span class="title">{{ item.name }}</span>
-                {% if item.producer.organisation_name %}<span style="display:block; font-size:11px; color:#888;">{{ item.producer.organisation_name }}</span>{% endif %}
-                <span class="price">{{ item.price_display }}</span>
-                {% if item.avg_rating %}
-                <span style="font-size:11px;color:#888;">⭐ {{ item.avg_rating }}/5 ({{ item.review_count }})</span>
-                {% else %}
-                <span style="font-size:11px;color:#bbb;">No reviews yet</span>
-                {% endif %}
-            </div>
-            <div class="card-btn-wrap">
-                <button type="button" class="add-to-cart-btn">Add</button>
-                <span class="card-cart-badge"></span>
-            </div>
+      <div class="card-info">
+        <div class="card-info-left">
+          <span class="title">{{ item.name }}</span>
+          {% if item.producer.organisation_name %}
+            <span class="card-producer">{{ item.producer.organisation_name }}</span>
+          {% endif %}
+          <span class="price">{{ item.price_display }}</span>
+          {% if item.avg_rating %}
+            <span class="card-rating">&#11088; {{ item.avg_rating }}/5 ({{ item.review_count }})</span>
+          {% else %}
+            <span class="card-rating card-rating--none">No reviews yet</span>
+          {% endif %}
         </div>
+        <div class="card-btn-wrap">
+          <button type="button" class="add-to-cart-btn">Add</button>
+          <span class="card-cart-badge"></span>
+        </div>
+      </div>
     </div>
-</div>
   {% endfor %}
-</div>
+</div>{# end .widget-card-grid #}
 
-<div id="homePagination" style="display:flex;justify-content:center;align-items:center;gap:8px;margin:24px 0;">
+<div id="homePagination" class="home-pagination">
   {% if page_obj.has_previous %}
-    <button class="page-btn" onclick="goToPage({{ page_obj.previous_page_number }})">← Prev</button>
+    <button class="page-btn" onclick="goToPage({{ page_obj.previous_page_number }})">&#8592; Prev</button>
   {% endif %}
-  <span style="font-size:0.9rem;color:#666;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  <span class="page-info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
   {% if page_obj.has_next %}
-    <button class="page-btn" onclick="goToPage({{ page_obj.next_page_number }})">Next →</button>
+    <button class="page-btn" onclick="goToPage({{ page_obj.next_page_number }})">Next &#8594;</button>
   {% endif %}
 </div>
 
-<!-- Product detail modal -->
-<div id="cartConfirm" style="display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:28px 28px 22px;width:300px;text-align:center;position:relative;">
-    <img id="cartConfirmImg" src="" alt="" style="width:100px;height:100px;object-fit:cover;border-radius:10px;margin-bottom:14px;">
-    <div style="color:#198754;font-size:1.1rem;font-weight:600;margin-bottom:6px;">Successfully added to cart!</div>
-    <div id="cartConfirmQty" style="color:#555;font-size:0.9rem;margin-bottom:20px;"></div>
-    <button id="cartConfirmClose" style="width:100%;padding:9px;background:#198754;color:#fff;border:none;border-radius:8px;font-size:0.95rem;cursor:pointer;">OK</button>
+<div id="cartConfirm" class="cart-confirm-overlay">
+  <div class="cart-confirm-box">
+    <img id="cartConfirmImg" src="" alt="" class="cart-confirm-img">
+    <div class="cart-confirm-title">Added to cart</div>
+    <div id="cartConfirmQty" class="cart-confirm-qty"></div>
+    <button id="cartConfirmClose" class="cart-confirm-btn">OK</button>
   </div>
 </div>
 
 <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-xl">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <div>
-          <h5 class="modal-title mb-1">
+    <div class="modal-content pm-content">
+      <div class="pm-header">
+        <div class="pm-title-area">
+          <h5 class="pm-name">
             <span id="modalName"></span>
-            <span id="modalOrganicInline" class="badge bg-success ms-2" style="display:none;font-size:0.85rem;vertical-align:middle;">Certified organic</span>
+            <span id="modalOrganicInline" class="pm-organic-tag" style="display:none;">Certified organic</span>
           </h5>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <small class="text-muted" id="modalProducer"></small>
-            <button id="modalCertBtn" class="btn btn-link p-0 text-success" style="font-size:0.78rem;display:none;" data-bs-toggle="modal" data-bs-target="#certModal">View organic certification ›</button>
+          <div class="pm-subtitle">
+            <span id="modalProducer" class="pm-producer"></span>
+            <button id="modalCertBtn" class="pm-cert-btn" style="display:none;" data-bs-toggle="modal" data-bs-target="#certModal">View organic certification &#8250;</button>
           </div>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="pm-close" data-bs-dismiss="modal">&#x2715;</button>
       </div>
 
-      <div class="modal-body pt-0">
-        <div class="row g-3 align-items-start">
-          <div class="col-5" style="height:340px;">
-            <img id="modalImage" src="" alt="" class="img-fluid rounded" style="object-fit:cover;height:100%;width:100%;display:block;">
+      <div class="pm-body">
+        <div class="pm-layout">
+          <div class="pm-image-wrap">
+            <img id="modalImage" src="" alt="" class="pm-image">
           </div>
-          <div class="col-7">
-
-            <div class="mb-2">
-              <strong>Available classes</strong>
-              <select id="modalClassSelect" class="form-select form-select-sm mt-1">
-                <option value="" disabled selected>Select class…</option>
+          <div class="pm-details">
+            <div class="pm-class-area">
+              <label class="pm-label">Available classes</label>
+              <select id="modalClassSelect" class="pm-class-select">
+                <option value="" disabled selected>Select class&#8230;</option>
               </select>
             </div>
 
-            <p class="mb-1"><strong>Category:</strong> <span id="modalCategory"></span></p>
-            <p class="mb-1"><strong>Availability:</strong> <span id="modalAvailability"></span></p>
-            <div id="modalSeasonRow" class="mb-1" style="display:none">
-              <strong>Season:</strong> <span id="modalSeason"></span>
-            </div>
-            <p class="mb-1"><strong id="modalStockLabel">Total in stock:</strong> <span id="modalTotalStock"></span> <span id="modalStockUnit"></span></p>
-
-            <p class="mt-2 mb-1"><strong>Description</strong></p>
-            <p id="modalDescription" class="text-muted small"></p>
-
-            <div id="modalAllergenRow" class="mt-1">
-              <strong>Allergens:</strong>
-              <span id="modalAllergens" class="text-danger small"></span>
-              <span id="modalNoAllergens" class="text-success small" style="display:none;">No common allergens</span>
-            </div>
-
-            <!-- Shown only after a class is selected -->
-            <div id="modalBatchInfo" style="visibility:hidden">
-              <hr class="my-2">
-              <p class="mb-1"><strong>Price:</strong> <span id="modalPrice"></span></p>
-              <span id="modalBestBefore" style="display:none;"></span>
-              <span id="modalSurplusBadge" class="badge bg-warning text-dark" style="display:none">Surplus</span>
-              <div id="modalDiscountRow" class="mb-1 text-danger" style="display:none">
-                <strong>Discount:</strong> <span id="modalDiscount"></span>% off
+            <div class="pm-info-grid">
+              <div class="pm-info-row">
+                <span class="pm-info-key">Category</span>
+                <span class="pm-info-val" id="modalCategory"></span>
+              </div>
+              <div class="pm-info-row">
+                <span class="pm-info-key">Availability</span>
+                <span class="pm-info-val" id="modalAvailability"></span>
+              </div>
+              <div id="modalSeasonRow" class="pm-info-row" style="display:none">
+                <span class="pm-info-key">Season</span>
+                <span class="pm-info-val" id="modalSeason"></span>
+              </div>
+              <div class="pm-info-row">
+                <span class="pm-info-key" id="modalStockLabel">Total in stock</span>
+                <span class="pm-info-val"><span id="modalTotalStock"></span>&nbsp;<span id="modalStockUnit"></span></span>
               </div>
             </div>
 
-            <div id="modalCartControls" class="mt-3" style="display:flex;flex-direction:column;gap:8px;">
+            <div class="pm-desc-area">
+              <label class="pm-label">Description</label>
+              <p id="modalDescription" class="pm-desc"></p>
+            </div>
+
+            <div id="modalAllergenRow" class="pm-allergen-row">
+              <span class="pm-info-key">Allergens</span>
+              <span id="modalAllergens" class="pm-allergens-list"></span>
+              <span id="modalNoAllergens" class="pm-no-allergens" style="display:none;">No common allergens</span>
+            </div>
+
+            <div id="modalBatchInfo" class="pm-batch-info" style="visibility:hidden">
+              <div class="pm-info-row">
+                <span class="pm-info-key">Price</span>
+                <span class="pm-info-val pm-price" id="modalPrice"></span>
+              </div>
+              <span id="modalBestBefore" style="display:none;font-size:0.8rem;color:#888;"></span>
+              <div class="pm-badges">
+                <span id="modalSurplusBadge" class="pm-surplus-badge" style="display:none">Surplus</span>
+                <span id="modalDiscountRow" class="pm-discount-badge" style="display:none"><span id="modalDiscount"></span>% off</span>
+              </div>
+            </div>
+
+            <div id="modalCartControls" class="pm-cart-controls">
               <div id="modalCartStepper" class="cart-stepper" style="display:none">
-                <button class="widget-stepper-btn" id="modalDecBtn">−</button>
+                <button class="widget-stepper-btn" id="modalDecBtn">&#8722;</button>
                 <span class="stepper-qty" id="modalQty">1</span>
                 <button class="widget-stepper-btn" id="modalIncBtn">+</button>
-                <span id="modalCartTotal" style="margin-left:8px;font-weight:600;"></span>
+                <span id="modalCartTotal" class="pm-cart-total"></span>
               </div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <button id="modalAddBtn" class="add-to-cart-btn">Add</button>
-                <button id="modalNotifyBtn" class="btn btn-outline-secondary btn-sm" style="display:none">Notify me when more items are available</button>
+              <div class="pm-add-row">
+                <button id="modalAddBtn" class="add-to-cart-btn pm-add-btn">Add</button>
+                <button id="modalNotifyBtn" class="pm-notify-btn" style="display:none">Notify me when available</button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Reviews section -->
-        <div id="modalReviewsSection" style="display:none;margin-top:1.5rem;border-top:1px solid #dee2e6;padding-top:1rem;">
-          <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:1rem;">
-            <h6 class="fw-bold mb-0">Customer reviews</h6>
-            <small id="modalRating" style="color:#888;display:none;">⭐ <span id="modalRatingValue"></span>/5 (<span id="modalReviewCount"></span> reviews)</small>
+        <div id="modalReviewsSection" class="pm-reviews-section" style="display:none">
+          <div class="pm-reviews-header">
+            <h6 class="pm-reviews-title">Customer reviews</h6>
+            <span id="modalRating" class="pm-reviews-rating" style="display:none;">&#11088; <span id="modalRatingValue"></span>/5 (<span id="modalReviewCount"></span> reviews)</span>
           </div>
           <div id="modalReviewsList"></div>
           <div id="reviewPagination"></div>
         </div>
 
-        <!-- Recipe suggestions section -->
-        <div id="modalRecipesSection" style="display:none;margin-top:1.5rem;border-top:1px solid #dee2e6;padding-top:1rem;">
-          <h6 class="fw-bold mb-2" style="color:#1a7a4a;">Recipe suggestions</h6>
-          <div id="modalRecipesList" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        <div id="modalRecipesSection" class="pm-recipes-section" style="display:none">
+          <h6 class="pm-recipes-title">Recipe suggestions</h6>
+          <div id="modalRecipesList" class="pm-recipes-list"></div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Organic certification modal -->
 <div class="modal fade" id="certModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <h6 class="modal-title text-success fw-bold">Organic certification</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-content pm-content">
+      <div class="pm-header">
+        <div class="pm-title-area">
+          <h5 class="pm-name" style="color:var(--primary);font-size:1.05rem;">Organic certification</h5>
+          <span id="certProducerName" class="pm-producer"></span>
+        </div>
+        <button type="button" class="pm-close" data-bs-dismiss="modal">&#x2715;</button>
       </div>
-      <div class="modal-body pt-2">
-        <p class="text-muted small mb-2" id="certProducerName"></p>
-        <p id="certText" style="font-size:0.9rem;white-space:pre-wrap;color:#2d6a2d;background:#f0faf0;border-radius:8px;padding:1rem;margin:0;"></p>
+      <div style="padding:0 24px 24px;">
+        <p id="certText" class="pm-cert-text"></p>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Notify me toast -->
 <div id="notifyToast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 20px;border-radius:8px;font-size:0.9rem;z-index:9999;box-shadow:var(--shadow);">
-  An email will be sent to <strong id="notifyEmail"></strong> once the item is back in stock!
+  An email will be sent to <strong id="notifyEmail"></strong> once the item is back in stock.
 </div>
-
 
 {{ cart_items|json_script:"cart-state-data" }}
 {{ batch_data|json_script:"batch-data" }}
@@ -276,22 +268,20 @@
 {{ recipe_suggestions|json_script:"recipe-suggestions-data" }}
 
 <script>
-  let batchData = JSON.parse(document.getElementById('batch-data').textContent);
+  let batchData  = JSON.parse(document.getElementById('batch-data').textContent);
   let reviewData = JSON.parse(document.getElementById('review-data').textContent);
   const recipeSuggestionsData = JSON.parse(document.getElementById('recipe-suggestions-data').textContent);
-  const userEmail = '{{ request.user.email }}';
+  const userEmail    = '{{ request.user.email }}';
   const userCategory = '{{ request.user.category }}';
-  const isBulkBuyer = (userCategory === 'Restaurant' || userCategory === 'Community');
+  const isBulkBuyer  = userCategory === 'Restaurant' || userCategory === 'Community';
 
-function selectBatch(batch) {
-    // Batch-specific section
+  function selectBatch(batch) {
     document.getElementById('modalPrice').textContent      = '£' + batch.price + (batch.unit ? '/' + batch.unit : '');
     document.getElementById('modalBestBefore').textContent = batch.best_before;
     document.getElementById('modalStockLabel').textContent = 'In stock:';
     document.getElementById('modalTotalStock').textContent = batch.stock;
-    document.getElementById('modalStockUnit').textContent = batch.unit || '';
+    document.getElementById('modalStockUnit').textContent  = batch.unit || '';
     document.getElementById('modalSurplusBadge').style.display = batch.surplus ? '' : 'none';
-
     const discRow = document.getElementById('modalDiscountRow');
     if (batch.quality_class === 'Discounted' && parseFloat(batch.discount) > 0) {
       discRow.style.display = '';
@@ -299,35 +289,30 @@ function selectBatch(batch) {
     } else {
       discRow.style.display = 'none';
     }
-
-    // Switch image to batch image if it has one
     if (batch.image) document.getElementById('modalImage').src = batch.image;
-
-    // Reveal batch info
     document.getElementById('modalBatchInfo').style.visibility = 'visible';
-
-    currentBatchId = batch.id;
-    currentItemPrice = parseFloat(batch.price);
-    currentBatchStock = batch.stock;
+    currentBatchId     = batch.id;
+    currentItemPrice   = parseFloat(batch.price);
+    currentBatchStock  = batch.stock;
     currentBatchMaxQty = (!isBulkBuyer && batch.max_order_qty) ? batch.max_order_qty : null;
-    currentBatchUnit = batch.unit || '';
+    currentBatchUnit   = batch.unit || '';
     localQty = cartState[currentBatchId] || 0;
     updateModalCartUI();
   }
 
   document.getElementById('productModal').addEventListener('show.bs.modal', function(e) {
-    const card = e.relatedTarget;
-    const d = card.dataset;
+    const card      = e.relatedTarget;
+    const d         = card.dataset;
     const productId = d.productId;
     currentProductId = productId;
 
-    // Product-level fields
     document.getElementById('modalName').textContent        = d.name;
     document.getElementById('modalProducer').textContent    = d.producer;
     document.getElementById('modalDescription').textContent = d.description;
     document.getElementById('modalCategory').textContent    = d.category;
+
     const isOrganic = d.organic === 'True' || d.organic === 'true' || d.organic === true;
-    const ratingEl = document.getElementById('modalRating');
+    const ratingEl  = document.getElementById('modalRating');
     if (d.avgRating) {
       document.getElementById('modalRatingValue').textContent = d.avgRating;
       document.getElementById('modalReviewCount').textContent = d.reviewCount;
@@ -336,23 +321,22 @@ function selectBatch(batch) {
       ratingEl.style.display = 'none';
     }
     document.getElementById('modalOrganicInline').style.display = isOrganic ? '' : 'none';
-    document.getElementById('modalCertBtn').style.display = isOrganic ? '' : 'none';
-    document.getElementById('certProducerName').textContent = d.producer || '';
-    document.getElementById('certText').textContent = d.organicInfo || 'No certification details provided yet.';
+    document.getElementById('modalCertBtn').style.display        = isOrganic ? '' : 'none';
+    document.getElementById('certProducerName').textContent      = d.producer || '';
+    document.getElementById('certText').textContent              = d.organicInfo || 'No certification details provided yet.';
 
     const hasAllergens = d.allergens && d.allergens.toString().trim().length > 0;
-    document.getElementById('modalAllergens').textContent = hasAllergens ? d.allergens : '';
-    document.getElementById('modalAllergens').style.display = hasAllergens ? '' : 'none';
+    document.getElementById('modalAllergens').textContent     = hasAllergens ? d.allergens : '';
+    document.getElementById('modalAllergens').style.display   = hasAllergens ? '' : 'none';
     document.getElementById('modalNoAllergens').style.display = hasAllergens ? 'none' : '';
 
-    const batches = batchData[productId] || [];
+    const batches    = batchData[productId] || [];
     const totalStock = batches.reduce((sum, b) => sum + b.stock, 0);
-    const first = batches[0];
+    const first      = batches[0];
     document.getElementById('modalStockLabel').textContent = 'Total in stock:';
     document.getElementById('modalTotalStock').textContent = totalStock;
-    document.getElementById('modalStockUnit').textContent = first ? first.unit : '';
+    document.getElementById('modalStockUnit').textContent  = first ? first.unit : '';
 
-    // Availability from first batch (all share same season since inherited from product)
     if (first) {
       document.getElementById('modalAvailability').textContent = first.availability;
       const seasonRow = document.getElementById('modalSeasonRow');
@@ -364,22 +348,19 @@ function selectBatch(batch) {
       }
     }
 
-    // Product image: prefer Class A batch image
-    const classA = batches.find(b => b.quality_class === 'A');
+    const classA     = batches.find(b => b.quality_class === 'A');
     const firstBatch = batches[0];
     document.getElementById('modalImage').src = (classA && classA.image) || (firstBatch && firstBatch.image) || '/static/test.jpg';
 
-    // Reset to pre-selection state
     document.getElementById('modalBatchInfo').style.visibility = 'hidden';
-    document.getElementById('modalCartStepper').style.display = 'none';
-    document.getElementById('modalAddBtn').textContent = 'Add';
-    currentBatchId = null;
+    document.getElementById('modalCartStepper').style.display  = 'none';
+    document.getElementById('modalAddBtn').textContent         = 'Add';
+    currentBatchId    = null;
     currentBatchStock = 0;
-    localQty = 0;
+    localQty          = 0;
 
-    // Group batches by quality_class, merging stock and taking earliest best_before
     const classOrder = ['A', 'B', 'C', 'D', 'Discounted'];
-    const grouped = {};
+    const grouped    = {};
     batches.forEach(b => {
       const key = b.quality_class;
       if (!grouped[key]) {
@@ -387,7 +368,6 @@ function selectBatch(batch) {
       } else {
         grouped[key].stock += b.stock;
         if (b.best_before < grouped[key].best_before) {
-          // Adopt the earlier batch as primary (FIFO)
           const combinedStock = grouped[key].stock;
           grouped[key] = { ...b, stock: combinedStock };
         }
@@ -395,44 +375,37 @@ function selectBatch(batch) {
     });
     const mergedBatches = classOrder.filter(k => grouped[k]).map(k => grouped[k]);
 
-    // Render class dropdown options
     const classSelect = document.getElementById('modalClassSelect');
     const labels = { A: 'Premium', B: 'Standard', C: 'Economy', D: 'Basic', Discounted: 'Surplus / Discount' };
     classSelect.innerHTML = '<option value="" disabled selected>Select class…</option>' +
       mergedBatches.map((b, i) =>
         `<option value="${i}">Class ${b.quality_class} — ${labels[b.quality_class] || b.quality_class}</option>`
       ).join('');
-
     classSelect.onchange = function() {
       selectBatch(mergedBatches[parseInt(this.value)]);
     };
 
-    // Render reviews
     currentReviews = reviewData[productId] || [];
     reviewPage = 1;
-    const reviewsSection = document.getElementById('modalReviewsSection');
-    reviewsSection.style.display = '';
+    document.getElementById('modalReviewsSection').style.display = '';
     if (currentReviews.length > 0) {
       renderReviews();
     } else {
-      document.getElementById('modalReviewsList').innerHTML =
-        '<p style="color:#888;font-size:0.88rem;">No reviews yet.</p>';
+      document.getElementById('modalReviewsList').innerHTML = '<p style="color:#888;font-size:0.88rem;">No reviews yet.</p>';
       document.getElementById('reviewPagination').innerHTML = '';
     }
 
-    // Render recipe suggestions
-    const recipes = recipeSuggestionsData[productId] || [];
+    const recipes        = recipeSuggestionsData[productId] || [];
     const recipesSection = document.getElementById('modalRecipesSection');
-    const recipesList = document.getElementById('modalRecipesList');
+    const recipesList    = document.getElementById('modalRecipesList');
     if (recipes.length > 0) {
       recipesSection.style.display = '';
       const seasonColour = { Spring: '#2e7d32', Summer: '#f57f17', Autumn: '#bf360c', Winter: '#283593' };
       recipesList.innerHTML = recipes.map(r => `
-        <a href="/community/recipe/${r.id}/"
-           style="display:inline-flex;flex-direction:column;gap:2px;padding:8px 12px;border:1.5px solid #c8e6c9;border-radius:8px;text-decoration:none;background:#f9fdf9;min-width:130px;">
-          <span style="font-size:0.8rem;font-weight:600;color:#1a7a4a;">${r.title}</span>
-          <span style="font-size:0.72rem;color:${seasonColour[r.season] || '#666'};">${r.season}</span>
-          <span style="font-size:0.7rem;color:#888;">${r.producer}</span>
+        <a href="/community/recipe/${r.id}/" class="pm-recipe-card">
+          <span class="pm-recipe-title">${r.title}</span>
+          <span class="pm-recipe-season" style="color:${seasonColour[r.season] || '#666'};">${r.season}</span>
+          <span class="pm-recipe-producer">${r.producer}</span>
         </a>
       `).join('');
     } else {
@@ -442,7 +415,6 @@ function selectBatch(batch) {
 </script>
 
 <script>
-  // ── Allergen icon renderer ─────────────────────────────────────────────────
   const ALLERGEN_SVGS = {
     gluten:     `<line x1="12" y1="21" x2="12" y2="5"/><path d="M12 17C9 16 8 13 9 11 10 9 12 9 12 9"/><path d="M12 17C15 16 16 13 15 11 14 9 12 9 12 9"/><path d="M12 11C9 10 8 7 9 5 10 3 12 3 12 3"/><path d="M12 11C15 10 16 7 15 5 14 3 12 3 12 3"/>`,
     crustacean: `<path d="M16 5C18 7 17 11 15 13L11 16C9 17 8 19 10 21"/><path d="M10 21C9 22 7 21 7 19 7 17 9 16 12 15"/><path d="M16 5L18 4M15 8L18 7M7 19L5 19M8 17L6 16"/>`,
@@ -484,11 +456,11 @@ function selectBatch(batch) {
     const raw = card.dataset.allergens || '';
     if (!raw.trim()) return;
     const allergens = raw.split(',').map(a => a.trim()).filter(Boolean);
-    const imageDiv = card.querySelector('.image');
+    const imageDiv  = card.querySelector('.image');
     if (!imageDiv) return;
     const MAX_VISIBLE = 4;
     let slotIndex = 0;
-    allergens.forEach((allergen) => {
+    allergens.forEach(allergen => {
       if (slotIndex >= MAX_VISIBLE) return;
       const key = getAllergenKey(allergen);
       if (!key) return;
@@ -513,31 +485,29 @@ function selectBatch(batch) {
 </script>
 
 <script>
-  // Cart state — initialised from server-rendered session
   const cartState = JSON.parse(document.getElementById('cart-state-data').textContent);
-  let currentBatchId = null;
-  let currentItemPrice = 0;
-  let currentBatchStock = 0;
+  let currentBatchId     = null;
+  let currentItemPrice   = 0;
+  let currentBatchStock  = 0;
   let currentBatchMaxQty = null;
-  let currentBatchUnit = '';
-  let currentProductId = null;
-  let localQty = 0;  // pending qty, not yet committed to server
+  let currentBatchUnit   = '';
+  let currentProductId   = null;
+  let localQty = 0;
 
   function updateCardCartBadge(productId) {
     const batches = batchData[productId] || [];
-    const qty = batches.reduce((sum, b) => sum + (cartState[b.id] || 0), 0);
-    const card = document.querySelector(`.widget-card-grid .card[data-product-id="${productId}"]`);
+    const qty     = batches.reduce((sum, b) => sum + (cartState[b.id] || 0), 0);
+    const card    = document.querySelector(`.widget-card-grid .card[data-product-id="${productId}"]`);
     if (!card) return;
     const badge = card.querySelector('.card-cart-badge');
     if (!badge) return;
-    badge.textContent = qty;
+    badge.textContent   = qty;
     badge.style.display = qty > 0 ? 'block' : 'none';
   }
 
-  // Updates stepper display only — no AJAX
   function updateModalCartUI() {
-    const stepper = document.getElementById('modalCartStepper');
-    const addBtn  = document.getElementById('modalAddBtn');
+    const stepper      = document.getElementById('modalCartStepper');
+    const addBtn       = document.getElementById('modalAddBtn');
     const effectiveCap = currentBatchMaxQty !== null
       ? Math.min(currentBatchStock, currentBatchMaxQty)
       : currentBatchStock;
@@ -550,7 +520,6 @@ function selectBatch(batch) {
     document.getElementById('modalIncBtn').disabled = localQty >= effectiveCap;
     const atCap = localQty > 0 && localQty >= effectiveCap;
     document.getElementById('modalNotifyBtn').style.display = (atCap && localQty >= currentBatchStock) ? '' : 'none';
-    // Show cap hint for non-bulk customers
     let capHint = document.getElementById('modalMaxQtyHint');
     if (!capHint) {
       capHint = document.createElement('p');
@@ -572,7 +541,6 @@ function selectBatch(batch) {
     document.getElementById('cartConfirm').style.display = 'none';
   });
 
-  // Commits localQty to the server and updates navbar/badge
   function commitCart() {
     const delta = localQty - (cartState[currentBatchId] || 0);
     if (delta === 0) return;
@@ -582,7 +550,7 @@ function selectBatch(batch) {
         'Content-Type': 'application/json',
         'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
       },
-      body: JSON.stringify({delta: delta})
+      body: JSON.stringify({ delta })
     })
     .then(r => {
       if (r.redirected || r.status === 403) { window.location.href = '/login/'; return null; }
@@ -617,11 +585,9 @@ function selectBatch(batch) {
       return;
     }
     if (localQty === 0) {
-      // First "Add" — start local counter
       localQty = 1;
       updateModalCartUI();
     } else {
-      // "Add to cart" — commit to server
       commitCart();
     }
   });
@@ -635,7 +601,7 @@ function selectBatch(batch) {
   });
 
   function updateCardDiscountBadge(card) {
-    const batches = batchData[card.dataset.productId] || [];
+    const batches       = batchData[card.dataset.productId] || [];
     const surplusBatches = batches.filter(b => b.surplus);
     card.querySelectorAll('.card-corner-ribbon').forEach(el => el.remove());
     if (surplusBatches.length > 0) {
@@ -660,10 +626,7 @@ function selectBatch(batch) {
   attachCardClickHandlers();
 </script>
 
-<br/>
-<br/>
-<br/>
-<!--Filter search without reload-->
+<br/><br/><br/>
 <script>
   const searchInput = document.querySelector('input[name="q"]');
   let searchTimer;
@@ -676,18 +639,6 @@ function selectBatch(batch) {
   document.querySelectorAll('.filters input[type="checkbox"]').forEach(cb => {
     cb.addEventListener('change', () => fetchResults(true));
   });
-
-  function toggleAllergenPanel() {
-    const panel = document.getElementById('allergenPanel');
-    const arrow = document.getElementById('allergenArrow');
-    const open = panel.style.display === 'none';
-    panel.style.display = open ? '' : 'none';
-    arrow.style.transform = open ? 'rotate(180deg)' : '';
-  }
-  // Auto-open panel if allergens are already active (e.g. page load with params)
-  if (document.querySelectorAll('input[name="exclude_allergen"]:checked').length > 0) {
-    toggleAllergenPanel();
-  }
 
   const offerBtn = document.querySelector('.widget-offer-btn');
   if (offerBtn) {
@@ -708,20 +659,24 @@ function selectBatch(batch) {
 
   function fetchResults(resetPage = false) {
     if (resetPage) currentPage = 1;
-    const form = searchInput.closest('form');
+    const form   = searchInput.closest('form');
     const params = new URLSearchParams(new FormData(form));
     params.set('page', currentPage);
+
+    if (typeof window.fmGetParams === 'function') {
+      const fm = window.fmGetParams();
+      if (fm.min_miles) params.set('min_miles', fm.min_miles);
+      if (fm.max_miles) params.set('max_miles', fm.max_miles);
+    }
 
     fetch(`?${params.toString()}`, {
       headers: { 'x-requested-with': 'XMLHttpRequest' }
     })
     .then(res => res.json())
     .then(data => {
-      // Update count
       document.querySelector('.home-results b').textContent = `Found ${data.count} matches`;
 
-      // Show/hide spell suggestion
-      const suggestionEl = document.getElementById('search-suggestion');
+      const suggestionEl   = document.getElementById('search-suggestion');
       const suggestionLink = document.getElementById('suggestion-link');
       if (data.suggestion) {
         suggestionLink.textContent = data.suggestion;
@@ -731,15 +686,14 @@ function selectBatch(batch) {
         suggestionEl.style.display = 'none';
       }
 
-      // Rebuild the card grid
-      Object.assign(batchData, data.batch_data);
+      Object.assign(batchData,  data.batch_data);
       Object.assign(reviewData, data.review_data || {});
       const grid = document.querySelector('.widget-card-grid');
       grid.innerHTML = data.items.map(item => `
-        <div class="card" style="display:flex;flex-direction:column;height:320px;width:210px;overflow:hidden;cursor:pointer;"
+        <div class="card"
              data-name="${item.name}"
-             data-description="${(item.description||'').replace(/"/g,'&quot;')}"
-             data-allergens="${(item.allergens||[]).join(', ')}"
+             data-description="${(item.description || '').replace(/"/g, '&quot;')}"
+             data-allergens="${(item.allergens || []).join(', ')}"
              data-category="${item.category}"
              data-organic="${item.organic}"
              data-producer="${item.producer || ''}"
@@ -747,81 +701,81 @@ function selectBatch(batch) {
              data-avg-rating="${item.avg_rating || ''}"
              data-review-count="${item.review_count || 0}"
              data-product-id="${item.id}">
-          <div class="image" style="height:75%;width:100%;flex-shrink:0;overflow:hidden;position:relative;">
+          <div class="image">
             ${item.image
-              ? `<img src="${item.image}" style="height:100%;width:100%;object-fit:cover;">`
-              : `<img src="/static/test.jpg" style="height:100%;width:100%;object-fit:cover;">`
+              ? `<img src="${item.image}" alt="${item.name}">`
+              : `<img src="/static/test.jpg" alt="${item.name}">`
             }
-            ${item.organic ? `<img src="/static/organic_badge.svg" alt="Organic product" style="position:absolute;top:6px;left:6px;width:42px;height:42px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));">` : ''}
+            ${item.organic ? `<img src="/static/organic_badge.svg" alt="Organic" class="organic-badge">` : ''}
           </div>
-          <div style="display:flex;padding:0 15px;flex-grow:1;width:100%;">
-            <div style="display:flex;align-items:center;justify-content:space-between;flex:1;">
-              <div style="display:flex;flex-direction:column;justify-content:center;">
-                <span class="title">${item.name}</span>
-                ${item.producer ? `<span style="display:block;font-size:11px;color:#888;">${item.producer}</span>` : ''}
-                <span class="price">${item.price_display || '£' + item.price}</span>
-                ${item.avg_rating ? `<span style="font-size:11px;color:#888;">⭐ ${item.avg_rating}/5 (${item.review_count})</span>` : '<span style="font-size:11px;color:#bbb;">No reviews yet</span>'}
-              </div>
-              <div class="card-btn-wrap">
-                <button type="button" class="add-to-cart-btn">Add</button>
-                <span class="card-cart-badge"></span>
-              </div>
+          <div class="card-info">
+            <div class="card-info-left">
+              <span class="title">${item.name}</span>
+              ${item.producer ? `<span class="card-producer">${item.producer}</span>` : ''}
+              <span class="price">${item.price_display || '£' + item.price}</span>
+              ${item.avg_rating
+                ? `<span class="card-rating">⭐ ${item.avg_rating}/5 (${item.review_count})</span>`
+                : `<span class="card-rating card-rating--none">No reviews yet</span>`}
+            </div>
+            <div class="card-btn-wrap">
+              <button type="button" class="add-to-cart-btn">Add</button>
+              <span class="card-cart-badge"></span>
             </div>
           </div>
         </div>
       `).join('');
       attachCardClickHandlers();
 
-      // Update pagination controls
       const pag = document.getElementById('homePagination');
       pag.innerHTML = '';
       if (data.has_prev) {
         const btn = document.createElement('button');
-        btn.className = 'page-btn'; btn.textContent = '← Prev';
+        btn.className = 'page-btn';
+        btn.textContent = '← Prev';
         btn.onclick = () => goToPage(data.page - 1);
         pag.appendChild(btn);
       }
       if (data.total_pages > 1) {
         const info = document.createElement('span');
-        info.style.cssText = 'font-size:0.9rem;color:#666;';
+        info.className = 'page-info';
         info.textContent = `Page ${data.page} of ${data.total_pages}`;
         pag.appendChild(info);
       }
       if (data.has_next) {
         const btn = document.createElement('button');
-        btn.className = 'page-btn'; btn.textContent = 'Next →';
+        btn.className = 'page-btn';
+        btn.textContent = 'Next →';
         btn.onclick = () => goToPage(data.page + 1);
         pag.appendChild(btn);
       }
     });
   }
 
-  // ── Review pagination ──────────────────────────────────────────────────────
   const REVIEWS_PER_PAGE = 3;
-  let reviewPage = 1;
+  let reviewPage     = 1;
   let currentReviews = [];
 
   function renderReviews() {
     const start = (reviewPage - 1) * REVIEWS_PER_PAGE;
     const slice = currentReviews.slice(start, start + REVIEWS_PER_PAGE);
-    const list = document.getElementById('modalReviewsList');
+    const list  = document.getElementById('modalReviewsList');
     list.innerHTML = slice.map(r => `
-      <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #f0f0f0;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-          <span style="color:#f5a623;font-size:1rem;">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span>
-          <strong style="font-size:0.9rem;">${r.title}</strong>
-          <span style="font-size:0.75rem;color:#888;margin-left:auto;">${r.author} · ${r.date}</span>
+      <div class="pm-review-card">
+        <div class="pm-review-top">
+          <span class="pm-review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+          <strong class="pm-review-title">${r.title}</strong>
+          <span class="pm-review-meta">${r.author} &middot; ${r.date}</span>
         </div>
-        <p style="font-size:0.85rem;color:#555;margin:0;">${r.content}</p>
+        <p class="pm-review-body">${r.content}</p>
       </div>`).join('');
 
     const totalPages = Math.ceil(currentReviews.length / REVIEWS_PER_PAGE);
     let pagHtml = '';
     if (totalPages > 1) {
-      pagHtml = `<div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:8px;">
-        <button class="page-btn" onclick="changeReviewPage(-1)" ${reviewPage === 1 ? 'disabled' : ''}>← Prev</button>
-        <span style="font-size:0.82rem;color:#888;">${reviewPage} / ${totalPages}</span>
-        <button class="page-btn" onclick="changeReviewPage(1)" ${reviewPage === totalPages ? 'disabled' : ''}>Next →</button>
+      pagHtml = `<div class="pm-review-pagination">
+        <button class="page-btn" onclick="changeReviewPage(-1)" ${reviewPage === 1 ? 'disabled' : ''}>&#8592; Prev</button>
+        <span class="page-info">${reviewPage} / ${totalPages}</span>
+        <button class="page-btn" onclick="changeReviewPage(1)" ${reviewPage === totalPages ? 'disabled' : ''}>Next &#8594;</button>
       </div>`;
     }
     document.getElementById('reviewPagination').innerHTML = pagHtml;

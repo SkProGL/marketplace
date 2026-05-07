@@ -1,9 +1,65 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  :root { --main-color: #198754; }
+  .checkout-card {
+    width: 100%;
+    padding: 3rem;
+    align-items: flex-start;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+  }
+  .checkout-section-title {
+    color: var(--main-color);
+    margin-bottom: 1.5rem;
+  }
+  .checkout-pay {
+    width: 130px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: black;
+    border: none;
+    color: white;
+    font-weight: 600;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+    transition-duration: .3s;
+    margin-top: 2rem;
+  }
+  .svgIcon { width: 16px; }
+  .svgIcon path { fill: white; }
+  .checkout-pay::before {
+    width: 130px;
+    height: 130px;
+    position: absolute;
+    content: "";
+    background-color: white;
+    border-radius: 50%;
+    left: -100%;
+    top: 0;
+    transition-duration: .3s;
+    mix-blend-mode: difference;
+  }
+  .checkout-pay:hover::before {
+    transition-duration: .3s;
+    transform: translate(100%, -50%);
+    border-radius: 0;
+  }
+  .checkout-pay:active {
+    transform: translate(5px, 5px);
+    transition-duration: .3s;
+  }
+</style>
 
 <div class="container mt-5 d-flex justify-content-center">
-    <div class="widget-account-form-card" style="width: 100%; padding: 3rem; align-items: flex-start;">
-        <h2 style="color: var(--main-color); margin-bottom: 1.5rem;">Secure Checkout</h2>
+    <div class="checkout-card">
+        <h2 class="checkout-section-title">Secure Checkout</h2>
 
         <form action="{% url 'checkout' %}" method="POST" class="w-100">
             {% csrf_token %}
@@ -157,59 +213,5 @@
 
   if (postcodeInput.value.trim()) lookupPostcode();
 </script>
-<style>
-
-/* From Uiverse.io by vinodjangid07 */ 
-.checkout-pay {
-  width: 130px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: black;
-  border: none;
-  color: white;
-  font-weight: 600;
-  gap: 8px;
-  cursor: pointer;
-  box-shadow: var(--shadow);
-  position: relative;
-  overflow: hidden;
-  transition-duration: .3s;
-  margin-top:2rem;
-}
-
-.svgIcon {
-  width: 16px;
-}
-
-.svgIcon path {
-  fill: white;
-}
-
-.checkout-pay::before {
-  width: 130px;
-  height: 130px;
-  position: absolute;
-  content: "";
-  background-color: white;
-  border-radius: 50%;
-  left: -100%;
-  top: 0;
-  transition-duration: .3s;
-  mix-blend-mode: difference;
-}
-
-.checkout-pay:hover::before {
-  transition-duration: .3s;
-  transform: translate(100%,-50%);
-  border-radius: 0;
-}
-
-.checkout-pay:active {
-  transform: translate(5px,5px);
-  transition-duration: .3s;
-}
-</style>
 {% endblock %}
 
