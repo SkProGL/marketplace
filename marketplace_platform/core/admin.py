@@ -5,8 +5,8 @@ from simple_history.admin import SimpleHistoryAdmin
 from import_export.admin import ImportExportModelAdmin
 from .models import (
     User, Product, Order, OrderProduct, StoryPost, 
-    Recipe, RecipeIngredients, Review, Payment, 
-    OrderPayment, OrderStatusHistory
+    Recipe, RecipeIngredients, Review, Payment,
+    OrderStatusHistory
 )
 # Register all models
 app_models = apps.get_app_config('core').get_models()

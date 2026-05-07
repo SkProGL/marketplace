@@ -416,7 +416,12 @@ def home_view(request):
         Prefetch('batches', queryset=in_stock_batches_qs, to_attr='in_stock_batches')
     ).annotate(
         total_stock=Sum('batches__stock'),
-        primary_image=Subquery(class_a_image.values('image')[:1]),
+        primary_image=Subquery(
+            ProductBatch.objects.filter(
+                product=OuterRef('pk'),
+                image__isnull=False
+            ).order_by('id').values('image')[:1]
+        ),
         avg_rating=Avg('review__rating'),
         review_count=Count('review'),
     ).filter(total_stock__gt=0)

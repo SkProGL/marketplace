@@ -180,6 +180,7 @@ class Product(models.Model):
     discount_expiry = models.DateTimeField(blank=True, null=True)
     discount_note = models.TextField(blank=True)
     image = models.ImageField(upload_to='item_images/', blank=True)
+    image_url = models.URLField(max_length=700,blank=True)
 
     @property
     def availability(self):
@@ -397,8 +398,7 @@ class Order(models.Model):
     delivery_postcode = models.CharField(max_length=20, blank=True)
     # Food miles - distance food travels from producer to customer
     food_miles = models.IntegerField(default=0)
-
-    last_generated = models.DateField(null=True, blank=True)
+    # last_generated=models.DateTimeField(null=True,blank=True)
 
     @property
     def calculated_total(self):
@@ -473,6 +473,7 @@ class OrderProduct(models.Model):
 
 class StoryPost(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title=models.CharField(max_length=128)
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE
@@ -564,23 +565,17 @@ class Payment(models.Model):
         User,
         on_delete=models.CASCADE
     )
-    orders = models.ManyToManyField("Order", blank=True)
+    #orders = models.ManyToManyField("Order", through="OrderPayment")
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE
+    )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
     # history = HistoricalRecords()
-
-class OrderPayment(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    payment = models.ForeignKey(Payment, on_delete=models.CASCADE)
-    class Meta:
-        unique_together = ("order", "payment")
-    date_posted=models.DateTimeField(auto_now_add=True)
-    # history = HistoricalRecords()
-
 
 class OrderStatusHistory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
