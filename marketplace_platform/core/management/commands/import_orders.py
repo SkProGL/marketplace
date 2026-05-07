@@ -5,7 +5,7 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
 from core.models import Order, ProductBatch, User, OrderProduct, Payment
-from core.module.location import get_coordinates, calculate_distance
+from core.utils import get_coordinates, calculate_distance, BRFN_LAT, BRFN_LON
 
 
 def to_decimal(value, default=0):
@@ -46,6 +46,9 @@ class Command(BaseCommand):
                 # for (i, row) in enumerate(reader):
                 # if i>=limit:
                 #     break
+            for (i, row) in enumerate(reader):
+                if i>=limit:
+                    break
                 try:
                     indexes = row["product_ids"].replace('"', '').split(",")
                     batches_for_order = [

@@ -14,7 +14,7 @@ from django.contrib.auth.forms import PasswordChangeForm
 from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe, Payment
 from core.forms import ComplaintForm, LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
-from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
+from core.utils import get_management_context, get_recurring_orders_context, handle_management_post, food_mile_session_builder, calculate_distance, get_producer_food_miles
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.db import transaction
@@ -112,21 +112,35 @@ def cart_contents(request):
     total_price = 0
     if cart:
         batches = ProductBatch.objects.select_related('product__producer').filter(id__in=cart.keys())
-        for batch in batches:
-            qty = cart.get(str(batch.id), 0)
-            subtotal = float(batch.price) * qty
-            total_price += subtotal
-            producer = batch.product.producer
-            cart_items_data.append({
-                'id': str(batch.id),
-                'name': batch.name,
-                'price': float(batch.price),
-                'quantity': qty,
-                'subtotal': round(subtotal, 2),
-                'image': batch.image.url if batch.image else None,
-                'producer': getattr(producer, 'organisation_name', None) or str(producer),
-                'producer_id': str(producer.id),
-            })
+    for batch in batches:
+        qty = cart.get(str(batch.id), 0)
+        subtotal = float(batch.price) * qty
+        total_price += subtotal
+
+        producer = batch.product.producer
+
+        food_miles = None
+        coords = request.session.get("user_coords")
+
+        if coords:
+            food_miles = get_producer_food_miles(
+                producer,
+                (coords["lat"], coords["lon"])
+            )
+
+        cart_items_data.append({
+            'id': str(batch.id),
+            'name': batch.name,
+            'price': float(batch.price),
+            'quantity': qty,
+            'subtotal': round(subtotal, 2),
+            'image': batch.image.url if batch.image else None,
+            'producer': getattr(producer, 'organisation_name', None) or str(producer),
+            'producer_id': str(producer.id),
+
+            # IMPORTANT
+            'food_miles': float(food_miles) if food_miles is not None else None,
+        })
     return JsonResponse({
         'total_items': sum(cart.values()),
         'total_price': round(total_price, 2),
@@ -270,9 +284,30 @@ def checkout(request):
     cart_items = []
 
     for pid, qty in cart.items():
-        batch = get_object_or_404(ProductBatch.objects.select_related('product__producer'), id=pid)
-        total_price += batch.price * qty
-        cart_items.append({'product': batch, 'quantity': qty})
+            batch = get_object_or_404(
+                ProductBatch.objects.select_related('product__producer'),
+                id=pid
+            )
+
+            subtotal = batch.price * qty
+            total_price += subtotal
+
+            # 👇 ADD THIS
+            producer = batch.product.producer
+            food_miles = None
+
+            if request.session.get("user_coords"):
+                coords = request.session["user_coords"]
+                food_miles = get_producer_food_miles(
+                    producer,
+                    (coords["lat"], coords["lon"])
+                )
+
+            cart_items.append({
+                'product': batch,
+                'quantity': qty,
+                'food_miles': food_miles,   # ✅ ADD THIS
+            })
 
     groups = defaultdict(list)
     for item in cart_items:
@@ -512,6 +547,37 @@ def home_view(request):
     for allergen in exclude_allergens:
         items = items.exclude(allergens__contains=[allergen])
 
+    min_miles = request.GET.get("min_miles")
+    max_miles = request.GET.get("max_miles")
+    customer_coords = request.session.get("user_coords")
+
+    min_m = Decimal(min_miles) if min_miles else None
+    max_m = Decimal(max_miles) if max_miles else None
+
+    filtered_items = []
+
+    for item in items:
+        if customer_coords:
+            miles = get_producer_food_miles(
+                item.producer,
+                (customer_coords["lat"], customer_coords["lon"])
+            )
+            item.food_miles = miles
+        else:
+            item.food_miles = None
+
+        # apply filter only if needed
+        if customer_coords and (min_miles or max_miles):
+            if item.food_miles is None:
+                continue
+            if min_m is not None and item.food_miles < min_m:
+                continue
+            if max_m is not None and item.food_miles > max_m:
+                continue
+
+        filtered_items.append(item)
+
+    items = filtered_items
     suggestion = None
     if q and not items.exists():
         all_names = list(Product.objects.values_list('name', flat=True))
@@ -519,8 +585,13 @@ def home_view(request):
         if matches:
             suggestion = matches[0]
 
+<<<<<<< Updated upstream
     total_count = items.count()
     paginator = Paginator(items, 24)
+=======
+    total_count = len(items)
+    paginator = Paginator(items, 12)
+>>>>>>> Stashed changes
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     items_list = list(page_obj)
@@ -589,7 +660,6 @@ def home_view(request):
                 'season': ri.recipe.season,
                 'producer': ri.recipe.user.organisation_name or ri.recipe.user.full_name or ri.recipe.user.email,
             })
-
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         data = [{
             'id': str(item.id),
@@ -606,6 +676,7 @@ def home_view(request):
             'organic_description': item.producer.organic_description,
             'avg_rating': round(item.avg_rating, 1) if item.avg_rating else None,
             'review_count': item.review_count,
+            'food_miles': item.food_miles
         } for item in items_list]
         return JsonResponse({
             'items': data,
@@ -694,6 +765,7 @@ def login_view(request):
 
             if user is not None:
                 login(request, user)
+                request.session.update(food_mile_session_builder(user))
                 if not remember_me:
                     request.session.set_expiry(0)
                 else:
