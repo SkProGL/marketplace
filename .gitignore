@@ -2,7 +2,7 @@
 .venv
 __pycache__/
 # Created by https://www.gitignore.io
-
+marketplace_platform/media/CACHE/images/* 
 ### OSX ###
 .DS_Store
 .AppleDouble

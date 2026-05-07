@@ -520,7 +520,7 @@ def home_view(request):
             suggestion = matches[0]
 
     total_count = items.count()
-    paginator = Paginator(items, 12)
+    paginator = Paginator(items, 24)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     items_list = list(page_obj)
@@ -597,6 +597,7 @@ def home_view(request):
             'price': str(item.price),
             'price_display': item.price_display,
             'image': f'/media/{item.primary_image}' if item.primary_image else None,
+            'thumbnail': item.thumbnail.url if item.image else None,
             'allergens': item.allergens,
             'description': item.description,
             'category': item.category,
