@@ -19,7 +19,9 @@ class Command(BaseCommand):
                 try:
                     name = row.get("name")
                     producer_id = random.choice(producer_ids)
-
+                    print("RAW IMAGE FIELD")
+                    print("images:",row.get("images"))
+                    print("images:",row.get("img_path"))
                     # One Product per unique name; price is the Class A base price
                     product, _ = Product.objects.get_or_create(
                         name=name,
@@ -29,16 +31,18 @@ class Command(BaseCommand):
                             'description': row["description"],
                             'price': Decimal(row["price"]),
                             'unit': row["unit"],
-                            'food_miles': int(row["food_miles"]),
-                            'stock': int(row["stock"]),
                             'stock_alert_threshold': int(row["stock_alert_threshold"] or 0),
                             'allergens': [],
                             'organic': row["organic"] == "True",
+                            "image": f"item_images/{row['img_path']}",
                             "image_url": row["images"],
-                            "image": f"item_images/{row['img_path']}"
                         }
                     )
-
+                    print("SAVED PRODUCT IMAGE FIELDS:")
+                    print("image:", product.image)
+                    print("image name:", product.image.name if product.image else None)
+                    print("image url:", getattr(product.image, "url", None))
+                    print("image_url:", product.image_url)
                     # Each CSV row creates a Class A batch (price derived from product)
                     ProductBatch.objects.create(
                         product=product,
@@ -50,6 +54,7 @@ class Command(BaseCommand):
                         best_before=row["best_before"],
                         surplus=row["surplus"] == "True",
                         discount_percentage=to_decimal(row["discount_percentage"]),
+                        image=f"item_images/{row['img_path']}"
                     )
                     print(f"Batch created for: {name}")
                 except Exception as e:

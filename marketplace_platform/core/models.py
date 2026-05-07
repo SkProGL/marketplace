@@ -180,6 +180,7 @@ class Product(models.Model):
     discount_expiry = models.DateTimeField(blank=True, null=True)
     discount_note = models.TextField(blank=True)
     image = models.ImageField(upload_to='item_images/', blank=True)
+    image_url = models.URLField(max_length=700,blank=True)
 
     @property
     def availability(self):
@@ -397,7 +398,6 @@ class Order(models.Model):
     delivery_postcode = models.CharField(max_length=20, blank=True)
     # Food miles - distance food travels from producer to customer
     food_miles = models.IntegerField(default=0)
-
     # last_generated=models.DateTimeField(null=True,blank=True)
 
     @property
@@ -452,7 +452,6 @@ class OrderProduct(models.Model):
     producer_order = models.ForeignKey(ProducerOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name='items')
     batch = models.ForeignKey(ProductBatch, on_delete=models.CASCADE)
     numPurchased = models.IntegerField(verbose_name="# Purchased")
-    food_miles = models.FloatField()
     price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Price at Purchase")
 
     class Meta:
@@ -577,16 +576,6 @@ class Payment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
     # history = HistoricalRecords()
-
-class OrderPayment(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    payment = models.ForeignKey(Payment, on_delete=models.CASCADE)
-    class Meta:
-        unique_together = ("order", "payment")
-    date_posted=models.DateTimeField(auto_now_add=True)
-    # history = HistoricalRecords()
-
 
 class OrderStatusHistory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

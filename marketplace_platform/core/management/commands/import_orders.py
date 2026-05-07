@@ -46,10 +46,16 @@ class Command(BaseCommand):
                     cus_lat, cus_lon=get_coordinates(customer.postcode)
                     order_date=parse_datetime(row["order_date"])
                     total_food_miles=0
-
+                    
+                    producer_totals={}
                     for batch in batches_for_order:
-                        producer_postcode=(batch.product.producer.postcode)
+                        producer=batch.product.producer
+                        producer_totals.setdefault(producer.id,Decimal("0.00"))
+                        producer_totals[producer.id]+=batch.price
+
+                        producer_postcode=producer.postcode
                         prod_lat, prod_lon = get_cached_coords(producer_postcode)
+
                         distance1 = calculate_distance(prod_lat,prod_lon,brfn_lat,brfn_lon)
                         distance2 = calculate_distance(brfn_lat,brfn_lon,cus_lat,cus_lon)
                         total_food_miles+=(distance1+distance2)
@@ -74,7 +80,22 @@ class Command(BaseCommand):
                         for b in batches_for_order
                     ]
                     OrderProduct.objects.bulk_create(order_products, ignore_conflicts=True)
+
+                    payments=[]
+                    for producer_id, amount in producer_totals.items():
+                        payments.append(
+                            Payment(
+                                producer_id=producer_id,
+                                order=order,
+                                amount=amount,
+                                status=Payment.Status.PROCESSED,
+                                created_at=order_date,
+                                processed_at=order_date+timedelta(hours=1)
+                            )
+                        )
+                    Payment.objects.bulk_create(payments)
                     print(f"Created order {order.id}")
+                    
                 except Exception as e:
                     print(f"Error with row {row}: {e}")
         print("All orders done.")
