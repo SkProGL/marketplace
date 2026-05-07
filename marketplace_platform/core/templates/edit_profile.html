@@ -5,9 +5,17 @@
 
 <h2>Edit Profile</h2>
 
-<form method="POST">
+<form method="POST" enctype="multipart/form-data">
 {% csrf_token %}
 <input type="hidden" name="update_profile" value="1">
+
+{% if user.profile_image %}
+<p>
+  <strong>Current photo:</strong><br>
+  <img src="{{ user.profile_image.url }}" alt="Profile photo"
+       style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #dee2e6;margin-top:4px;">
+</p>
+{% endif %}
 
 {{ profile_form.as_p }}
 

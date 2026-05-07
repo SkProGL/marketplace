@@ -74,28 +74,48 @@ class SignupForm(forms.ModelForm):
             user.save()
         return user
 class ProfileEditForm(forms.ModelForm):
+    # Fields shown per category — all are optional, purely display/contact info
+    CATEGORY_FIELDS = {
+        'Customer':        ['full_name', 'phone', 'address', 'postcode', 'profile_image'],
+        'Producer':        ['full_name', 'phone', 'address', 'postcode', 'organisation_name', 'organic_description', 'profile_image'],
+        'Restaurant':      ['full_name', 'phone', 'address', 'postcode', 'organisation_name', 'profile_image'],
+        'Community group': ['full_name', 'phone', 'address', 'postcode', 'organisation_name', 'charity_status', 'profile_image'],
+    }
+
     class Meta:
         model = User
         fields = [
-            "full_name",
-            "phone",
-            "address",
-            "postcode",
-            "organisation_name",
-            "organic_description",
-            "charity_status",
-            "profile_image",
+            "full_name", "phone", "address", "postcode",
+            "organisation_name", "organic_description", "charity_status", "profile_image",
         ]
         widgets = {
-            "full_name": forms.TextInput(attrs={"class": "form-control"}),
-            "phone": forms.TextInput(attrs={"class": "form-control"}),
-            "address": forms.TextInput(attrs={"class": "form-control"}),
-            "postcode": forms.TextInput(attrs={"class": "form-control"}),
-            "organisation_name": forms.TextInput(attrs={"class": "form-control"}),
+            "full_name":           forms.TextInput(attrs={"class": "form-control"}),
+            "phone":               forms.TextInput(attrs={"class": "form-control"}),
+            "address":             forms.TextInput(attrs={"class": "form-control"}),
+            "postcode":            forms.TextInput(attrs={"class": "form-control"}),
+            "organisation_name":   forms.TextInput(attrs={"class": "form-control"}),
             "organic_description": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
-            "charity_status": forms.TextInput(attrs={"class": "form-control"}),
-            "profile_image": forms.ClearableFileInput(attrs={"class": "form-control"}),
+            "charity_status":      forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Registered charity, Educational institution…"}),
+            "profile_image":       forms.ClearableFileInput(attrs={"class": "form-control"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        category = kwargs.pop('category', None)
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.required = False
+        allowed = self.CATEGORY_FIELDS.get(category)
+        if allowed:
+            for field in list(self.fields):
+                if field not in allowed:
+                    del self.fields[field]
+        org_labels = {
+            'Producer':        'Farm / Producer name',
+            'Restaurant':      'Restaurant name',
+            'Community group': 'Organisation name',
+        }
+        if 'organisation_name' in self.fields and category in org_labels:
+            self.fields['organisation_name'].label = org_labels[category]
 
 class LoginForm(forms.Form):
     email = forms.EmailField(

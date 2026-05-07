@@ -934,8 +934,9 @@ def profile_view(request):
 
 @login_required
 def edit_profile(request):
+    category = getattr(request.user, 'category', None)
     if request.method == "POST":
-        profile_form = ProfileEditForm(request.POST, request.FILES, instance=request.user)
+        profile_form = ProfileEditForm(request.POST, request.FILES, instance=request.user, category=category)
         password_form = PasswordChangeForm(request.user, request.POST)
 
         if "update_profile" in request.POST:
@@ -952,7 +953,7 @@ def edit_profile(request):
                 return redirect("profile")
 
     else:
-        profile_form = ProfileEditForm(instance=request.user)
+        profile_form = ProfileEditForm(instance=request.user, category=category)
         password_form = PasswordChangeForm(request.user)
 
     return render(request, "edit_profile.html", {

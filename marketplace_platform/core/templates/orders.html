@@ -46,20 +46,22 @@
                         <div class="oh-item-name">{{ item.batch.product.name }} × {{ item.numPurchased }}</div>
                         <div class="oh-item-farm">{{ item.batch.product.producer.name }}</div>
                     </div>
-                    <span class="oh-item-price">£{{ item.batch.price }}</span>
-                {% if order.order_status == "DELIVERED" %}
-                    {% with item.batch.product.review_set.all as product_reviews %}
-                    {% for r in product_reviews %}{% if r.user == request.user %}
-                    <a href="{% url 'edit_review' r.id %}" class="oh-btn-outline" style="font-size:0.78rem;">Edit Review</a>
-                    <form method="POST" action="{% url 'delete_review' r.id %}" style="display:inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="oh-btn-outline" style="font-size:0.78rem; color:#dc3545; border-color:#dc3545;" onclick="return confirm('Delete this review?')">Delete</button>
-                    </form>
-                    {% endif %}{% empty %}
-                    <a href="{% url 'add_review' item.batch.product.id %}" class="oh-btn-outline" style="font-size:0.78rem;">Write Review</a>
-                    {% endfor %}
-                    {% endwith %}
-                {% endif %}
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <span class="oh-item-price">£{{ item.batch.price }}</span>
+                        {% if order.order_status == "DELIVERED" %}
+                        {% with item.batch.product.review_set.all as product_reviews %}
+                        {% for r in product_reviews %}{% if r.user == request.user %}
+                        <a href="{% url 'edit_review' r.id %}" class="oh-btn-outline" style="font-size:0.78rem;">Edit Review</a>
+                        <form method="POST" action="{% url 'delete_review' r.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger" style="font-size:0.78rem;" onclick="return confirm('Delete this review?')">Delete</button>
+                        </form>
+                        {% endif %}{% empty %}
+                        <a href="{% url 'add_review' item.batch.product.id %}" class="oh-btn-outline" style="font-size:0.78rem;">Write Review</a>
+                        {% endfor %}
+                        {% endwith %}
+                        {% endif %}
+                    </div>
                 </div>
                 {% endfor %}
                 <div class="oh-actions">
