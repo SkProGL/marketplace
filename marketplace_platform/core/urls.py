@@ -28,6 +28,7 @@ urlpatterns = [
     path('cart/update/<uuid:product_id>/', views.update_cart_ajax, name='update_cart_ajax'),
     path('cart/clear/', views.clear_cart, name='clear_cart'),
     path('checkout/', views.checkout, name='checkout'),
+    path('loading/', views.loading, name='loading'),
     path('notifications/clear/', views.clear_notifications, name='clear_notifications'),
     # Management URLs
     path('management/', views.management_view, name="management"),

@@ -245,6 +245,10 @@ def reorder(request, order_id):
     return redirect('checkout')
 
 @login_required
+def loading(request):
+    return render(request, 'loading.html')
+
+@login_required
 def checkout(request):
     cart = request.session.get('cart', {})
 
@@ -295,7 +299,7 @@ def checkout(request):
             request.session['cart'] = {}
 
             messages.success(request, "Order placed successfully!")
-            return redirect('orders')
+            return redirect('loading')
     else:
         form = CheckoutForm()
 
