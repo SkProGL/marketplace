@@ -144,82 +144,103 @@
 
 <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-xl">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <div>
-          <h5 class="modal-title mb-1">
+    <div class="modal-content pm-content">
+      <div class="pm-header">
+        <div class="pm-title-area">
+          <h5 class="pm-name">
             <span id="modalName"></span>
-            <span id="modalOrganicInline" class="badge bg-success ms-2" style="display:none;font-size:0.85rem;vertical-align:middle;">Certified organic</span>
+            <span id="modalOrganicInline" class="pm-organic-tag" style="display:none;">Certified organic</span>
           </h5>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <small class="text-muted" id="modalProducer"></small>
-            <button id="modalCertBtn" class="btn btn-link p-0 text-success" style="font-size:0.78rem;display:none;" data-bs-toggle="modal" data-bs-target="#certModal">View organic certification &#8250;</button>
+          <div class="pm-subtitle">
+            <span id="modalProducer" class="pm-producer"></span>
+            <button id="modalCertBtn" class="pm-cert-btn" style="display:none;" data-bs-toggle="modal" data-bs-target="#certModal">View organic certification &#8250;</button>
           </div>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="pm-close" data-bs-dismiss="modal">&#x2715;</button>
       </div>
 
-      <div class="modal-body pt-0">
-        <div class="row g-3 align-items-start">
-          <div class="col-5" style="height:340px;">
-            <img id="modalImage" src="" alt="" class="img-fluid rounded" style="object-fit:cover;height:100%;width:100%;display:block;">
+      <div class="pm-body">
+        <div class="pm-layout">
+          <div class="pm-image-wrap">
+            <img id="modalImage" src="" alt="" class="pm-image">
           </div>
-          <div class="col-7">
-            <div class="mb-2">
-              <strong>Available classes</strong>
-              <select id="modalClassSelect" class="form-select form-select-sm mt-1">
+          <div class="pm-details">
+            <div class="pm-class-area">
+              <label class="pm-label">Available classes</label>
+              <select id="modalClassSelect" class="pm-class-select">
                 <option value="" disabled selected>Select class&#8230;</option>
               </select>
             </div>
-            <p class="mb-1"><strong>Category:</strong> <span id="modalCategory"></span></p>
-            <p class="mb-1"><strong>Availability:</strong> <span id="modalAvailability"></span></p>
-            <div id="modalSeasonRow" class="mb-1" style="display:none">
-              <strong>Season:</strong> <span id="modalSeason"></span>
-            </div>
-            <p class="mb-1"><strong id="modalStockLabel">Total in stock:</strong> <span id="modalTotalStock"></span> <span id="modalStockUnit"></span></p>
-            <p class="mt-2 mb-1"><strong>Description</strong></p>
-            <p id="modalDescription" class="text-muted small"></p>
-            <div id="modalAllergenRow" class="mt-1">
-              <strong>Allergens:</strong>
-              <span id="modalAllergens" class="text-danger small"></span>
-              <span id="modalNoAllergens" class="text-success small" style="display:none;">No common allergens</span>
-            </div>
-            <div id="modalBatchInfo" style="visibility:hidden">
-              <hr class="my-2">
-              <p class="mb-1"><strong>Price:</strong> <span id="modalPrice"></span></p>
-              <span id="modalBestBefore" style="display:none;"></span>
-              <span id="modalSurplusBadge" class="badge bg-warning text-dark" style="display:none">Surplus</span>
-              <div id="modalDiscountRow" class="mb-1 text-danger" style="display:none">
-                <strong>Discount:</strong> <span id="modalDiscount"></span>% off
+
+            <div class="pm-info-grid">
+              <div class="pm-info-row">
+                <span class="pm-info-key">Category</span>
+                <span class="pm-info-val" id="modalCategory"></span>
+              </div>
+              <div class="pm-info-row">
+                <span class="pm-info-key">Availability</span>
+                <span class="pm-info-val" id="modalAvailability"></span>
+              </div>
+              <div id="modalSeasonRow" class="pm-info-row" style="display:none">
+                <span class="pm-info-key">Season</span>
+                <span class="pm-info-val" id="modalSeason"></span>
+              </div>
+              <div class="pm-info-row">
+                <span class="pm-info-key" id="modalStockLabel">Total in stock</span>
+                <span class="pm-info-val"><span id="modalTotalStock"></span>&nbsp;<span id="modalStockUnit"></span></span>
               </div>
             </div>
-            <div id="modalCartControls" class="mt-3" style="display:flex;flex-direction:column;gap:8px;">
+
+            <div class="pm-desc-area">
+              <label class="pm-label">Description</label>
+              <p id="modalDescription" class="pm-desc"></p>
+            </div>
+
+            <div id="modalAllergenRow" class="pm-allergen-row">
+              <span class="pm-info-key">Allergens</span>
+              <span id="modalAllergens" class="pm-allergens-list"></span>
+              <span id="modalNoAllergens" class="pm-no-allergens" style="display:none;">No common allergens</span>
+            </div>
+
+            <div id="modalBatchInfo" class="pm-batch-info" style="visibility:hidden">
+              <div class="pm-info-row">
+                <span class="pm-info-key">Price</span>
+                <span class="pm-info-val pm-price" id="modalPrice"></span>
+              </div>
+              <span id="modalBestBefore" style="display:none;font-size:0.8rem;color:#888;"></span>
+              <div class="pm-badges">
+                <span id="modalSurplusBadge" class="pm-surplus-badge" style="display:none">Surplus</span>
+                <span id="modalDiscountRow" class="pm-discount-badge" style="display:none"><span id="modalDiscount"></span>% off</span>
+              </div>
+            </div>
+
+            <div id="modalCartControls" class="pm-cart-controls">
               <div id="modalCartStepper" class="cart-stepper" style="display:none">
                 <button class="widget-stepper-btn" id="modalDecBtn">&#8722;</button>
                 <span class="stepper-qty" id="modalQty">1</span>
                 <button class="widget-stepper-btn" id="modalIncBtn">+</button>
-                <span id="modalCartTotal" style="margin-left:8px;font-weight:600;"></span>
+                <span id="modalCartTotal" class="pm-cart-total"></span>
               </div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <button id="modalAddBtn" class="add-to-cart-btn">Add</button>
-                <button id="modalNotifyBtn" class="btn btn-outline-secondary btn-sm" style="display:none">Notify me when available</button>
+              <div class="pm-add-row">
+                <button id="modalAddBtn" class="add-to-cart-btn pm-add-btn">Add</button>
+                <button id="modalNotifyBtn" class="pm-notify-btn" style="display:none">Notify me when available</button>
               </div>
             </div>
           </div>
         </div>
 
-        <div id="modalReviewsSection" style="display:none;margin-top:1.5rem;border-top:1px solid #dee2e6;padding-top:1rem;">
-          <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:1rem;">
-            <h6 class="fw-bold mb-0">Customer reviews</h6>
-            <small id="modalRating" style="color:#888;display:none;">&#11088; <span id="modalRatingValue"></span>/5 (<span id="modalReviewCount"></span> reviews)</small>
+        <div id="modalReviewsSection" class="pm-reviews-section" style="display:none">
+          <div class="pm-reviews-header">
+            <h6 class="pm-reviews-title">Customer reviews</h6>
+            <span id="modalRating" class="pm-reviews-rating" style="display:none;">&#11088; <span id="modalRatingValue"></span>/5 (<span id="modalReviewCount"></span> reviews)</span>
           </div>
           <div id="modalReviewsList"></div>
           <div id="reviewPagination"></div>
         </div>
 
-        <div id="modalRecipesSection" style="display:none;margin-top:1.5rem;border-top:1px solid #dee2e6;padding-top:1rem;">
-          <h6 class="fw-bold mb-2" style="color:#1a7a4a;">Recipe suggestions</h6>
-          <div id="modalRecipesList" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        <div id="modalRecipesSection" class="pm-recipes-section" style="display:none">
+          <h6 class="pm-recipes-title">Recipe suggestions</h6>
+          <div id="modalRecipesList" class="pm-recipes-list"></div>
         </div>
       </div>
     </div>
@@ -228,14 +249,16 @@
 
 <div class="modal fade" id="certModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <h6 class="modal-title text-success fw-bold">Organic certification</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-content pm-content">
+      <div class="pm-header">
+        <div class="pm-title-area">
+          <h5 class="pm-name" style="color:var(--primary);font-size:1.05rem;">Organic certification</h5>
+          <span id="certProducerName" class="pm-producer"></span>
+        </div>
+        <button type="button" class="pm-close" data-bs-dismiss="modal">&#x2715;</button>
       </div>
-      <div class="modal-body pt-2">
-        <p class="text-muted small mb-2" id="certProducerName"></p>
-        <p id="certText" style="font-size:0.9rem;white-space:pre-wrap;color:#2d6a2d;background:#f0faf0;border-radius:8px;padding:1rem;margin:0;"></p>
+      <div style="padding:0 24px 24px;">
+        <p id="certText" class="pm-cert-text"></p>
       </div>
     </div>
   </div>
@@ -385,11 +408,10 @@
       recipesSection.style.display = '';
       const seasonColour = { Spring: '#2e7d32', Summer: '#f57f17', Autumn: '#bf360c', Winter: '#283593' };
       recipesList.innerHTML = recipes.map(r => `
-        <a href="/community/recipe/${r.id}/"
-           style="display:inline-flex;flex-direction:column;gap:2px;padding:8px 12px;border:1.5px solid #c8e6c9;border-radius:8px;text-decoration:none;background:#f9fdf9;min-width:130px;">
-          <span style="font-size:0.8rem;font-weight:600;color:#1a7a4a;">${r.title}</span>
-          <span style="font-size:0.72rem;color:${seasonColour[r.season] || '#666'};">${r.season}</span>
-          <span style="font-size:0.7rem;color:#888;">${r.producer}</span>
+        <a href="/community/recipe/${r.id}/" class="pm-recipe-card">
+          <span class="pm-recipe-title">${r.title}</span>
+          <span class="pm-recipe-season" style="color:${seasonColour[r.season] || '#666'};">${r.season}</span>
+          <span class="pm-recipe-producer">${r.producer}</span>
         </a>
       `).join('');
     } else {
@@ -756,22 +778,22 @@
     const slice = currentReviews.slice(start, start + REVIEWS_PER_PAGE);
     const list  = document.getElementById('modalReviewsList');
     list.innerHTML = slice.map(r => `
-      <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #f0f0f0;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-          <span style="color:#f5a623;font-size:1rem;">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
-          <strong style="font-size:0.9rem;">${r.title}</strong>
-          <span style="font-size:0.75rem;color:#888;margin-left:auto;">${r.author} · ${r.date}</span>
+      <div class="pm-review-card">
+        <div class="pm-review-top">
+          <span class="pm-review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+          <strong class="pm-review-title">${r.title}</strong>
+          <span class="pm-review-meta">${r.author} &middot; ${r.date}</span>
         </div>
-        <p style="font-size:0.85rem;color:#555;margin:0;">${r.content}</p>
+        <p class="pm-review-body">${r.content}</p>
       </div>`).join('');
 
     const totalPages = Math.ceil(currentReviews.length / REVIEWS_PER_PAGE);
     let pagHtml = '';
     if (totalPages > 1) {
-      pagHtml = `<div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:8px;">
-        <button class="page-btn" onclick="changeReviewPage(-1)" ${reviewPage === 1 ? 'disabled' : ''}>← Prev</button>
-        <span style="font-size:0.82rem;color:#888;">${reviewPage} / ${totalPages}</span>
-        <button class="page-btn" onclick="changeReviewPage(1)" ${reviewPage === totalPages ? 'disabled' : ''}>Next →</button>
+      pagHtml = `<div class="pm-review-pagination">
+        <button class="page-btn" onclick="changeReviewPage(-1)" ${reviewPage === 1 ? 'disabled' : ''}>&#8592; Prev</button>
+        <span class="page-info">${reviewPage} / ${totalPages}</span>
+        <button class="page-btn" onclick="changeReviewPage(1)" ${reviewPage === totalPages ? 'disabled' : ''}>Next &#8594;</button>
       </div>`;
     }
     document.getElementById('reviewPagination').innerHTML = pagHtml;
