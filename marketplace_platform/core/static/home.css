@@ -267,6 +267,19 @@
   min-width: 20px;
   text-align: center;
 }
+input.stepper-qty {
+  width: 52px;
+  border: none;
+  outline: none;
+  background: transparent;
+  -moz-appearance: textfield;
+  padding: 0;
+}
+input.stepper-qty::-webkit-outer-spin-button,
+input.stepper-qty::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 .allergens svg {
   background: none;
   margin-bottom: 2px;

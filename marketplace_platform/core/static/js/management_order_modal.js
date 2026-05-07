@@ -55,6 +55,29 @@ function buildReceiptTable(receipt, canAdvance, showProducerCol) {
     return html;
 }
 
+function buildProducerOrdersSection(producerOrders) {
+    if (!producerOrders || !producerOrders.length) return '';
+    return producerOrders.map((po, i) => {
+        const advBtn = po.advance_url
+            ? `<div class="mt-2">
+                <textarea class="form-control form-control-sm mb-1" id="po-note-${i}" rows="2" placeholder="Optional note..."></textarea>
+                <button class="btn btn-sm btn-outline-success w-100 po-advance-btn"
+                    data-url="${po.advance_url}" data-note-id="po-note-${i}">
+                    Advance to ${po.next_status}
+                </button>
+               </div>`
+            : '';
+        return `<div class="border rounded p-2 mb-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <strong style="font-size:.85rem">${po.producer}</strong>
+                ${pill(po.status, true)}
+                <span class="text-muted" style="font-size:.8rem">Delivery: ${po.delivery_date || 'N/A'}</span>
+            </div>
+            ${advBtn}
+        </div>`;
+    }).join('');
+}
+
 function buildHistoryTimeline(history) {
     if (!history || !history.length) return '<p class="text-muted" style="font-size:.82rem">No history yet.</p>';
     return history.map(h => `
@@ -76,6 +99,8 @@ buttons.forEach(button => {
         document.getElementById('receipt-table').innerHTML = '<p class="text-muted p-3">Loading...</p>';
         document.getElementById('error').innerText = '';
         document.getElementById('advance-section').classList.add('d-none');
+        document.getElementById('producer-orders-section').style.display = 'none';
+        document.getElementById('producer-orders-list').innerHTML = '';
 
         fetch(`/management/order/${orderId}/order_summary/`)
             .then(r => r.json())
@@ -114,22 +139,46 @@ buttons.forEach(button => {
                     });
                 }
 
+                const csrf = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+                const canAdvance = data.producer_orders
+                    ? data.producer_orders.some(po => po.advance_url)
+                    : !!data.advance_url;
+
                 // Receipt and history
                 document.getElementById('receipt-table').innerHTML =
-                    buildReceiptTable(data.receipt, !!data.advance_url, data.show_producer_col);
+                    buildReceiptTable(data.receipt, canAdvance, data.show_producer_col);
                 document.getElementById('status-history').innerHTML =
                     buildHistoryTimeline(data.status_history);
 
-                // Advance section
+                // Embedded producer orders section (superuser only)
+                const poSection = document.getElementById('producer-orders-section');
+                const poList = document.getElementById('producer-orders-list');
+                if (data.producer_orders && data.producer_orders.length) {
+                    poList.innerHTML = buildProducerOrdersSection(data.producer_orders);
+                    poSection.style.display = '';
+                    poList.querySelectorAll('.po-advance-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const note = document.getElementById(btn.dataset.noteId).value;
+                            fetch(btn.dataset.url, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: new URLSearchParams({ csrfmiddlewaretoken: csrf, note }),
+                            }).then(() => { modal.hide(); window.location.reload(); });
+                        });
+                    });
+                } else {
+                    poSection.style.display = 'none';
+                }
+
+                // Single advance section (producer only)
                 const advSection = document.getElementById('advance-section');
-                if (data.advance_url && data.next_status) {
+                if (!data.producer_orders && data.advance_url && data.next_status) {
                     advSection.classList.remove('d-none');
                     document.getElementById('advance-label').innerText = `Advance to ${data.next_status}`;
                     const advBtn = document.getElementById('advance-btn');
                     advBtn.innerText = `Advance to ${data.next_status}`;
                     const fresh = advBtn.cloneNode(true);
                     advBtn.parentNode.replaceChild(fresh, advBtn);
-                    const csrf = document.querySelector('[name="csrfmiddlewaretoken"]').value;
                     fresh.addEventListener('click', () => {
                         const note = document.getElementById('advance-note').value;
                         fetch(data.advance_url, {
@@ -138,6 +187,8 @@ buttons.forEach(button => {
                             body: new URLSearchParams({ csrfmiddlewaretoken: csrf, note }),
                         }).then(() => { modal.hide(); window.location.reload(); });
                     });
+                } else if (data.producer_orders) {
+                    advSection.classList.add('d-none');
                 }
             });
     });

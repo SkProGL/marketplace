@@ -1,5 +1,5 @@
 
-from core.utils import get_low_stock_products, get_pending_orders
+from core.utils import get_low_stock_products, get_pending_orders, get_seasonal_coming_soon_products
 from .models import OrderProduct, OrderStatusHistory, ProductBatch, ProducerOrder
 
 
@@ -45,6 +45,18 @@ def navbar_alerts(request):
                 "message_status": ", ".join(names) + suffix,
                 "link_url": '/management/?model=Order',
                 "link_label": "View orders",
+            })
+
+    if category == 'Producer':
+        for product in get_seasonal_coming_soon_products(request.user):
+            alerts.append({
+                "key": f"seasonal_{product.id}",
+                "icon": "calendar2-event-fill",
+                "colour": "info",
+                "message": f"{product.name} season starts next month",
+                "message_status": f"Goes live from {product.seasonStart} — check your stock",
+                "link_url": '/management/?model=Product',
+                "link_label": "Review products",
             })
 
     if category == 'Customer':
