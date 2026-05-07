@@ -17,6 +17,7 @@
   </div>
 
   <div class="filters home-filter-row">
+    <span class="home-allergen-label" stlye="align-content:center">Include categories:</span>
     <input type="checkbox" id="fruit" name="category" value="Fruit"
            {% if "Fruit" in selected_categories %}checked{% endif %}>
     <label for="fruit">Fruits</label>
@@ -48,28 +49,21 @@
            {% if organic %}checked{% endif %}>
     <label for="organic">Organic</label>
 
-    <div class="allergen-filter-wrap" style="margin:0;">
-      <button type="button" class="allergen-filter-toggle" id="allergenToggle" onclick="toggleAllergenPanel()">
-        Allergens
-        {% if exclude_allergens %}<span class="allergen-active-count">{{ exclude_allergens|length }}</span>{% endif %}
-        <span id="allergenArrow" style="margin-left:4px;transition:transform 0.2s;">&#9662;</span>
-      </button>
-      <div id="allergenPanel" style="display:none;">
-        <p class="allergen-filter-hint">Products containing the selected allergens will be hidden.</p>
-        <div class="filters">
-          {% for allergen in allergen_list %}
-            <input type="checkbox" name="exclude_allergen" value="{{ allergen }}"
-                   id="exc-{{ allergen }}"
-                   {% if allergen in exclude_allergens %}checked{% endif %}>
-            <label for="exc-{{ allergen }}" class="allergen-label">{{ allergen }}</label>
-          {% endfor %}
-        </div>
-      </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding-top:4px;border-top:1px solid #f0f0f0;">
+    <div class="filters" style="margin:0;flex:1;">
+      <span class="home-allergen-label" style="align-content:center">Exclude allergens:</span>
+      {% for allergen in allergen_list %}
+        <input type="checkbox" name="exclude_allergen" value="{{ allergen }}"
+               id="exc-{{ allergen }}"
+               {% if allergen in exclude_allergens %}checked{% endif %}>
+        <label for="exc-{{ allergen }}" class="allergen-label">{{ allergen }}</label>
+      {% endfor %}
     </div>
+    {% include "components/widget-food-miles.html" %}
   </div>
 </form>
 
-{% include "components/widget-food-miles.html" %}
 
 <div class="home-results">
   <b>Found {{ total_count }} matches</b>
@@ -517,6 +511,7 @@
     const effectiveCap = currentBatchMaxQty !== null
       ? Math.min(currentBatchStock, currentBatchMaxQty)
       : currentBatchStock;
+  
     document.getElementById('modalQty').textContent = localQty;
     document.getElementById('modalCartTotal').textContent = localQty > 0
       ? '£' + (localQty * currentItemPrice).toFixed(2) + ', ' + localQty + currentBatchUnit : '';
@@ -606,14 +601,14 @@
   });
 
   function updateCardDiscountBadge(card) {
-    const batches    = batchData[card.dataset.productId] || [];
-    const discounted = batches.filter(b => b.surplus && parseFloat(b.discount) > 0);
+    const batches       = batchData[card.dataset.productId] || [];
+    const surplusBatches = batches.filter(b => b.surplus);
     card.querySelectorAll('.card-corner-ribbon').forEach(el => el.remove());
-    if (discounted.length > 0) {
-      const maxDiscount = Math.max(...discounted.map(b => parseFloat(b.discount)));
+    if (surplusBatches.length > 0) {
+      const maxDiscount = Math.max(...surplusBatches.map(b => parseFloat(b.discount) || 0));
       const ribbon = document.createElement('div');
       ribbon.className = 'card-corner-ribbon';
-      ribbon.textContent = `${maxDiscount}% OFF`;
+      ribbon.textContent = maxDiscount > 0 ? `${maxDiscount}% OFF` : 'Surplus';
       card.querySelector('.image').appendChild(ribbon);
     }
   }
@@ -644,19 +639,6 @@
   document.querySelectorAll('.filters input[type="checkbox"]').forEach(cb => {
     cb.addEventListener('change', () => fetchResults(true));
   });
-
-  function toggleAllergenPanel() {
-    const panel = document.getElementById('allergenPanel');
-    const wrap  = panel.closest('.allergen-filter-wrap');
-    const arrow = document.getElementById('allergenArrow');
-    const open  = panel.style.display === 'none';
-    panel.style.display   = open ? '' : 'none';
-    arrow.style.transform = open ? 'rotate(180deg)' : '';
-    wrap.classList.toggle('open', open);
-  }
-  if (document.querySelectorAll('input[name="exclude_allergen"]:checked').length > 0) {
-    toggleAllergenPanel();
-  }
 
   const offerBtn = document.querySelector('.widget-offer-btn');
   if (offerBtn) {

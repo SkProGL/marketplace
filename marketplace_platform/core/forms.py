@@ -136,16 +136,28 @@ class CheckoutForm(forms.Form):
         max_length=20,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. SW1A 1AA'})
     )
+    delivery_date = forms.DateField(
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+
+    def clean_delivery_date(self):
+        delivery_date = self.cleaned_data.get('delivery_date')
+        if delivery_date and delivery_date < date.today() + timedelta(days=2):
+            raise forms.ValidationError("Delivery must be at least 48 hours from now.")
+        return delivery_date
     
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
         fields = [
             'name', 'category', 'description', 'price',
-            'unit', 'all_year', 'seasonStart', 'seasonEnd',
-            'stock_alert_threshold',
+            'unit', 'seasonStart', 'seasonEnd',
+            'best_before', 'stock_alert_threshold',
             'allergens', 'organic', 'surplus', 'discount_percentage',
-            'discount_expiry', 'discount_note', 'image'
+            'discount_expiry', 'discount_note', 'image', 'image_url'
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),

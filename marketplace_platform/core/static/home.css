@@ -6,9 +6,9 @@
   --row-gap: 1.5rem;
 }
 
-.home-header {
+/* .home-header {
   padding: 32px 0 8px;
-}
+} */
 .home-header h1 {
   font-size: 1.8rem;
   font-weight: 600;
@@ -21,8 +21,22 @@
 
 
 .home-filter-row {
-  margin: 8px 0 12px !important;
+  margin: 8px 0 4px !important;
   align-items: center;
+}
+
+.home-allergen-row {
+  margin: 0 0 12px !important;
+  padding-top: 4px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.home-allergen-label {
+  font-size: 0.78rem;
+  color: #999;
+  white-space: nowrap;
+  flex-shrink: 0;
+  width: 130px;
 }
 
 .home-filter-divider {
@@ -51,17 +65,18 @@
   display: inline-block;
   padding: 6px 14px;
   border-radius: 20px;
-  border: 1.5px solid #ddd;
+  border: 1.5px solid #c3e6cb;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
-  background: white;
+  background: #f6fdf8;
   white-space: nowrap;
   font-size: 0.82rem;
-  color: #555;
+  color: #2d6a4f;
 }
 
 .filters label:hover {
   border-color: var(--primary);
+  background: #e8f5ed;
   color: var(--primary);
 }
 
@@ -69,6 +84,25 @@
   background: var(--primary);
   color: white;
   border-color: var(--primary);
+}
+
+/* Allergen chips — warning palette */
+.filters label.allergen-label {
+  border-color: #ffe5a0;
+  background: #fffdf0;
+  color: #856404;
+}
+
+.filters label.allergen-label:hover {
+  border-color: #ffc107;
+  background: #fff8d6;
+  color: #664d03;
+}
+
+.filters input:checked + label.allergen-label {
+  background: #ffc107;
+  color: #212529;
+  border-color: #ffc107;
 }
 .widget-stepper-container {
   display: inline-flex;
