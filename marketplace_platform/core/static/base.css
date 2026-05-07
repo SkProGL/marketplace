@@ -202,6 +202,9 @@ body {
   font-weight: 600;
   color: #198754;
   font-size: 0.85rem;
+  min-width: 3.5rem;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .cart-producer-group {
