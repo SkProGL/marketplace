@@ -1,60 +1,100 @@
-<div class="fm-bar-wrap">
-  <span class="fm-bar-label">Food miles</span>
-
-  <div class="fm-bar-slider">
-    <div class="fm-track">
-      <div class="fm-fill" id="fm-fill"></div>
+<div class="fm-chip-wrap" id="fm-chip-wrap">
+  <button type="button" class="fm-chip" id="fm-chip">
+    <span id="fm-chip-label">Food miles: all</span>
+    <span class="fm-chip-arrow" id="fm-chip-arrow">&#9662;</span>
+  </button>
+  <div class="fm-popover" id="fm-popover" style="display:none;">
+    <div class="fm-popover-slider">
+      <div class="fm-track">
+        <div class="fm-fill" id="fm-fill"></div>
+      </div>
+      <input class="fm-range" id="fm-min-range" type="range" min="0" max="50" value="0" step="1">
+      <input class="fm-range" id="fm-max-range" type="range" min="0" max="50" value="50" step="1">
     </div>
-    <input class="fm-range" id="fm-min-range" type="range" min="0" max="50" value="0" step="1">
-    <input class="fm-range" id="fm-max-range" type="range" min="0" max="50" value="50" step="1">
+    <div class="fm-popover-inputs">
+      <div class="fm-input-box">
+        <input class="fm-number" id="fm-min-num" type="number" min="0" max="50" value="0">
+        <span class="fm-unit">mi</span>
+      </div>
+      <span class="fm-dash">&ndash;</span>
+      <div class="fm-input-box">
+        <input class="fm-number" id="fm-max-num" type="number" min="0" max="50" value="50">
+        <span class="fm-unit">mi</span>
+      </div>
+    </div>
+    <div class="fm-popover-actions">
+      <button type="button" class="fm-apply" id="fm-apply">Apply</button>
+      <button type="button" class="fm-clear"  id="fm-clear">Clear</button>
+    </div>
   </div>
-
-  <div class="fm-bar-inputs">
-    <div class="fm-input-box">
-      <span class="fm-unit">mi</span>
-      <input class="fm-number" id="fm-min-num" type="number" min="0" max="50" value="0">
-    </div>
-    <span class="fm-dash">&ndash;</span>
-    <div class="fm-input-box">
-      <span class="fm-unit">mi</span>
-      <input class="fm-number" id="fm-max-num" type="number" min="0" max="50" value="50">
-    </div>
-  </div>
-
-  <button type="button" class="fm-apply" id="fm-apply">Apply</button>
-  <button type="button" class="fm-clear"  id="fm-clear">Clear</button>
 </div>
 
 <style>
-.fm-bar-wrap {
-  display: flex;
+.fm-chip-wrap {
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  background: #fff;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 6px 12px;
-  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.fm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid #c3e6cb;
+  background: #f6fdf8;
+  color: #22a86c;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
   user-select: none;
 }
 
-.fm-bar-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #888;
-  white-space: nowrap;
-  flex-shrink: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+.fm-chip:hover {
+  border-color: #198754;
+  background: #e8f5ed;
+  color: #198754;
 }
 
-.fm-bar-slider {
+.fm-chip.fm-active {
+  background: #198754;
+  border-color: #198754;
+  color: #fff;
+}
+
+.fm-chip-arrow {
+  font-size: 0.7rem;
+  transition: transform 0.15s;
+}
+
+.fm-chip.fm-open .fm-chip-arrow {
+  transform: rotate(180deg);
+}
+
+.fm-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  background: #fff;
+  border: 1.5px solid #ddd;
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fm-popover-slider {
   position: relative;
-  flex: 1;
   height: 14px;
   display: flex;
   align-items: center;
-  min-width: 60px;
 }
 
 .fm-track {
@@ -87,8 +127,8 @@
 
 .fm-range::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: #fff;
   border: 2px solid #198754;
@@ -99,8 +139,8 @@
 }
 
 .fm-range::-moz-range-thumb {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: #fff;
   border: 2px solid #198754;
@@ -113,21 +153,21 @@
   box-shadow: 0 0 0 5px rgba(25,135,84,0.12);
 }
 
-.fm-bar-inputs {
+.fm-popover-inputs {
   display: flex;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
+  gap: 6px;
 }
 
 .fm-input-box {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   border: 1px solid #ddd;
-  border-radius: 5px;
-  padding: 2px 6px;
+  border-radius: 6px;
+  padding: 3px 7px;
   background: #fafafa;
+  flex: 1;
 }
 
 .fm-input-box:focus-within {
@@ -135,17 +175,12 @@
   background: #fff;
 }
 
-.fm-unit {
-  font-size: 0.65rem;
-  color: #aaa;
-}
-
 .fm-number {
   border: none;
   background: none;
   outline: none;
-  width: 24px;
-  font-size: 0.72rem;
+  width: 28px;
+  font-size: 0.78rem;
   font-weight: 600;
   color: #222;
   padding: 0;
@@ -153,13 +188,15 @@
 }
 
 .fm-number::-webkit-outer-spin-button,
-.fm-number::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-}
+.fm-number::-webkit-inner-spin-button { -webkit-appearance: none; }
 
-.fm-dash {
-  color: #bbb;
-  font-size: 0.72rem;
+.fm-unit { font-size: 0.65rem; color: #aaa; }
+.fm-dash { color: #bbb; font-size: 0.78rem; }
+
+.fm-popover-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .fm-apply {
@@ -167,42 +204,42 @@
   color: #fff;
   border: none;
   border-radius: 20px;
-  padding: 3px 10px;
-  font-size: 0.68rem;
+  padding: 4px 14px;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
-  flex-shrink: 0;
   transition: background 0.15s;
+  flex-shrink: 0;
 }
-
 .fm-apply:hover { background: #157347; }
 
 .fm-clear {
   background: none;
   border: none;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   color: #aaa;
   cursor: pointer;
   padding: 0;
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 2px;
-  flex-shrink: 0;
 }
-
 .fm-clear:hover { color: #555; }
 </style>
 
 <script>
 (function () {
-  const MAX = 50;
+  const MAX      = 50;
+  const chip     = document.getElementById('fm-chip');
+  const popover  = document.getElementById('fm-popover');
+  const chipLabel = document.getElementById('fm-chip-label');
   const minRange = document.getElementById('fm-min-range');
   const maxRange = document.getElementById('fm-max-range');
   const minNum   = document.getElementById('fm-min-num');
   const maxNum   = document.getElementById('fm-max-num');
   const fill     = document.getElementById('fm-fill');
-  const clearBtn = document.getElementById('fm-clear');
   const applyBtn = document.getElementById('fm-apply');
+  const clearBtn = document.getElementById('fm-clear');
 
   const urlParams = new URLSearchParams(window.location.search);
   const initMin = parseInt(urlParams.get('min_miles') || '0', 10);
@@ -220,6 +257,32 @@
     minNum.value = lo;
     maxNum.value = hi;
   }
+
+  function updateChipLabel() {
+    const lo = parseInt(minRange.value, 10);
+    const hi = parseInt(maxRange.value, 10);
+    const isDefault = lo === 0 && hi === MAX;
+    chipLabel.textContent = isDefault ? 'Food miles: all' : `${lo}–${hi} mi`;
+    chip.classList.toggle('fm-active', !isDefault);
+  }
+
+  function togglePopover() {
+    const open = popover.style.display === 'none';
+    popover.style.display = open ? '' : 'none';
+    chip.classList.toggle('fm-open', open);
+  }
+
+  chip.addEventListener('click', (e) => {
+    e.stopPropagation();
+    togglePopover();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!document.getElementById('fm-chip-wrap').contains(e.target)) {
+      popover.style.display = 'none';
+      chip.classList.remove('fm-open');
+    }
+  });
 
   minRange.addEventListener('input', () => {
     if (parseInt(minRange.value) > parseInt(maxRange.value) - 2)
@@ -243,13 +306,10 @@
     updateFill();
   });
 
-  window.fmGetParams = function () {
-    const lo = parseInt(minRange.value, 10);
-    const hi = parseInt(maxRange.value, 10);
-    return { min_miles: lo > 0 ? lo : null, max_miles: hi < MAX ? hi : null };
-  };
-
   applyBtn.addEventListener('click', () => {
+    updateChipLabel();
+    popover.style.display = 'none';
+    chip.classList.remove('fm-open');
     if (typeof fetchResults === 'function') fetchResults(true);
   });
 
@@ -257,9 +317,19 @@
     minRange.value = 0;
     maxRange.value = MAX;
     updateFill();
+    updateChipLabel();
+    popover.style.display = 'none';
+    chip.classList.remove('fm-open');
     if (typeof fetchResults === 'function') fetchResults(true);
   });
 
+  window.fmGetParams = function () {
+    const lo = parseInt(minRange.value, 10);
+    const hi = parseInt(maxRange.value, 10);
+    return { min_miles: lo > 0 ? lo : null, max_miles: hi < MAX ? hi : null };
+  };
+
   updateFill();
+  updateChipLabel();
 })();
 </script>

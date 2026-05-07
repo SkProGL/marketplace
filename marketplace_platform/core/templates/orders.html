@@ -1,110 +1,214 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<style>
-  .modal { top: 5%; }
-  .oh-layout-grid { display: grid; grid-template-columns: 1fr 0.3fr; gap: 1rem; align-items: start; }
-</style>
 <link rel="stylesheet" href="{% static 'orders.css' %}">
 <link rel="stylesheet" href="{% static 'invoice.css' %}">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
 <script>function download_pdf() { html2pdf(document.querySelector('#invoice-modal .invoice-box')); }</script>
-        <!-- Quick re-order panel -->
-         {% include 'includes/orders/ai_order_recommendation.html' %}
-<div class="oh-layout-grid">
-    <div class="oh-header">
-        <h1>Order Management</h1>
-        <p>Your past and current orders from local producers</p>
-    </div>
-    <div class="oh-header">
-        <h1>Recurring Orders</h1>
-        <p>Your recurring orders</p>
-    </div>
+
+{% include 'includes/orders/ai_order_recommendation.html' %}
+
+<div class="d-grid" style="grid-template-columns: 1fr 0.3fr; gap: 1rem; align-items: start;">
+  <div class="oh-header">
+    <h1>Order Management</h1>
+    <p>Your past and current orders from local producers</p>
+  </div>
+  <div class="oh-header">
+    <h1>Recurring Orders</h1>
+    <p>Your recurring orders</p>
+  </div>
 </div>
-<div class="oh-layout-grid">
-    <!-- Leftside Order history -->
-    <div>
-        <!-- <div class="oh-orders-column"> -->
-        <div class="oh-card">
-            {% for order in orders %}
-            <div class="oh-card-header">
-                <div class="oh-meta">
-                    <span class="oh-num">{{ order.id }}</span>
-                    <span class="oh-date">{{ order.order_date|date:"d M Y" }}</span>
-                    <span class="oh-status oh-status-{{ order.order_status|lower }}">{{ order.order_status }}</span>
-                </div>
-                <span class="oh-total">£{{ order.total_price }}</span>
+
+<div class="d-grid" style="grid-template-columns: 1fr 0.3fr; gap: 1rem; align-items: start;">
+  <div>
+    {% for order in orders %}
+    {% with status=order.order_status|lower %}
+    <div class="oh-card" style="margin-bottom:20px;">
+
+      <!-- Header -->
+      <div class="oh-card-header">
+        <div class="oh-meta">
+          <span class="oh-num">{{ order.id|stringformat:"s"|slice:":8" }}…</span>
+          <span class="oh-date">{{ order.order_date|date:"d M Y" }}</span>
+          <span class="oh-status oh-status-{{ status }}">{{ order.order_status }}</span>
+          {% if order.recurrence_type != 'None' %}
+          <span style="font-size:0.72rem;padding:2px 8px;border-radius:20px;background:#e8f5e9;color:#2e7d32;font-weight:500;">
+            <i class="bi bi-arrow-clockwise"></i> {{ order.recurrence_type }}
+          </span>
+          {% endif %}
+        </div>
+        <span class="oh-total">£{{ order.total_price }}</span>
+      </div>
+
+      <!-- Progress bar -->
+      <div style="padding:16px 18px 8px;">
+        <div class="progress" style="height:10px;">
+          <div class="progress-bar bg-success progress-bar-striped progress-bar-animated"
+               role="progressbar"
+               style="width:{% if status == 'pending' %}25{% elif status == 'confirmed' %}50{% elif status == 'ready' %}75{% else %}100{% endif %}%;transition:width 0.6s ease;">
+          </div>
+        </div>
+        <div class="d-flex justify-content-between mt-1" style="font-size:0.68rem;font-weight:600;color:#888;text-transform:uppercase;">
+          <span {% if status == 'pending' %}style="color:var(--main-color)"{% endif %}>Pending</span>
+          <span {% if status == 'confirmed' %}style="color:var(--main-color)"{% endif %}>Confirmed</span>
+          <span {% if status == 'ready' %}style="color:var(--main-color)"{% endif %}>Ready</span>
+          <span {% if status == 'delivered' %}style="color:var(--main-color)"{% endif %}>Delivered</span>
+        </div>
+      </div>
+
+      <!-- Two-column body -->
+      <div class="oh-card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
+
+        <!-- Left: delivery details + status history -->
+        <div>
+          <b style="font-size:0.82rem;">Delivery Details</b>
+          <div style="font-size:0.82rem;margin-top:6px;color:var(--bs-secondary-color);">
+            {% if order.delivery_address %}
+            <div><span style="color:#555;">Address:</span> {{ order.delivery_address }}</div>
+            {% endif %}
+            <div><span style="color:#555;">Order date:</span> {{ order.order_date|date:"d M Y, H:i" }}</div>
+            {% if order.delivery_date %}
+            <div><span style="color:#555;">Delivery date:</span> {{ order.delivery_date|date:"d M Y" }}</div>
+            {% endif %}
+            {% if order.recurrence_type and order.recurrence_type != 'None' %}
+            <div><span style="color:#555;">Recurrence:</span> {{ order.recurrence_type }}{% if order.recurrence_day %} (day {{ order.recurrence_day }}){% endif %}</div>
+            {% endif %}
+            {% if order.special_instructions %}
+            <div><span style="color:#555;">Instructions:</span> {{ order.special_instructions }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Status history from all producer orders -->
+          {% with has_history=order.producer_orders.all %}
+          {% if has_history %}<b style="font-size:0.82rem;display:block;margin-top:14px;">Status History</b>{% endif %}
+          {% for po in has_history %}
+          {% for h in po.status_history.all %}
+          {% if h.changed_by or h.from_status != h.to_status %}
+          <div style="font-size:0.78rem;color:#888;margin-top:4px;display:flex;align-items:center;gap:6px;">
+            <span style="color:#555;">{{ h.changed_at|date:"d M, H:i" }}</span>
+            <span class="oh-status oh-status-{{ h.from_status|lower }}" style="font-size:0.68rem;padding:1px 7px;">{{ h.from_status }}</span>
+            <span>→</span>
+            <span class="oh-status oh-status-{{ h.to_status|lower }}" style="font-size:0.68rem;padding:1px 7px;">{{ h.to_status }}</span>
+            {% if h.note %}<span style="color:#aaa;font-style:italic;">– {{ h.note }}</span>{% endif %}
+          </div>
+          {% endif %}
+          {% endfor %}
+          {% endfor %}
+          {% endwith %}
+        </div>
+
+        <!-- Right: items receipt grouped by producer -->
+        <div>
+          <b style="font-size:0.82rem;">Items</b>
+          {% regroup order.orderproduct_set.all by batch.product.producer as producer_groups %}
+          {% for group in producer_groups %}
+          <div style="margin-top:10px;">
+            <div style="font-size:0.75rem;font-weight:600;color:#555;padding:4px 0 4px;border-bottom:1px solid #eee;margin-bottom:4px;">
+              {{ group.grouper.organisation_name|default:group.grouper.email }}
             </div>
-            <div class="oh-card-body">
-                {% for item in order.orderproduct_set.all %}
-                <div class="oh-item">
-                    <div>
-                        <div class="oh-item-name">{{ item.batch.product.name }} × {{ item.numPurchased }}</div>
-                        <div class="oh-item-farm">{{ item.batch.product.producer.name }}</div>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:0.5rem;">
-                        <span class="oh-item-price">£{{ item.batch.price }}</span>
-                        {% if order.order_status == "DELIVERED" %}
-                        {% with item.batch.product.review_set.all as product_reviews %}
-                        {% for r in product_reviews %}{% if r.user == request.user %}
-                        <a href="{% url 'edit_review' r.id %}" class="oh-btn-outline" style="font-size:0.78rem;">Edit Review</a>
-                        <form method="POST" action="{% url 'delete_review' r.id %}" style="display:inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-danger" style="font-size:0.78rem;" onclick="return confirm('Delete this review?')">Delete</button>
-                        </form>
-                        {% endif %}{% empty %}
-                        <a href="{% url 'add_review' item.batch.product.id %}" class="oh-btn-outline" style="font-size:0.78rem;">Write Review</a>
-                        {% endfor %}
-                        {% endwith %}
-                        {% endif %}
-                    </div>
+            {% for item in group.list %}
+            <div class="oh-item">
+              <div>
+                <div class="oh-item-name">
+                  <a href="/?q={{ item.batch.product.name|urlencode }}" style="text-decoration:none;color:inherit;">{{ item.batch.product.name }}</a>
+                  × {{ item.numPurchased }}
                 </div>
-                {% endfor %}
-                <div class="oh-actions">
-                    <a href="{% url 'invoice' order.id %}" class="oh-btn-outline invoice-link" data-order-id="{{ order.id }}">View Invoice</a>
-                    <form action="{% url 'reorder' order.id %}" method="POST" class="oh-reorder-form">
-                        {% csrf_token %}
-                        <button type="submit" class="oh-btn-primary">Reorder</button>
+                <div class="oh-item-farm">Class {{ item.batch.quality_class }}{% if item.batch.product.unit %} · {{ item.batch.product.unit }}{% endif %}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <span class="oh-item-price">£{{ item.price_at_purchase }}</span>
+                {% if order.order_status == "DELIVERED" %}
+                  {% with item.batch.product.review_set.all as product_reviews %}
+                  {% for r in product_reviews %}
+                    {% if r.user == request.user %}
+                    <a href="{% url 'edit_review' r.id %}" class="oh-btn-outline" style="font-size:0.78rem;">Edit Review</a>
+                    <form method="POST" action="{% url 'delete_review' r.id %}" style="display:inline;">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-danger" style="font-size:0.78rem;" onclick="return confirm('Delete this review?')">Delete</button>
                     </form>
-                </div>
+                    {% endif %}
+                  {% empty %}
+                    <a href="{% url 'add_review' item.batch.product.id %}" class="oh-btn-outline" style="font-size:0.78rem;">Write Review</a>
+                  {% endfor %}
+                  {% endwith %}
+                {% endif %}
+              </div>
             </div>
-            {% empty %}
-            <p>You haven't placed any orders yet.</p>
             {% endfor %}
-            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+      </div>
+
+      <!-- Actions -->
+      <div class="oh-actions" style="padding:0 18px 14px;">
+        <a href="{% url 'invoice' order.id %}" class="oh-btn-outline invoice-link" data-order-id="{{ order.id }}">View Invoice</a>
+        <form action="{% url 'reorder' order.id %}" method="POST" class="oh-reorder-form" style="margin:0;">
+          {% csrf_token %}
+          <button type="submit" class="oh-btn-primary">Reorder</button>
+        </form>
+        {% if order.order_status == 'PENDING' %}
+        <form action="{% url 'cancel_order' order.id %}" method="POST" style="margin:0;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger"
+                  onclick="return confirm('Cancel this order? Stock will be restored.')">
+            Cancel order
+          </button>
+        </form>
+        {% endif %}
+      </div>
+
     </div>
-    <!-- Right side -->
-    <!-- Recurring order card -->  
-    {% include 'includes/orders/recurring_order_card.html' %}
+    {% endwith %}
+    {% empty %}
+    <div class="oh-empty">You haven't placed any orders yet.</div>
+    {% endfor %}
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin:8px 0 24px;">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}" class="oh-btn-outline">← Prev</a>
+      {% endif %}
+      <span style="font-size:0.9rem;color:#666;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}" class="oh-btn-outline">Next →</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% include 'includes/orders/recurring_order_card.html' %}
 </div>
+
 <script>
 function toggleXAI(id) {
-    document.getElementById(id).classList.toggle('visible');
+  document.getElementById(id).classList.toggle('visible');
 }
 
-document.querySelectorAll('.invoice-link').forEach(function (link) {
-    link.addEventListener('click', function (e) {
-        e.preventDefault();
-        fetch(this.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(r => r.text())
-            .then(html => {
-                document.getElementById('invoice-modal-body').innerHTML = html;
-                new bootstrap.Modal(document.getElementById('invoice-modal')).show();
-            });
-    });
+document.querySelectorAll('.invoice-link').forEach(function(link) {
+  link.addEventListener('click', function(e) {
+    e.preventDefault();
+    fetch(this.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(r => r.text())
+      .then(html => {
+        document.getElementById('invoice-modal-body').innerHTML = html;
+        new bootstrap.Modal(document.getElementById('invoice-modal')).show();
+      });
+  });
 });
 </script>
 
 <!-- Invoice modal -->
 <div class="modal fade" id="invoice-modal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Invoice</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="invoice-modal-body"></div>
-        </div>
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Invoice</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="invoice-modal-body"></div>
     </div>
+  </div>
 </div>
 {% endblock %}
