@@ -162,19 +162,8 @@ tr.order-summary-row {
   cursor: pointer;
 }
 
-/* Strip the "form" styling from the inputs on order rows */
-
-tr.order-summary-row input,
-tr.order-summary-row select {
-  background-color: transparent !important;
-  border: none !important;
-}
-
-tr.order-summary-row input,
-tr.order-summary-row select,
-tr.order-summary-row .status-pill {
-  pointer-events: none; /* Clicks pass right through to the <tr> */
-}
+/* Inputs inside order rows are still interactive; JS stopPropagation prevents
+   a click on an input from also opening the order modal. */
 
 /* Order status pills — shared by table cells and history timeline */
 .status-pill {
