@@ -1,81 +1,106 @@
 
 from core.utils import get_low_stock_products, get_pending_orders
-from .models import OrderStatusHistory
-
+from .models import OrderStatusHistory, ProductBatch, ProducerOrder
 def navbar_alerts(request):
     """
     Navigation bar notification bell.
     Producers: low stock + pending orders.
     Customers: order status changes.
     """
+    # Define notification display limit
     LIMIT = 4
     if not request.user.is_authenticated:
         return {"navbar_alerts": [], "navbar_alert_count": 0, "navbar_total_alert_count": 0}
 
-    dismissed = set(request.session.get('dismissed_notifications', []))
     alerts = []
     category = getattr(request.user, 'category', None)
 
     if request.user.is_superuser or category in ('Producer', 'Admin'):
+        cleared_at = getattr(request.user, 'notifications_cleared_at', None)
         for product in get_low_stock_products(request.user):
-            key = f"stock_{product.id}"
             alerts.append({
-                "key": key,
+                "key": f"stock_{product.id}",
                 "icon": "exclamation-triangle-fill",
                 "colour": "warning" if product.stock > 0 else "danger",
-                "message": f"Low stock: {product.name} ({product.stock} left)" if product.stock > 0 else f"No stock: {product.name}",
+                "message": product.name,
+                "message_status": f"{product.stock} left" if product.stock > 0 else "Out of stock",
                 "link_url": '/management/?model=Product',
                 "link_label": "Manage products",
             })
-        for order in get_pending_orders(request.user):
-            key = f"order_{order.id}"
-            items = order.orderproduct_set.select_related("batch__product")
-            item_summary = ", ".join(f"{item.batch.product.name} ({item.numPurchased})" for item in items)
+        pending_orders = get_pending_orders(request.user)
+        if cleared_at:
+            pending_orders = pending_orders.filter(order__order_date__gt=cleared_at)
+        for pending_order in pending_orders.select_related('order').prefetch_related('items__batch__product'):
+            items = list(pending_order.items.all())
+            # Item 1, Item 2, + x more...
+            names = [i.batch.product.name for i in items[:2]]
+            suffix = f" +{len(items) - 2} more" if len(items) > 2 else ""
             alerts.append({
-                "key": key,
+                "key": f"order_{pending_order.id}",
                 "icon": "bag-check-fill",
                 "colour": "success",
-                "message": f"Outstanding order: {item_summary}",
+                "message": "Outstanding order:",
+                "message_status": ", ".join(names) + suffix,
                 "link_url": '/management/?model=Order',
                 "link_label": "View orders",
             })
 
     if category == 'Customer':
+        cleared_at = request.user.notifications_cleared_at
+        qs_filter = {'producer_order__order__customer': request.user, 'changed_by__isnull': False}
+        if cleared_at:
+            qs_filter['changed_at__gt'] = cleared_at
         recent_changes = (OrderStatusHistory.objects
-                          .filter(order__customer=request.user, changed_by__isnull=False)
-                          .select_related('order')
+                          .filter(**qs_filter)
+                          .select_related('producer_order__order')
+                          .prefetch_related('producer_order__items__batch__product')
                           .order_by('-changed_at')[:5])
         for h in recent_changes:
             key = f"status_{h.id}"
+            items = list(h.producer_order.items.all())
+            names = [i.batch.product.name for i in items[:2]]
+            suffix = f" +{len(items) - 2} more" if len(items) > 2 else ""
+            item_summary = ", ".join(names) + suffix
             alerts.append({
                 "key": key,
                 "icon": "bag-check-fill",
                 "colour": "success",
-                "message": f"Order status updated: {h.from_status.title()} → {h.to_status.title()}",
+                "message": f"Your order for {item_summary}:",
+                "message_status": f"{h.from_status.title()} → {h.to_status.title()}",
+                "note": h.note or "",
                 "link_url": '/orders/',
                 "link_label": "View your orders",
             })
-    visible = [a for a in alerts if a["key"] not in dismissed][-LIMIT:]
+    visible = alerts[-LIMIT:]
     return {"navbar_alerts": visible, "navbar_alert_count": len(visible), "navbar_total_alert_count": len(alerts)}
 
 
 def get_producer_alerts(request):
     """Notification badges for management panel"""
+
     warning_count = 0
     error_count = 0
     pending_orders = 0
-    if request.user.is_authenticated and getattr(request.user, 'category', None) == 'Producer':
-        low_stock_products = get_low_stock_products(request.user)
+    if not request.user.is_authenticated:
+        return {'stock_alert': {'warning_count': 0, 'error_count': 0, 'pending_orders': 0, 'total': 0}}
+
+    category = getattr(request.user, 'category', None)
+    if not (request.user.is_superuser or category == 'Producer'):
+        return {'stock_alert': {'warning_count': 0, 'error_count': 0, 'pending_orders': 0, 'total': 0}}
+
+    if request.user.is_superuser:
+        pending_orders = ProducerOrder.objects.filter(order_status='PENDING').count()
+    else:
         pending_orders = get_pending_orders(request.user).count()
-        for product in low_stock_products:
-            if product.stock == 0:
-                error_count += 1
-            else:
-                warning_count +=1
+    for product in get_low_stock_products(request.user):
+        if product.stock == 0:
+            error_count += 1
+        else:
+            warning_count += 1
 
-    return {'stock_alert': {'warning_count': warning_count, 'error_count': error_count, 'pending_orders': pending_orders}}
+    total = warning_count + error_count + pending_orders
+    return {'stock_alert': {'warning_count': warning_count, 'error_count': error_count, 'pending_orders': pending_orders, 'total': total}}
 
-from .models import ProductBatch
 def cart_processor(request):
     cart = request.session.get('cart', {})
     total_items = sum(cart.values())

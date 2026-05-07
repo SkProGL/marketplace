@@ -53,11 +53,34 @@
       <input type="checkbox" id="organic" name="organic" value="1"
              {% if organic %}checked{% endif %}>
       <label for="organic">Organic</label>
+
+      <input type="checkbox" id="organic" name="organic" value="1"
+             {% if organic %}checked{% endif %}>
+      <label for="organic">Organic</label>
     </div>
 
     {% include "components/widget-food-miles.html" %}
     {% include "components/widget-tree.html" %}
     {#% include "components/widget-offer.html" %#}
+
+    <div class="allergen-filter-wrap">
+      <button type="button" class="allergen-filter-toggle" id="allergenToggle" onclick="toggleAllergenPanel()">
+        Avoid allergens
+        {% if exclude_allergens %}<span class="allergen-active-count">{{ exclude_allergens|length }}</span>{% endif %}
+        <span id="allergenArrow" style="margin-left:auto;transition:transform 0.2s;">▾</span>
+      </button>
+      <div id="allergenPanel" style="display:none;">
+        <p class="allergen-filter-hint">Products containing the selected allergens will be hidden.</p>
+        <div class="filters">
+          {% for allergen in allergen_list %}
+            <input type="checkbox" name="exclude_allergen" value="{{ allergen }}"
+                   id="exc-{{ allergen }}"
+                   {% if allergen in exclude_allergens %}checked{% endif %}>
+            <label for="exc-{{ allergen }}" class="allergen-label">{{ allergen }}</label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
 
     <div class="allergen-filter-wrap">
       <button type="button" class="allergen-filter-toggle" id="allergenToggle" onclick="toggleAllergenPanel()">
@@ -145,7 +168,27 @@
   {% endif %}
 </div>
 
+
+<div id="homePagination" style="display:flex;justify-content:center;align-items:center;gap:8px;margin:24px 0;">
+  {% if page_obj.has_previous %}
+    <button class="page-btn" onclick="goToPage({{ page_obj.previous_page_number }})">← Prev</button>
+  {% endif %}
+  <span style="font-size:0.9rem;color:#666;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+    <button class="page-btn" onclick="goToPage({{ page_obj.next_page_number }})">Next →</button>
+  {% endif %}
+</div>
+
 <!-- Product detail modal -->
+<div id="cartConfirm" style="display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:28px 28px 22px;width:300px;text-align:center;position:relative;">
+    <img id="cartConfirmImg" src="" alt="" style="width:100px;height:100px;object-fit:cover;border-radius:10px;margin-bottom:14px;">
+    <div style="color:#198754;font-size:1.1rem;font-weight:600;margin-bottom:6px;">Successfully added to cart!</div>
+    <div id="cartConfirmQty" style="color:#555;font-size:0.9rem;margin-bottom:20px;"></div>
+    <button id="cartConfirmClose" style="width:100%;padding:9px;background:#198754;color:#fff;border:none;border-radius:8px;font-size:0.95rem;cursor:pointer;">OK</button>
+  </div>
+</div>
+
 <div id="cartConfirm" style="display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:28px 28px 22px;width:300px;text-align:center;position:relative;">
     <img id="cartConfirmImg" src="" alt="" style="width:100px;height:100px;object-fit:cover;border-radius:10px;margin-bottom:14px;">
@@ -236,6 +279,7 @@
           </div>
           <div id="modalReviewsList"></div>
           <div id="reviewPagination"></div>
+          <div id="reviewPagination"></div>
         </div>
       </div>
     </div>
@@ -272,6 +316,8 @@
   let batchData = JSON.parse(document.getElementById('batch-data').textContent);
   let reviewData = JSON.parse(document.getElementById('review-data').textContent);
   const userEmail = '{{ request.user.email }}';
+  const userCategory = '{{ request.user.category }}';
+  const isBulkBuyer = (userCategory === 'Restaurant' || userCategory === 'Community');
   const userCategory = '{{ request.user.category }}';
   const isBulkBuyer = (userCategory === 'Restaurant' || userCategory === 'Community');
 
@@ -319,6 +365,7 @@ function selectBatch(batch) {
     document.getElementById('modalDescription').textContent = d.description;
     document.getElementById('modalCategory').textContent    = d.category;
     const isOrganic = d.organic === 'True' || d.organic === 'true' || d.organic === true;
+    const isOrganic = d.organic === 'True' || d.organic === 'true' || d.organic === true;
     const ratingEl = document.getElementById('modalRating');
     if (d.avgRating) {
       document.getElementById('modalRatingValue').textContent = d.avgRating;
@@ -360,6 +407,8 @@ function selectBatch(batch) {
     const classA = batches.find(b => b.quality_class === 'A');
     const firstBatch = batches[0];
     document.getElementById('modalImage').src = (classA && classA.image) || (firstBatch && firstBatch.image) || '/static/test.jpg';
+    const firstBatch = batches[0];
+    document.getElementById('modalImage').src = (classA && classA.image) || (firstBatch && firstBatch.image) || '/static/test.jpg';
 
     // Reset to pre-selection state
     document.getElementById('modalBatchInfo').style.visibility = 'hidden';
@@ -387,19 +436,44 @@ function selectBatch(batch) {
     });
     const mergedBatches = classOrder.filter(k => grouped[k]).map(k => grouped[k]);
 
+    // Group batches by quality_class, merging stock and taking earliest best_before
+    const classOrder = ['A', 'B', 'C', 'D', 'Discounted'];
+    const grouped = {};
+    batches.forEach(b => {
+      const key = b.quality_class;
+      if (!grouped[key]) {
+        grouped[key] = { ...b };
+      } else {
+        grouped[key].stock += b.stock;
+        if (b.best_before < grouped[key].best_before) {
+          // Adopt the earlier batch as primary (FIFO)
+          const combinedStock = grouped[key].stock;
+          grouped[key] = { ...b, stock: combinedStock };
+        }
+      }
+    });
+    const mergedBatches = classOrder.filter(k => grouped[k]).map(k => grouped[k]);
+
     // Render class dropdown options
     const classSelect = document.getElementById('modalClassSelect');
     const labels = { A: 'Premium', B: 'Standard', C: 'Economy', D: 'Basic', Discounted: 'Surplus / Discount' };
+    const labels = { A: 'Premium', B: 'Standard', C: 'Economy', D: 'Basic', Discounted: 'Surplus / Discount' };
     classSelect.innerHTML = '<option value="" disabled selected>Select class…</option>' +
+      mergedBatches.map((b, i) =>
+        `<option value="${i}">Class ${b.quality_class} — ${labels[b.quality_class] || b.quality_class}</option>`
+      ).join('');
       mergedBatches.map((b, i) =>
         `<option value="${i}">Class ${b.quality_class} — ${labels[b.quality_class] || b.quality_class}</option>`
       ).join('');
 
     classSelect.onchange = function() {
       selectBatch(mergedBatches[parseInt(this.value)]);
+      selectBatch(mergedBatches[parseInt(this.value)]);
     };
 
     // Render reviews
+    currentReviews = reviewData[productId] || [];
+    reviewPage = 1;
     currentReviews = reviewData[productId] || [];
     reviewPage = 1;
     const reviewsSection = document.getElementById('modalReviewsSection');
@@ -472,7 +546,17 @@ function selectBatch(batch) {
       badge.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ALLERGEN_SVGS[key]}</svg>`;
       imageDiv.appendChild(badge);
       slotIndex++;
+      slotIndex++;
     });
+    const extra = allergens.filter(a => getAllergenKey(a)).length - slotIndex;
+    if (extra > 0) {
+      const more = document.createElement('div');
+      more.className = 'allergen-badge';
+      more.title = allergens.slice(MAX_VISIBLE).join(', ');
+      more.style.cssText = `position:absolute;bottom:8px;left:${8 + slotIndex * 26}px;width:22px;height:22px;background:#444;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:${10 + slotIndex};color:white;font-size:9px;font-weight:700;`;
+      more.textContent = `+${extra}`;
+      imageDiv.appendChild(more);
+    }
     const extra = allergens.filter(a => getAllergenKey(a)).length - slotIndex;
     if (extra > 0) {
       const more = document.createElement('div');
@@ -491,6 +575,7 @@ function selectBatch(batch) {
   let currentBatchId = null;
   let currentItemPrice = 0;
   let currentBatchStock = 0;
+  let currentBatchMaxQty = null;
   let currentBatchMaxQty = null;
   let currentBatchUnit = '';
   let currentProductId = null;
@@ -514,11 +599,38 @@ function selectBatch(batch) {
     const effectiveCap = currentBatchMaxQty !== null
       ? Math.min(currentBatchStock, currentBatchMaxQty)
       : currentBatchStock;
+    const effectiveCap = currentBatchMaxQty !== null
+      ? Math.min(currentBatchStock, currentBatchMaxQty)
+      : currentBatchStock;
     document.getElementById('modalQty').textContent = localQty;
     document.getElementById('modalCartTotal').textContent = localQty > 0
       ? '£' + (localQty * currentItemPrice).toFixed(2) + ', ' + localQty + currentBatchUnit : '';
     stepper.style.display = localQty > 0 ? 'flex' : 'none';
     addBtn.textContent    = localQty > 0 ? 'Add to cart' : 'Add';
+    document.getElementById('modalIncBtn').disabled = localQty >= effectiveCap;
+    const atCap = localQty > 0 && localQty >= effectiveCap;
+    document.getElementById('modalNotifyBtn').style.display = (atCap && localQty >= currentBatchStock) ? '' : 'none';
+    // Show cap hint for non-bulk customers
+    let capHint = document.getElementById('modalMaxQtyHint');
+    if (!capHint) {
+      capHint = document.createElement('p');
+      capHint.id = 'modalMaxQtyHint';
+      capHint.style.cssText = 'font-size:0.78rem;color:#888;margin:4px 0 0;';
+      document.getElementById('modalIncBtn').parentElement.after(capHint);
+    }
+    capHint.textContent = (currentBatchMaxQty !== null && atCap)
+      ? `Max ${currentBatchMaxQty} per order for standard customers.` : '';
+  }
+
+  function showCartConfirm(name, qty, imgSrc) {
+    bootstrap.Modal.getInstance(document.getElementById('productModal'))?.hide();
+    document.getElementById('cartConfirmImg').src = imgSrc || '';
+    document.getElementById('cartConfirmQty').textContent = `Quantity: ${qty}`;
+    document.getElementById('cartConfirm').style.display = 'flex';
+  }
+  document.getElementById('cartConfirmClose').addEventListener('click', () => {
+    document.getElementById('cartConfirm').style.display = 'none';
+  });
     document.getElementById('modalIncBtn').disabled = localQty >= effectiveCap;
     const atCap = localQty > 0 && localQty >= effectiveCap;
     document.getElementById('modalNotifyBtn').style.display = (atCap && localQty >= currentBatchStock) ? '' : 'none';
@@ -566,6 +678,11 @@ function selectBatch(batch) {
       updateCardCartBadge(currentProductId);
       updateDrawerIfOpen(data);
       updateNavbarCart(data.total_items, data.total_price);
+      showCartConfirm(
+        document.getElementById('modalName').textContent.trim(),
+        data.quantity,
+        document.getElementById('modalImage').src
+      );
       showCartConfirm(
         document.getElementById('modalName').textContent.trim(),
         data.quantity,
@@ -619,6 +736,19 @@ function selectBatch(batch) {
     }
   }
 
+  function updateCardDiscountBadge(card) {
+    const batches = batchData[card.dataset.productId] || [];
+    const discounted = batches.filter(b => b.surplus && parseFloat(b.discount) > 0);
+    card.querySelectorAll('.card-corner-ribbon').forEach(el => el.remove());
+    if (discounted.length > 0) {
+      const maxDiscount = Math.max(...discounted.map(b => parseFloat(b.discount)));
+      const ribbon = document.createElement('div');
+      ribbon.className = 'card-corner-ribbon';
+      ribbon.textContent = `${maxDiscount}% OFF`;
+      card.querySelector('.image').appendChild(ribbon);
+    }
+  }
+
   function attachCardClickHandlers() {
     document.querySelectorAll('.widget-card-grid .card').forEach(card => {
       card.addEventListener('click', () => {
@@ -626,6 +756,7 @@ function selectBatch(batch) {
       });
       updateCardCartBadge(card.dataset.productId);
       renderAllergenBadges(card);
+      updateCardDiscountBadge(card);
       updateCardDiscountBadge(card);
     });
   }
@@ -643,11 +774,25 @@ function selectBatch(batch) {
   searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => fetchResults(true), 500);
+    searchTimer = setTimeout(() => fetchResults(true), 500);
   });
 
   document.querySelectorAll('.filters input[type="checkbox"]').forEach(cb => {
     cb.addEventListener('change', () => fetchResults(true));
+    cb.addEventListener('change', () => fetchResults(true));
   });
+
+  function toggleAllergenPanel() {
+    const panel = document.getElementById('allergenPanel');
+    const arrow = document.getElementById('allergenArrow');
+    const open = panel.style.display === 'none';
+    panel.style.display = open ? '' : 'none';
+    arrow.style.transform = open ? 'rotate(180deg)' : '';
+  }
+  // Auto-open panel if allergens are already active (e.g. page load with params)
+  if (document.querySelectorAll('input[name="exclude_allergen"]:checked').length > 0) {
+    toggleAllergenPanel();
+  }
 
   function toggleAllergenPanel() {
     const panel = document.getElementById('allergenPanel');
@@ -670,6 +815,16 @@ function selectBatch(batch) {
     });
   }
 
+  let currentPage = {{ page_obj.number }};
+
+  function goToPage(page) {
+    currentPage = page;
+    fetchResults();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function fetchResults(resetPage = false) {
+    if (resetPage) currentPage = 1;
   let currentPage = {{ page_obj.number }};
 
   function goToPage(page) {
