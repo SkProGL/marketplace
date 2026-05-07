@@ -1,41 +1,46 @@
 @import 'globals.css';
 
 :root {
-  --font: system-ui;
-
-  --bg-page: #f4f6f8;
-  --bg-card: #fff;
-
-  --color-border: #ddd;
+  --color-primary:       #198754;
+  --color-success:       #198754;
+  --color-text-light:    #fff;
+  --color-border:        #ddd;
   --color-border-upload: #ccc;
 
-  --color-primary: #2c73f3;
-  /* --color-success: #28a745; */
-  --color-success: #198754;
-  --color-text-light: #fff;
-
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   10px;
   --radius-pill: 20px;
 
-  --padding-input: 10px;
+  --padding-input:  10px;
   --padding-button: 12px;
-  --padding-card: 28px;
+  --padding-card:   28px;
 
-  --shadow-card: var(--shadow);
-
-  --gap-row: 6px;
+  --gap-row:    6px;
   --gap-toggle: 8px;
 }
 
-/* layout */
+.iu-header {
+  padding: 32px 0 16px;
+}
+.iu-header h1 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.iu-header p {
+  color: #888;
+  font-size: 0.9rem;
+}
+
 .form {
-  background: var(--bg-card);
+  background: #fff;
   padding: var(--padding-card);
   border-radius: var(--radius-lg);
-  width: 35vw;
-  box-shadow: var(--shadow-card);
+  border: 1.5px solid #e0e0e0;
+  width: min(560px, 90vw);
+  min-width: 320px;
+  box-shadow: var(--shadow);
   margin: auto;
 }
 
@@ -45,16 +50,31 @@ label {
   font-weight: 600;
 }
 
-/* inputs */
+.label-note {
+  font-weight: 400;
+  color: #888;
+  font-size: 0.82rem;
+}
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   padding: var(--padding-input);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   margin-top: 6px;
   font-size: 14px;
+  box-sizing: border-box;
+  font-family: inherit;
+  outline: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.15);
 }
 
 textarea {
@@ -62,8 +82,6 @@ textarea {
   resize: none;
   overflow: hidden;
 }
-
-/* rows */
 
 .row {
   display: flex;
@@ -73,21 +91,12 @@ textarea {
 
 .price-row {
   width: 100%;
-  margin: auto;
 }
 .price-row input,
 .price-row select {
   flex: 1;
+  margin-top: 0;
 }
-.price-row select {
-  width: 100%;
-  padding: var(--padding-input);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-}
-
-/* toggle buttons */
 
 .toggles {
   display: flex;
@@ -106,6 +115,9 @@ textarea {
   border-radius: var(--radius-pill);
   cursor: pointer;
   font-size: 13px;
+  margin-top: 0;
+  font-weight: 400;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .toggles input:checked + label {
@@ -113,8 +125,6 @@ textarea {
   color: var(--color-text-light);
   border-color: var(--color-primary);
 }
-
-/* upload */
 
 .upload {
   display: block;
@@ -124,49 +134,34 @@ textarea {
   text-align: center;
   border-radius: var(--radius-md);
   cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.upload:hover {
+  border-color: var(--color-primary);
+  background: #f0fff4;
 }
 
 .upload input {
   display: none;
 }
 
-/* season month selects */
-
-.season-months-row {
-  align-items: flex-end;
-}
-
-.season-select {
-  width: 100%;
-  padding: var(--padding-input);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  margin-top: 6px;
-}
-
-.season-select[style*="pointer-events: none"] {
-  cursor: not-allowed;
-}
-
-/* tabs */
-
 .form-tabs {
   display: flex;
   gap: 0;
   margin-bottom: 20px;
-  border-bottom: 2px solid var(--color-border);
+  border-bottom: 2px solid #e0e0e0;
 }
 
 .tab-btn {
   flex: 1;
-  padding: 10px;
+  padding: 12px 24px;
   background: none;
   border: none;
   border-bottom: 3px solid transparent;
   margin-bottom: -2px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 500;
   color: #888;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
@@ -175,6 +170,7 @@ textarea {
 .tab-btn.active {
   color: var(--color-primary);
   border-bottom-color: var(--color-primary);
+  font-weight: 500;
 }
 
 .tab-hint {
@@ -183,9 +179,7 @@ textarea {
   margin: 0 0 8px;
 }
 
-/* button */
-
-.form button {
+.form button[type="submit"] {
   margin-top: 18px;
   width: 100%;
   padding: var(--padding-button);
@@ -195,4 +189,106 @@ textarea {
   border-radius: var(--radius-md);
   font-size: 15px;
   cursor: pointer;
+  transition: background 0.15s;
+}
+
+.form button[type="submit"]:hover {
+  background: #157347;
+}
+
+.np-product-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.np-dropzone {
+  flex-shrink: 0;
+  width: 200px;
+  height: 200px;
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  background: #fafafa;
+  transition: border-color 0.2s, background 0.2s;
+  overflow: hidden;
+}
+
+.np-dropzone:hover {
+  border-color: var(--color-primary);
+  background: #f0fff4;
+}
+
+.np-dz-placeholder {
+  text-align: center;
+  pointer-events: none;
+  padding: 16px;
+}
+
+.np-dz-plus {
+  font-size: 2.8rem;
+  color: #ccc;
+  line-height: 1;
+  font-weight: 300;
+}
+
+.np-dz-hint {
+  font-size: 0.75rem;
+  color: #aaa;
+  margin-top: 10px;
+  line-height: 1.4;
+}
+
+.np-preview {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.np-revert {
+  display: none;
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.np-fields {
+  flex: 1;
+  min-width: 0;
+}
+
+.batch-base-price {
+  margin-top: 8px;
+  color: #555;
+  font-size: 0.88rem;
+}
+
+.effective-price-row {
+  margin-top: 10px;
+  font-size: 0.88rem;
+  color: #555;
+}
+
+.price-suggestion {
+  color: #888;
+  margin-left: 6px;
 }

@@ -2,12 +2,8 @@
 {% load static %}
 {% block content %}
 <style>
-    :root { --main-color: #198754; }
-    .modal { top: 5%; }
-    .order-card { background: #fdfdfd; border-left: 5px solid var(--main-color); margin-bottom: 20px; padding: 1.5rem; border-radius: 8px;  }
-    .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
-    .status-processed { background: var(--secondary-color); color: white; }
-    .status-pending { background: #ffc107; color: black; }
+  .modal { top: 5%; }
+  .oh-layout-grid { display: grid; grid-template-columns: 1fr 0.3fr; gap: 1rem; align-items: start; }
 </style>
 <link rel="stylesheet" href="{% static 'orders.css' %}">
 <link rel="stylesheet" href="{% static 'invoice.css' %}">
@@ -15,17 +11,17 @@
 <script>function download_pdf() { html2pdf(document.querySelector('#invoice-modal .invoice-box')); }</script>
         <!-- Quick re-order panel -->
          {% include 'includes/orders/ai_order_recommendation.html' %}
-<div class="d-grid" style="grid-template-columns: 1fr 0.3fr; gap: 1rem; align-items: start;">
+<div class="oh-layout-grid">
     <div class="oh-header">
         <h1>Order Management</h1>
         <p>Your past and current orders from local producers</p>
     </div>
-        <div class="oh-header">
+    <div class="oh-header">
         <h1>Recurring Orders</h1>
         <p>Your recurring orders</p>
     </div>
 </div>
-<div class="d-grid" style="grid-template-columns: 1fr 0.3fr; gap: 1rem; align-items: start;">
+<div class="oh-layout-grid">
     <!-- Leftside Order history -->
     <div>
         <!-- <div class="oh-orders-column"> -->

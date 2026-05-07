@@ -7,6 +7,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, update_session_auth_hash
 from django.core.mail import send_mail
+from django.core.paginator import Paginator
 from django.http import Http404, HttpResponse, JsonResponse
 from django.conf import settings
 from django.contrib.auth.forms import PasswordChangeForm
