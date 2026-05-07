@@ -125,6 +125,7 @@ function renderDrawer(data) {
               <button class="widget-stepper-btn" onclick="drawerUpdateCart('${item.id}', -1, this)">−</button>
               <span class="stepper-qty">${item.quantity}</span>
               <button class="widget-stepper-btn" onclick="drawerUpdateCart('${item.id}', 1, this)">+</button>
+              <button class="widget-stepper-btn" onclick="drawerRemoveItem('${item.id}', ${item.quantity})" title="Remove item" style="color:#dc3545;"><i class="bi bi-trash3"></i></button>
           </div>
           <span class="cart-drawer-item-price">£${item.subtotal.toFixed(2)}</span>
       </div>`).join('');
@@ -158,7 +159,6 @@ function drawerUpdateCart(productId, delta, btn) {
   })
     .then((r) => r.json())
     .then((data) => {
-      renderDrawer(data);
       updateNavbarCart(data.total_items, data.total_price);
 
       // Sync cartState and card badge on the home page if available
@@ -177,7 +177,14 @@ function drawerUpdateCart(productId, delta, btn) {
           }
         }
       }
+
+      // Fetch full cart contents so producer names are preserved in the drawer
+      return fetch("/cart/contents/").then((r) => r.json()).then(renderDrawer);
     });
+}
+
+function drawerRemoveItem(productId, quantity) {
+  drawerUpdateCart(productId, -quantity, null);
 }
 
 function syncCardWidget(productId, quantity) {
