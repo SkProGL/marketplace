@@ -18,6 +18,7 @@ from django.core.paginator import Paginator
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from django.contrib.auth.decorators import login_required
+from django.urls import reverse
 from django.db import transaction
 from django.utils import timezone
 from decimal import Decimal
@@ -267,7 +268,8 @@ def reorder(request, order_id):
 
 @login_required
 def loading(request):
-    return render(request, 'loading.html')
+    next_url = request.GET.get('next', '/orders/')
+    return render(request, 'loading.html', {'next_url': next_url})
 
 @login_required
 def checkout(request):
@@ -357,7 +359,8 @@ def checkout(request):
                         ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - qty)
 
                     request.session['cart'] = {}
-                    return redirect('order_confirmation', order_id=new_order.id)
+                    confirm_url = reverse('order_confirmation', args=[new_order.id])
+                    return redirect(f'/loading/?next={confirm_url}')
 
             except ValueError as e:
                 for msg in e.args[0]:
