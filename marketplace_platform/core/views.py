@@ -11,7 +11,7 @@ from django.core.paginator import Paginator
 from django.http import Http404, HttpResponse, JsonResponse
 from django.conf import settings
 from django.contrib.auth.forms import PasswordChangeForm
-from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe
+from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe, Payment, OrderPayment
 from core.forms import ComplaintForm, LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
@@ -345,6 +345,7 @@ def checkout(request):
 
                     # One ProducerOrder per producer, then assign each item to its slice
                     producer_orders = {}
+                    producer_subtotals = defaultdict(Decimal)
                     for item in cart_items:
                         batch = item['product']
                         producer = batch.product.producer
@@ -362,7 +363,21 @@ def checkout(request):
                             numPurchased=item['quantity'],
                             price_at_purchase=batch.price,
                         )
+                        producer_subtotals[producer.id] += batch.price * item['quantity']
                         ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - item['quantity'])
+
+                    # Record a Payment (95% of subtotal) for each producer
+                    now = timezone.now()
+                    for prod_id, prod_order in producer_orders.items():
+                        prod_subtotal = producer_subtotals[prod_id]
+                        producer_amount = (prod_subtotal * Decimal('0.95')).quantize(Decimal('0.01'))
+                        payment = Payment.objects.create(
+                            producer=prod_order.producer,
+                            amount=producer_amount,
+                            status=Payment.Status.PROCESSED,
+                            processed_at=now,
+                        )
+                        OrderPayment.objects.create(order=new_order, payment=payment)
 
                     request.session['cart'] = {}
                     return redirect('order_confirmation', order_id=new_order.id)
@@ -406,12 +421,17 @@ def order_confirmation(request, order_id):
             'items': ops,
             'subtotal': subtotal,
             'commission': commission,
+            'producer_payment': (subtotal * Decimal('0.95')).quantize(Decimal('0.01')),
         })
+
+    order_payments = OrderPayment.objects.filter(order=order).select_related('payment')
+    payment_processed = order_payments.filter(payment__status=Payment.Status.PROCESSED).exists()
 
     return render(request, 'order_confirmation.html', {
         'order': order,
         'cart_by_producer': cart_by_producer,
         'total_commission': total_commission,
+        'payment_processed': payment_processed,
     })
 
 

@@ -6,6 +6,11 @@
     <div style="font-size:3rem;color:#198754;">✓</div>
     <h2 style="color:#198754;font-weight:700;margin-bottom:4px;">Order Confirmed!</h2>
     <p class="text-muted">Thank you for your order. Your producers have been notified.</p>
+    {% if payment_processed %}
+    <div style="display:inline-flex;align-items:center;gap:6px;background:#d1e7dd;color:#0a3622;border-radius:20px;padding:4px 14px;font-size:0.85rem;font-weight:600;margin-top:4px;">
+      <i class="bi bi-shield-check-fill"></i> Payment processed
+    </div>
+    {% endif %}
     <div style="display:inline-flex;flex-direction:column;gap:4px;margin-top:8px;text-align:left;background:#f8f9fa;border-radius:10px;padding:12px 24px;">
       <div style="font-size:0.95rem;"><span style="color:#888;">Order number:</span> <strong style="font-family:monospace;letter-spacing:0.05em;">{{ order.id|stringformat:"s"|slice:":8"|upper }}</strong></div>
       <div style="font-size:0.95rem;"><span style="color:#888;">Order status:</span> <strong style="color:#856404;">{{ order.order_status }}</strong></div>
@@ -52,7 +57,7 @@
             </div>
           {% endfor %}
           <div style="text-align:right;font-size:0.78rem;color:#aaa;padding-right:8px;margin-top:4px;">
-            Network commission (5%): £{{ group.commission|floatformat:2 }}
+            Network commission (5%): £{{ group.commission|floatformat:2 }} &nbsp;·&nbsp; Producer receives: £{{ group.producer_payment|floatformat:2 }}
           </div>
         </div>
       {% endfor %}
