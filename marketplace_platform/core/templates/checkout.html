@@ -90,6 +90,16 @@
                                     <div style="padding-left:8px;margin-top:6px;font-size:0.82rem;color:#888;">
                                         Network commission (5%): £{{ group.commission|floatformat:2 }}
                                     </div>
+                                    <div style="padding-left:8px;margin-top:10px;">
+                                        <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:4px;color:#333;">
+                                            Delivery date — {{ group.producer.organisation_name|default:group.producer }}
+                                        </label>
+                                        <input type="date" name="delivery_date_{{ group.producer.id }}"
+                                               class="form-control form-control-sm"
+                                               min="{{ min_delivery_date }}" required
+                                               style="max-width:200px;">
+                                        <small class="text-muted" style="font-size:0.75rem;">Min. 48 hours from today</small>
+                                    </div>
                                 </div>
                             {% endfor %}
 
@@ -119,14 +129,6 @@
                         <div id="postcodeArea" style="font-size:0.8rem;color:#555;margin-top:4px;"></div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label class="form-label">Select Delivery Date</label>
-                        <input type="date" name="delivery_date" class="form-control" min="{{ min_delivery_date }}" required>
-                        {% if form.delivery_date.errors %}
-                            <div class="text-danger mt-2 small">{{ form.delivery_date.errors|join:", " }}</div>
-                        {% endif %}
-                        <small class="text-muted">Note: Earliest delivery is 48 hours from now.</small>
-                    </div>
                 </div>
 
                 <div class="col-md-6 ps-md-4">

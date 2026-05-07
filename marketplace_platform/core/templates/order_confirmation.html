@@ -59,6 +59,11 @@
           <div style="text-align:right;font-size:0.78rem;color:#aaa;padding-right:8px;margin-top:4px;">
             Network commission (5%): £{{ group.commission|floatformat:2 }} &nbsp;·&nbsp; Producer receives: £{{ group.producer_payment|floatformat:2 }}
           </div>
+          {% if group.delivery_date %}
+          <div style="padding-right:8px;margin-top:4px;font-size:0.78rem;color:#555;">
+            Delivery: {{ group.delivery_date|date:"l, d M Y" }}
+          </div>
+          {% endif %}
         </div>
       {% endfor %}
 

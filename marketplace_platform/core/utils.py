@@ -21,7 +21,8 @@ PRODUCER_ID_FIELDS = {'Product': 'producer', 'StoryPost': 'user', 'Recipe': 'use
 ## Fields to show first, per model
 MODEL_FIELD_PRIORITY = {
     'User': ['email', 'password', 'full_name', 'category', 'organisation_name','phone', 'addrss', 'postcode^'],
-    'Product': ['name', 'category', 'price', 'stock', 'alert_threshold', 'all_year', 'seasonStart', 'seasonEnd'],
+    'Product': ['name', 'category', 'price', 'stock_alert_threshold', 'all_year', 'seasonStart', 'seasonEnd'],
+    'ProductBatch': ['product', 'quality_class', 'stock', 'stock_alert_threshold', 'availability', 'best_before'],
     'Order': ['customer','order_status'],
     'ProducerOrder': ['order', 'producer', 'order_status', 'delivery_date'],
 }
@@ -301,7 +302,10 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
 
     # Sorting logic
     # Extract direction and header to sort by
-    default_sort = {'Order': ('order_date', 'descending')}.get(selected_model_name, (None, 'ascending'))
+    default_sort = {
+        'Order': ('order_date', 'descending'),
+        'ProducerOrder': ('delivery_date', 'ascending'),
+    }.get(selected_model_name, (None, 'ascending'))
     sort_field = request.GET.get('sortby', default_sort[0])
     sort_direction = request.GET.get('direction', default_sort[1])
     if sort_field:
