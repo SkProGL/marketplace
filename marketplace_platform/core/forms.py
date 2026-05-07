@@ -150,6 +150,16 @@ class ProductForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'rows': 3}),
         }
 
+    def clean_best_before(self):
+        best_before = self.cleaned_data.get('best_before')
+        if best_before is not None:
+            min_allowed = (timezone.now() + timedelta(hours=72)).date()
+            if best_before < min_allowed:
+                raise forms.ValidationError(
+                    "Best before date must be at least 3 days from now."
+                )
+        return best_before
+
 
 class ReviewForm(forms.ModelForm):
     class Meta:
@@ -173,6 +183,16 @@ class ProductBatchForm(forms.ModelForm):
             'discount_expiry', 'discount_note',
             'seasonStart', 'seasonEnd',
         ]
+
+    def clean_best_before(self):
+        best_before = self.cleaned_data.get('best_before')
+        if best_before is not None:
+            min_allowed = (timezone.now() + timedelta(hours=72)).date()
+            if best_before < min_allowed:
+                raise forms.ValidationError(
+                    "Best before date must be at least 3 days from now."
+                )
+        return best_before
 
 
 class RecipeForm(forms.ModelForm):

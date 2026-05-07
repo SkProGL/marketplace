@@ -14,7 +14,7 @@ from django.contrib.auth.forms import PasswordChangeForm
 from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe, Payment
 from core.forms import ComplaintForm, LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
-from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
+from core.utils import get_management_context, get_recurring_orders_context, handle_management_post, apply_surplus_if_due, SURPLUS_DAYS
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.db import transaction
@@ -465,7 +465,8 @@ def home_view(request):
             qty = cart.get(str(batch.id), 0)
             total_price += float(batch.price) * qty
 
-    in_stock_batches_qs = ProductBatch.objects.filter(stock__gt=0).order_by('quality_class')
+    min_best_before = date_type.today() + timedelta(days=2)
+    in_stock_batches_qs = ProductBatch.objects.filter(stock__gt=0, best_before__gt=min_best_before).order_by('quality_class')
 
     class_a_image = ProductBatch.objects.filter(
         product=OuterRef('pk'), quality_class='A'
@@ -738,18 +739,6 @@ def upload_item(request):
                     'seasonEnd': season_end,
                 }
             )
-            image = request.FILES.get('image')
-            if image and created:
-                from datetime import date, timedelta
-                ProductBatch.objects.create(
-                    product=product,
-                    quality_class='A',
-                    stock=1,
-                    best_before=date.today() + timedelta(days=365),
-                    image=image,
-                    seasonStart=season_start,
-                    seasonEnd=season_end,
-                )
             if created:
                 messages.success(request, f'"{product.name}" was created successfully!')
             else:
@@ -760,23 +749,34 @@ def upload_item(request):
             active_tab = 'batch'
             product = get_object_or_404(Product, id=request.POST.get('product_id'))
             quality_class = request.POST.get('quality_class', 'B')
+            surplus_discount_pct = Decimal(request.POST.get('surplus_discount_percentage') or '20')
+            best_before_str = request.POST.get('best_before')
+
+            # Resolve final quality class before writing to DB
+            if quality_class != 'Discounted' and best_before_str:
+                best_before_date = date_type.fromisoformat(best_before_str)
+                days = SURPLUS_DAYS.get(product.category, 5)
+                if best_before_date <= date_type.today() + timedelta(days=days):
+                    quality_class = 'Discounted'
+
             surplus = quality_class == 'Discounted'
+            class_discounts = {'A': Decimal('0'), 'B': Decimal('15'), 'C': Decimal('30'), 'D': Decimal('45'), 'Discounted': Decimal('50')}
+            if quality_class == 'Discounted':
+                discount_pct = Decimal(request.POST.get('discount_percentage') or str(surplus_discount_pct))
+            else:
+                discount_pct = class_discounts.get(quality_class, Decimal('0'))
+
             ref_batch = product.batches.filter(quality_class='A').order_by('-created_at').first() \
                         or product.batches.order_by('-created_at').first()
             season_start = ref_batch.seasonStart if ref_batch else 'January'
             season_end = ref_batch.seasonEnd if ref_batch else 'December'
-            class_discounts = {'A': Decimal('0'), 'B': Decimal('15'), 'C': Decimal('30'), 'D': Decimal('45'), 'Discounted': Decimal('50')}
-            if quality_class == 'Discounted':
-                discount_pct = Decimal(request.POST.get('discount_percentage') or '50')
-            else:
-                discount_pct = class_discounts.get(quality_class, Decimal('0'))
             harvest_date = request.POST.get('harvest_date') or None
-            new_batch = ProductBatch.objects.create(
+            ProductBatch.objects.create(
                 product=product,
                 quality_class=quality_class,
                 stock=int(request.POST.get('stock') or 1),
                 harvest_date=harvest_date,
-                best_before=request.POST.get('best_before'),
+                best_before=best_before_str,
                 seasonStart=season_start,
                 seasonEnd=season_end,
                 surplus=surplus,
@@ -784,7 +784,7 @@ def upload_item(request):
                 discount_note=request.POST.get('discount_note', ''),
                 image=request.FILES.get('image'),
                 max_order_qty=int(request.POST['max_order_qty']) if request.POST.get('max_order_qty') else None,
-                surplus_discount_percentage=Decimal(request.POST.get('surplus_discount_percentage') or '20'),
+                surplus_discount_percentage=surplus_discount_pct,
             )
             return redirect('home')
 

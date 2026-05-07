@@ -436,6 +436,30 @@ def format_for_display(field, raw_value):
     return display_value
         
 
+SURPLUS_DAYS = {
+    'Fruit':     5,
+    'Vegetable': 5,
+    'Preserve':  5,
+    'Dairy':     3,
+    'Bakery':    3,
+}
+
+def apply_surplus_if_due(batch):
+    """Mark batch as Discounted if it's within the surplus window. Returns True if updated."""
+    if batch.quality_class == 'Discounted':
+        return False
+    best_before = batch.best_before
+    if isinstance(best_before, str):
+        best_before = date.fromisoformat(best_before)
+    days = SURPLUS_DAYS.get(batch.product.category, 5)
+    if best_before <= timezone.now().date() + timedelta(days=days):
+        batch.quality_class = 'Discounted'
+        batch.surplus = True
+        batch.discount_percentage = batch.surplus_discount_percentage
+        batch.save(update_fields=['quality_class', 'surplus', 'discount_percentage'])
+        return True
+    return False
+
 def get_low_stock_products(user):
     """Returns Products whose total in-date stock is at or below their alert threshold."""
     return [p for p in Product.objects.filter(producer=user) if p.stock <= p.stock_alert_threshold]

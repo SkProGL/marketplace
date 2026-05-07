@@ -157,8 +157,12 @@ function drawerUpdateCart(productId, delta, btn) {
     },
     body: JSON.stringify({ delta: delta }),
   })
-    .then((r) => r.json())
+    .then((r) => {
+      if (r.redirected || r.status === 403) { window.location.href = "/login/"; return null; }
+      return r.json();
+    })
     .then((data) => {
+      if (!data) return;
       updateNavbarCart(data.total_items, data.total_price);
 
       // Sync cartState and card badge on the home page if available
