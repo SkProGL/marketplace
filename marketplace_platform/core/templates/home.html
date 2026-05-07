@@ -121,6 +121,8 @@
                 <span class="price">{{ item.price_display }}</span>
                 {% if item.avg_rating %}
                 <span style="font-size:11px;color:#888;">⭐ {{ item.avg_rating }}/5 ({{ item.review_count }})</span>
+                {% else %}
+                <span style="font-size:11px;color:#bbb;">No reviews yet</span>
                 {% endif %}
             </div>
             <div class="card-btn-wrap">
@@ -401,11 +403,13 @@ function selectBatch(batch) {
     currentReviews = reviewData[productId] || [];
     reviewPage = 1;
     const reviewsSection = document.getElementById('modalReviewsSection');
+    reviewsSection.style.display = '';
     if (currentReviews.length > 0) {
-      reviewsSection.style.display = '';
       renderReviews();
     } else {
-      reviewsSection.style.display = 'none';
+      document.getElementById('modalReviewsList').innerHTML =
+        '<p style="color:#888;font-size:0.88rem;">No reviews yet.</p>';
+      document.getElementById('reviewPagination').innerHTML = '';
     }
   });
 </script>
@@ -464,7 +468,7 @@ function selectBatch(batch) {
       const badge = document.createElement('div');
       badge.className = 'allergen-badge';
       badge.title = allergen;
-      badge.style.cssText = `position:absolute;bottom:8px;left:${8 + i * 26}px;width:22px;height:22px;background:white;border-radius:50%;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;z-index:${10 + i};`;
+      badge.style.cssText = `position:absolute;bottom:8px;left:${8 + slotIndex * 26}px;width:22px;height:22px;background:white;border-radius:50%;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;z-index:${10 + slotIndex};`;
       badge.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ALLERGEN_SVGS[key]}</svg>`;
       imageDiv.appendChild(badge);
       slotIndex++;
@@ -604,13 +608,13 @@ function selectBatch(batch) {
 
   function updateCardDiscountBadge(card) {
     const batches = batchData[card.dataset.productId] || [];
-    const discounted = batches.filter(b => b.surplus && parseFloat(b.discount) > 0);
+    const surplusBatches = batches.filter(b => b.surplus);
     card.querySelectorAll('.card-corner-ribbon').forEach(el => el.remove());
-    if (discounted.length > 0) {
-      const maxDiscount = Math.max(...discounted.map(b => parseFloat(b.discount)));
+    if (surplusBatches.length > 0) {
+      const maxDiscount = Math.max(...surplusBatches.map(b => parseFloat(b.discount) || 0));
       const ribbon = document.createElement('div');
       ribbon.className = 'card-corner-ribbon';
-      ribbon.textContent = `${maxDiscount}% OFF`;
+      ribbon.textContent = maxDiscount > 0 ? `${maxDiscount}% OFF` : 'Surplus';
       card.querySelector('.image').appendChild(ribbon);
     }
   }
@@ -728,7 +732,7 @@ function selectBatch(batch) {
                 <span class="title">${item.name}</span>
                 ${item.producer ? `<span style="display:block;font-size:11px;color:#888;">${item.producer}</span>` : ''}
                 <span class="price">${item.price_display || '£' + item.price}</span>
-                ${item.avg_rating ? `<span style="font-size:11px;color:#888;">⭐ ${item.avg_rating}/5 (${item.review_count})</span>` : ''}
+                ${item.avg_rating ? `<span style="font-size:11px;color:#888;">⭐ ${item.avg_rating}/5 (${item.review_count})</span>` : '<span style="font-size:11px;color:#bbb;">No reviews yet</span>'}
               </div>
               <div class="card-btn-wrap">
                 <button type="button" class="add-to-cart-btn">Add</button>

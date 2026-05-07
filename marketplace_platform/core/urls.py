@@ -1,4 +1,5 @@
 from django.urls import path
+from django.contrib.auth import views as auth_views
 from core import views
 
 urlpatterns = [
@@ -31,8 +32,25 @@ urlpatterns = [
     path('cart/update/<uuid:product_id>/', views.update_cart_ajax, name='update_cart_ajax'),
     path('cart/clear/', views.clear_cart, name='clear_cart'),
     path('checkout/', views.checkout, name='checkout'),
-    path('loading/', views.loading, name='loading'),
+    path('order-confirmation/<uuid:order_id>/', views.order_confirmation, name='order_confirmation'),
     path('notifications/clear/', views.clear_notifications, name='clear_notifications'),
+    # Password reset
+    path('password-reset/', auth_views.PasswordResetView.as_view(
+        template_name='password_reset_form.html',
+        email_template_name='password_reset_email.txt',
+        subject_template_name='password_reset_subject.txt',
+        success_url='/password-reset/done/',
+    ), name='password_reset'),
+    path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(
+        template_name='password_reset_done.html',
+    ), name='password_reset_done'),
+    path('password-reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
+        template_name='password_reset_confirm.html',
+        success_url='/password-reset/complete/',
+    ), name='password_reset_confirm'),
+    path('password-reset/complete/', auth_views.PasswordResetCompleteView.as_view(
+        template_name='password_reset_complete.html',
+    ), name='password_reset_complete'),
     # Management URLs
     path('management/', views.management_view, name="management"),
     path('management/order/<uuid:order_id>/order_summary/', views.get_order_summary_json, name='order_summary'),

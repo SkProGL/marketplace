@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, date
 from django.utils import timezone
 from django import forms
 from django.contrib.auth.forms import PasswordChangeForm
@@ -131,22 +131,26 @@ class LoginForm(forms.Form):
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
 class CheckoutForm(forms.Form):
-    
+
+    delivery_address = forms.CharField(
+        max_length=256,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Street address'})
+    )
+    delivery_postcode = forms.CharField(
+        max_length=20,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. SW1A 1AA'})
+    )
     delivery_date = forms.DateField(
         widget=forms.DateInput(attrs={
-            'type': 'date', 
+            'type': 'date',
             'class': 'form-control'
         })
     )
 
     def clean_delivery_date(self):
         delivery_date = self.cleaned_data.get('delivery_date')
-        
-        # Check if delivery_date is not None (in case of empty input)
-        if delivery_date:
-            # Check if it's at least 48 hours away (2 days)
-            if delivery_date < (timezone.now() + timedelta(hours=48)).date():
-                raise forms.ValidationError("Delivery must be at least 48 hours from now.")
+        if delivery_date and delivery_date < date.today() + timedelta(days=2):
+            raise forms.ValidationError("Delivery must be at least 48 hours from now.")
         return delivery_date
     
 class ProductForm(forms.ModelForm):

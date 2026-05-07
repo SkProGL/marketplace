@@ -389,6 +389,8 @@ class Order(models.Model):
         max_length=20, choices=Recurrence.choices, default=Recurrence.NONE, verbose_name="Recurrence")
     recurrence_day = models.IntegerField(
         choices=Weekday.choices, null=True, blank=True, verbose_name="Rec. day")
+    delivery_address = models.CharField(max_length=256, blank=True)
+    delivery_postcode = models.CharField(max_length=20, blank=True)
     # Food miles - distance food travels from producer to customer
     food_miles = models.IntegerField(default=0)
 
