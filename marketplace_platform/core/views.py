@@ -11,15 +11,17 @@ from django.core.paginator import Paginator
 from django.http import Http404, HttpResponse, JsonResponse
 from django.conf import settings
 from django.contrib.auth.forms import PasswordChangeForm
-from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe, Payment, OrderPayment
+from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe, Payment
 from core.forms import ComplaintForm, LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from django.contrib.auth.decorators import login_required
+from django.urls import reverse
 from django.db import transaction
 from django.utils import timezone
-from datetime import timedelta
 from decimal import Decimal
+from datetime import timedelta
+
 
 MANAGEMENT_SEARCH_FIELDS = {
     'Product':    (['name', 'category', 'description'],
@@ -153,21 +155,7 @@ def get_next_occurrence(order):
 
 @login_required
 def recurring_orders(request):
-    orders = Order.objects.filter(
-        customer=request.user,
-    ).exclude(recurrence_type='None').prefetch_related('orderproduct_set__batch__product')
-
-    orders_with_next = []
-    for order in orders:
-        orders_with_next.append({
-            'order': order,
-            'next_date': get_next_occurrence(order),
-            'items': order.orderproduct_set.all(),
-        })
-
-    return render(request, 'recurring_orders.html', {
-        'orders_with_next': orders_with_next
-    })
+    return redirect('orders')
 
 
 @login_required
@@ -175,43 +163,22 @@ def modify_recurring_order(request, order_id):
     order = get_object_or_404(Order, id=order_id, customer=request.user)
 
     if request.method == 'POST':
-        # Create a brand new one-off order for next occurrence only
-        for order_product in order.orderproduct_set.all():
-            new_quantity = int(request.POST.get(f'qty_{order_product.id}', order_product.numPurchased))
-            order_product.numPurchased = new_quantity
-            order_product.save()
         order.recurrence_type = request.POST.get('recurrence_type', order.recurrence_type)
-        next_date = get_next_occurrence(order)
-        new_order = Order.objects.create(
-            customer=request.user,
-            total_price=order.total_price,
-            delivery_date=timezone.make_aware(
-                timezone.datetime.combine(
-                    next_date, timezone.datetime.min.time())
-            ),
-            order_status='PENDING',
-            recurrence_type='None',
-        )
+        recurrence_day = request.POST.get('recurrence_day')
+        if recurrence_day:
+            order.recurrence_day = int(recurrence_day)
+        order.save(update_fields=['recurrence_type', 'recurrence_day'])
 
-        # Copy items with updated quantities from POST
         for op in order.orderproduct_set.all():
             new_qty = int(request.POST.get(f'qty_{op.id}', op.numPurchased))
-            OrderProduct.objects.create(
-                order=new_order,
-                batch=op.batch,
-                numPurchased=new_qty,
-                price_at_purchase=op.price_at_purchase,
-            )
+            if new_qty != op.numPurchased:
+                op.numPurchased = new_qty
+                op.save(update_fields=['numPurchased'])
 
-        messages.success(
-            request, "Next occurrence updated. The recurring template is unchanged.")
-        return redirect('recurring_orders')
+        messages.success(request, "Recurring order updated.")
+        return redirect('orders')
 
-    return render(request, 'modify_occurrence.html', {
-        'order': order,
-        'next_date': get_next_occurrence(order),
-        'items': order.orderproduct_set.all(),
-    })
+    return redirect('orders')
    
 @login_required
 def pause_recurring_order(request, order_id):
@@ -232,11 +199,33 @@ def delete_recurring_order(request, order_id):
     return redirect('orders')
 
 @login_required
+def cancel_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id, customer=request.user)
+    if request.method == 'POST' and order.order_status == 'PENDING':
+        with transaction.atomic():
+            for op in order.orderproduct_set.select_related('batch').all():
+                ProductBatch.objects.filter(pk=op.batch_id).update(stock=F('stock') + op.numPurchased)
+            order.delete()
+        messages.success(request, "Order cancelled and stock restored.")
+    else:
+        messages.error(request, "Only pending orders can be cancelled.")
+    return redirect('orders')
+
+
+@login_required
 def orders(request):
-    orders = Order.objects.filter(customer=request.user).order_by('-order_date')
-    print(orders)
+    qs = (Order.objects
+          .filter(customer=request.user)
+          .order_by('-order_date')
+          .prefetch_related(
+              'orderproduct_set__batch__product__producer',
+              'producer_orders__status_history',
+          ))
+    paginator = Paginator(qs, 5)
+    page_obj = paginator.get_page(request.GET.get('page'))
     return render(request, 'orders.html', {
-        'orders': orders,
+        'orders': page_obj,
+        'page_obj': page_obj,
         'orders_with_next': get_recurring_orders_context(request.user)
     })
 
@@ -264,7 +253,8 @@ def reorder(request, order_id):
 
 @login_required
 def loading(request):
-    return render(request, 'loading.html')
+    next_url = request.GET.get('next', '/orders/')
+    return render(request, 'loading.html', {'next_url': next_url})
 
 @login_required
 def checkout(request):
@@ -318,14 +308,13 @@ def checkout(request):
                         for b in ProductBatch.objects.select_for_update().filter(pk__in=batch_ids)
                     }
 
-                    # Validate stock before touching anything
+                    # Check every item has enough stock before touching anything
                     short = []
                     for item in cart_items:
                         b = locked[str(item['product'].pk)]
                         if b.stock < item['quantity']:
                             short.append(
-                                f"{item['product'].name}: only {b.stock} available, "
-                                f"you requested {item['quantity']}"
+                                f"{item['product'].name}: only {b.stock} available, you requested {item['quantity']}"
                             )
                     if short:
                         raise ValueError(short)
@@ -343,44 +332,32 @@ def checkout(request):
                         recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
                     )
 
-                    # One ProducerOrder per producer, then assign each item to its slice
-                    producer_orders = {}
-                    producer_subtotals = defaultdict(Decimal)
                     for item in cart_items:
                         batch = item['product']
-                        producer = batch.product.producer
-                        if producer.id not in producer_orders:
-                            producer_orders[producer.id] = ProducerOrder.objects.create(
-                                order=new_order,
-                                producer=producer,
-                                order_status='PENDING',
-                                delivery_date=form.cleaned_data['delivery_date'],
-                            )
+                        qty = item['quantity']
                         OrderProduct.objects.create(
                             order=new_order,
-                            producer_order=producer_orders[producer.id],
                             batch=batch,
-                            numPurchased=item['quantity'],
+                            numPurchased=qty,
                             price_at_purchase=batch.price,
                         )
-                        producer_subtotals[producer.id] += batch.price * item['quantity']
-                        ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - item['quantity'])
+                        ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - qty)
 
                     # Record a Payment (95% of subtotal) for each producer
                     now = timezone.now()
-                    for prod_id, prod_order in producer_orders.items():
-                        prod_subtotal = producer_subtotals[prod_id]
-                        producer_amount = (prod_subtotal * Decimal('0.95')).quantize(Decimal('0.01'))
-                        payment = Payment.objects.create(
-                            producer=prod_order.producer,
+                    for entry in cart_by_producer:
+                        producer_amount = (entry['subtotal'] * Decimal('0.95')).quantize(Decimal('0.01'))
+                        Payment.objects.create(
+                            producer=entry['producer'],
+                            order=new_order,
                             amount=producer_amount,
                             status=Payment.Status.PROCESSED,
                             processed_at=now,
                         )
-                        OrderPayment.objects.create(order=new_order, payment=payment)
 
                     request.session['cart'] = {}
-                    return redirect('order_confirmation', order_id=new_order.id)
+                    confirm_url = reverse('order_confirmation', args=[new_order.id])
+                    return redirect(f'/loading/?next={confirm_url}')
 
             except ValueError as e:
                 for msg in e.args[0]:
@@ -424,8 +401,7 @@ def order_confirmation(request, order_id):
             'producer_payment': (subtotal * Decimal('0.95')).quantize(Decimal('0.01')),
         })
 
-    order_payments = OrderPayment.objects.filter(order=order).select_related('payment')
-    payment_processed = order_payments.filter(payment__status=Payment.Status.PROCESSED).exists()
+    payment_processed = Payment.objects.filter(order=order, status=Payment.Status.PROCESSED).exists()
 
     return render(request, 'order_confirmation.html', {
         'order': order,
@@ -454,7 +430,12 @@ def home_view(request):
         Prefetch('batches', queryset=in_stock_batches_qs, to_attr='in_stock_batches')
     ).annotate(
         total_stock=Sum('batches__stock'),
-        primary_image=Subquery(class_a_image.values('image')[:1]),
+        primary_image=Subquery(
+            ProductBatch.objects.filter(
+                product=OuterRef('pk'),
+                image__isnull=False
+            ).order_by('id').values('image')[:1]
+        ),
         avg_rating=Avg('review__rating'),
         review_count=Count('review'),
     ).filter(total_stock__gt=0)
@@ -509,7 +490,7 @@ def home_view(request):
             'best_before': str(b.best_before),
             'image': f'/media/{b.image}' if b.image else None,
             'surplus': b.surplus,
-            'discount': str(b.discount_percentage),
+            'discount': str(b.effective_discount),
             'availability': b.availability,
             'seasonStart': b.seasonStart,
             'seasonEnd': b.seasonEnd,
@@ -745,7 +726,7 @@ def upload_item(request):
             else:
                 discount_pct = class_discounts.get(quality_class, Decimal('0'))
             harvest_date = request.POST.get('harvest_date') or None
-            ProductBatch.objects.create(
+            new_batch = ProductBatch.objects.create(
                 product=product,
                 quality_class=quality_class,
                 stock=int(request.POST.get('stock') or 1),
@@ -846,10 +827,9 @@ def signup_view(request):
 @login_required
 def invoice_view(request, order_code=None):
     order_qs = Order.objects.filter(customer=request.user).prefetch_related(
-        'orderproduct_set__batch__product', 'customer')
+        'orderproduct_set__batch__product__producer')
     if order_code:
-        order = order_qs.filter(id__startswith=order_code).order_by(
-            'order_date').first()
+        order = order_qs.filter(id__startswith=order_code).order_by('order_date').first()
     else:
         order = order_qs.order_by('order_date').first()
 
@@ -860,24 +840,32 @@ def invoice_view(request, order_code=None):
     total = Decimal('0.00')
 
     if order:
-        items = order.orderproduct_set.all()
-        for item in items:
+        for item in order.orderproduct_set.all():
             line_total = item.numPurchased * item.price_at_purchase
             subtotal += line_total
+            producer = item.batch.product.producer
             invoice_items.append({
-                'name': item.batch.name,
-                'producer': item.batch.producer,
+                'name': item.batch.product.name,
+                'quality_class': item.batch.quality_class,
+                'producer_name': producer.organisation_name or ' '.join(filter(None, [producer.first_name, producer.last_name])) or producer.email,
                 'quantity': item.numPurchased,
-                'price': item.price_at_purchase,
+                'unit_price': item.price_at_purchase,
                 'line_total': line_total,
-                'details': item.batch.description,
                 'best_before': item.batch.best_before,
+                'unit': item.batch.product.unit,
             })
         commission_amount = subtotal * (commission_rate / Decimal('100.00'))
-        total = subtotal + commission_amount
+        total = subtotal
+
+    customer_name = None
+    if order:
+        c = order.customer
+        full = ' '.join(filter(None, [c.first_name, c.last_name]))
+        customer_name = c.organisation_name or full or c.email
 
     context = {
         'order': order,
+        'customer_name': customer_name,
         'invoice_items': invoice_items,
         'subtotal': subtotal,
         'commission_rate': commission_rate,
@@ -1364,36 +1352,6 @@ def profile_view(request):
         'recipe_count': recipe_count,
         'story_count': story_count,
         'saved_recipes': saved_recipes,
-    })
-
-
-
-@login_required
-def edit_profile(request):
-    if request.method == "POST":
-        profile_form = ProfileEditForm(request.POST, request.FILES, instance=request.user)
-        password_form = PasswordChangeForm(request.user, request.POST)
-
-        if "update_profile" in request.POST:
-            if profile_form.is_valid():
-                profile_form.save()
-                messages.success(request, "Profile updated successfully.")
-                return redirect("profile")
-
-        elif "change_password" in request.POST:
-            if password_form.is_valid():
-                user = password_form.save()
-                update_session_auth_hash(request, user)
-                messages.success(request, "Password changed successfully.")
-                return redirect("profile")
-
-    else:
-        profile_form = ProfileEditForm(instance=request.user)
-        password_form = PasswordChangeForm(request.user)
-
-    return render(request, "edit_profile.html", {
-        "profile_form": profile_form,
-        "password_form": password_form,
     })
 
 
