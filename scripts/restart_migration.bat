@@ -8,5 +8,6 @@ for /r %%i in (migrations\*.py) do (
     if not "%%~nxi"=="__init__.py" del "%%i"
 )
 
+docker compoose up
 docker exec django_app python manage.py makemigrations
 docker exec django_app python manage.py migrate
