@@ -5,14 +5,16 @@ from django.db.models import Q, Sum, Subquery, OuterRef, Prefetch, Avg, Count, F
 from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from django.contrib.auth import authenticate, get_user_model, login, update_session_auth_hash
+from django.contrib.auth import authenticate, login, update_session_auth_hash
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.http import Http404, HttpResponse, JsonResponse
 from django.conf import settings
 from django.contrib.auth.forms import PasswordChangeForm
-from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe
-from core.forms import ComplaintForm, LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
+from .models import User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe
+from core.forms import ComplaintForm, LoginForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
+from django.http import HttpResponse, JsonResponse
+from django.core.paginator import Paginator
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from django.contrib.auth.decorators import login_required
@@ -319,14 +321,13 @@ def checkout(request):
                         for b in ProductBatch.objects.select_for_update().filter(pk__in=batch_ids)
                     }
 
-                    # Validate stock before touching anything
+                    # Check every item has enough stock before touching anything
                     short = []
                     for item in cart_items:
                         b = locked[str(item['product'].pk)]
                         if b.stock < item['quantity']:
                             short.append(
-                                f"{item['product'].name}: only {b.stock} available, "
-                                f"you requested {item['quantity']}"
+                                f"{item['product'].name}: only {b.stock} available, you requested {item['quantity']}"
                             )
                     if short:
                         raise ValueError(short)
@@ -344,26 +345,16 @@ def checkout(request):
                         recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
                     )
 
-                    # One ProducerOrder per producer, then assign each item to its slice
-                    producer_orders = {}
                     for item in cart_items:
                         batch = item['product']
-                        producer = batch.product.producer
-                        if producer.id not in producer_orders:
-                            producer_orders[producer.id] = ProducerOrder.objects.create(
-                                order=new_order,
-                                producer=producer,
-                                order_status='PENDING',
-                                delivery_date=form.cleaned_data['delivery_date'],
-                            )
+                        qty = item['quantity']
                         OrderProduct.objects.create(
                             order=new_order,
-                            producer_order=producer_orders[producer.id],
                             batch=batch,
-                            numPurchased=item['quantity'],
+                            numPurchased=qty,
                             price_at_purchase=batch.price,
                         )
-                        ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - item['quantity'])
+                        ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - qty)
 
                     request.session['cart'] = {}
                     return redirect('order_confirmation', order_id=new_order.id)
