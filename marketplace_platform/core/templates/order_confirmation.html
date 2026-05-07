@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5" style="max-width:680px;">
+
+  <div style="text-align:center;margin-bottom:2rem;">
+    <div style="font-size:3rem;color:#198754;">✓</div>
+    <h2 style="color:#198754;font-weight:700;margin-bottom:4px;">Order Confirmed!</h2>
+    <p class="text-muted">Thank you for your order. Your producers have been notified.</p>
+    <div style="display:inline-flex;flex-direction:column;gap:4px;margin-top:8px;text-align:left;background:#f8f9fa;border-radius:10px;padding:12px 24px;">
+      <div style="font-size:0.95rem;"><span style="color:#888;">Order number:</span> <strong style="font-family:monospace;letter-spacing:0.05em;">{{ order.id|stringformat:"s"|slice:":8"|upper }}</strong></div>
+      <div style="font-size:0.95rem;"><span style="color:#888;">Order status:</span> <strong style="color:#856404;">{{ order.order_status }}</strong></div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:1.2rem;">
+        <div>
+          <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;">Order number</div>
+          <div style="font-family:monospace;font-size:1rem;font-weight:600;color:#333;">{{ order.id|stringformat:"s"|slice:":8"|upper }}</div>
+        </div>
+        <div>
+          <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;">Date placed</div>
+          <div style="font-size:0.9rem;">{{ order.order_date|date:"d M Y, H:i" }}</div>
+        </div>
+        <div>
+          <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;">Status</div>
+          <span style="background:#fff3cd;color:#856404;padding:2px 10px;border-radius:20px;font-size:0.8rem;font-weight:600;">{{ order.order_status }}</span>
+        </div>
+        <div>
+          <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;">Delivery date</div>
+          <div style="font-size:0.9rem;">{{ order.delivery_date|date:"d M Y" }}</div>
+        </div>
+      </div>
+
+      <hr>
+
+      {% for group in cart_by_producer %}
+        <div style="margin-bottom:1rem;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#198754;">
+              {{ group.producer.organisation_name|default:group.producer }}
+            </span>
+            <div style="flex:1;height:1px;background:#e0e0e0;"></div>
+          </div>
+          {% for op in group.items %}
+            <div style="display:flex;justify-content:space-between;padding:4px 8px;font-size:0.9rem;">
+              <span>{{ op.batch.product.name }}
+                <span style="color:#888;font-size:0.82rem;">× {{ op.numPurchased }} {{ op.batch.product.unit }}</span>
+              </span>
+              <span>£{{ op.price_at_purchase|floatformat:2 }}/{{ op.batch.product.unit }}</span>
+            </div>
+          {% endfor %}
+          <div style="text-align:right;font-size:0.78rem;color:#aaa;padding-right:8px;margin-top:4px;">
+            Network commission (5%): £{{ group.commission|floatformat:2 }}
+          </div>
+        </div>
+      {% endfor %}
+
+      <hr>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:0.82rem;color:#888;">
+          Total commission deducted from producers: £{{ total_commission|floatformat:2 }}
+        </div>
+        <div style="font-size:1.15rem;font-weight:700;color:#198754;">
+          Total: £{{ order.total_price|floatformat:2 }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h6 class="fw-bold mb-3">Delivery details</h6>
+      <div style="font-size:0.9rem;color:#444;line-height:1.8;">
+        {% if order.delivery_address %}
+          <div>{{ order.delivery_address }}</div>
+        {% endif %}
+        {% if order.delivery_postcode %}
+          <div>{{ order.delivery_postcode }}</div>
+        {% endif %}
+        <div style="margin-top:6px;color:#888;font-size:0.82rem;">
+          Expected by {{ order.delivery_date|date:"l, d M Y" }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:12px;justify-content:center;margin-top:1.5rem;">
+    <a href="{% url 'orders' %}" class="btn btn-outline-success">View all orders</a>
+    <a href="{% url 'home' %}" class="btn btn-success">Continue shopping</a>
+  </div>
+
+</div>
+{% endblock %}

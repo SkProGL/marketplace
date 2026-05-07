@@ -90,6 +90,24 @@
             </select>
           </div>
 
+          <label>Season</label>
+          <div class="toggles" style="margin-bottom:8px;">
+            <input type="checkbox" name="all_year" id="np-all-year" onchange="toggleSeasonFields(this.checked)" />
+            <label for="np-all-year">Available all year</label>
+          </div>
+          <div id="np-season-fields" class="row price-row">
+            <select name="season_start" id="np-season-start">
+              {% for value, label in months %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+            <select name="season_end" id="np-season-end">
+              {% for value, label in months %}
+                <option value="{{ value }}" {% if value == 'December' %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
           <label>Options</label>
           <div class="toggles">
             <input type="checkbox" name="organic" id="np-organic" />
@@ -179,6 +197,10 @@
 </div>
 
 <script>
+  function toggleSeasonFields(allYear) {
+    document.getElementById('np-season-fields').style.display = allYear ? 'none' : '';
+  }
+
   // ── Tab switching ──────────────────────────────────────
   function switchTab(tab) {
     document.getElementById('pane-new').style.display   = tab === 'new'   ? '' : 'none';
@@ -326,6 +348,8 @@
     r.addEventListener('change', updateDiscountRow);
   });
   updateDiscountRow();
+
+  lockSeasonEnd('np-season-start', 'np-season-end');
 
   // ── Restore correct tab if form was submitted with errors ──
   const formType = '{{ active_tab|default:"new" }}';
