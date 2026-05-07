@@ -19,8 +19,9 @@ from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.db import transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from decimal import Decimal
-from datetime import timedelta, date as date_type, datetime as datetime_type
+from datetime import time, timedelta, date as date_type, datetime as datetime_type
 
 
 MANAGEMENT_SEARCH_FIELDS = {
@@ -291,8 +292,6 @@ def checkout(request):
 
             subtotal = batch.price * qty
             total_price += subtotal
-
-            # 👇 ADD THIS
             producer = batch.product.producer
             food_miles = None
 
@@ -306,7 +305,7 @@ def checkout(request):
             cart_items.append({
                 'product': batch,
                 'quantity': qty,
-                'food_miles': food_miles,   # ✅ ADD THIS
+                'food_miles': food_miles,
             })
 
     groups = defaultdict(list)
@@ -1665,23 +1664,24 @@ def finance_view(request):
     user = request.user
     is_admin = user.is_superuser or user.category == 'Admin'
     
-    # Date filtering
+
     date_from = request.GET.get('from')
     date_to = request.GET.get('to')
-    
-    # Default to last 30 days for finance
-    if not date_from:
-        date_from = (timezone.now() - timedelta(days=30)).strftime('%Y-%m-%d')
-    if not date_to:
-        date_to = timezone.now().strftime('%Y-%m-%d')
-        
-    date_from_dt = datetime_type.strptime(date_from, '%Y-%m-%d')
-    date_to_dt = datetime_type.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
-    
-    payments = Payment.objects.select_related('producer', 'order').filter(
-        created_at__gte=date_from_dt,
-        created_at__lt=date_to_dt
-    ).order_by('-created_at')
+
+    payments = Payment.objects.select_related('producer', 'order').all()
+
+    # Only filter if user provides dates
+    if date_from:
+        date_from = parse_date(date_from)
+        date_from_dt = timezone.make_aware(datetime_type.combine(date_from, time.min))
+        payments = payments.filter(created_at__gte=date_from_dt)
+
+    if date_to:
+        date_to = parse_date(date_to)
+        date_to_dt = timezone.make_aware(datetime_type.combine(date_to, time.max))
+        payments = payments.filter(created_at__lte=date_to_dt)
+
+    payments = payments.order_by('-created_at')
     
     if not is_admin:
         payments = payments.filter(producer=user)
@@ -1708,7 +1708,8 @@ def finance_view(request):
                 p.status
             ])
         return response
-
+    print(Payment.objects.count())
+    print(Payment.objects.first().created_at)
     # Prepare data for template
     report_data = []
     total_network_commission = Decimal('0')
