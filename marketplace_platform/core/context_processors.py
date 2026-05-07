@@ -84,15 +84,15 @@ def navbar_alerts(request):
             surplus_filter['created_at__gt'] = cleared_at
         surplus_batches = (ProductBatch.objects
                            .filter(**surplus_filter)
-                           .select_related('product')[:3])
+                           .select_related('product__producer')[:3])
         for batch in surplus_batches:
-            discount = int(batch.discount_percentage) if batch.discount_percentage else int(batch.surplus_discount_percentage)
+            discount = int(batch.effective_discount)
             alerts.append({
                 "key": f"surplus_{batch.id}",
                 "icon": "tag-fill",
                 "colour": "warning",
                 "message": f"{batch.product.name} is on discount!",
-                "message_status": f"{discount}% off — helping reduce food waste",
+                "message_status": f"{discount}% off - {batch.product.producer.organisation_name or batch.product.producer.email}",
                 "link_url": '/',
                 "link_label": "Shop now",
             })

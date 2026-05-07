@@ -266,12 +266,16 @@ class ProductBatch(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     # --- Convenience properties so templates can use batch.name, batch.producer etc. ---
+    _CLASS_DISCOUNTS = {'A': Decimal('0'), 'B': Decimal('15'), 'C': Decimal('30'), 'D': Decimal('45'), 'Discounted': Decimal('50')}
+
+    @property
+    def effective_discount(self):
+        return self.discount_percentage or self._CLASS_DISCOUNTS.get(self.quality_class, Decimal('0'))
+
     @property
     def price(self):
-        from decimal import Decimal
         base = self.product.price
-        class_discounts = {'A': Decimal('0'), 'B': Decimal('15'), 'C': Decimal('30'), 'D': Decimal('45'), 'Discounted': Decimal('50')}
-        discount = self.discount_percentage if self.discount_percentage else class_discounts.get(self.quality_class, Decimal('0'))
+        discount = self.effective_discount
         if discount:
             return (base * (1 - discount / Decimal('100'))).quantize(Decimal('0.01'))
         return base

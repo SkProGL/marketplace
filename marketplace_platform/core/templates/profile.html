@@ -129,9 +129,6 @@
     </div>
     <div class="profile-header-info">
       <h1>{{ user.full_name|default:"No name set" }}</h1>
-      <a href="{% url 'edit_profile' %}" class="btn btn-sm btn-outline-dark mt-2">
-        Edit Profile
-      </a>
       {% if user.is_superuser %}
         <span class="profile-badge badge-superuser">Superuser / Admin</span>
       {% else %}

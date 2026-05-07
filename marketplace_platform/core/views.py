@@ -7,6 +7,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, update_session_auth_hash
 from django.core.mail import send_mail
+from django.core.paginator import Paginator
 from django.http import Http404, HttpResponse, JsonResponse
 from django.conf import settings
 from django.contrib.auth.forms import PasswordChangeForm
@@ -17,8 +18,9 @@ from core.utils import get_management_context, get_recurring_orders_context, han
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.utils import timezone
-from datetime import timedelta
 from decimal import Decimal
+from datetime import timedelta
+
 
 MANAGEMENT_SEARCH_FIELDS = {
     'Product':    (['name', 'category', 'description'],
@@ -488,7 +490,7 @@ def home_view(request):
             'best_before': str(b.best_before),
             'image': f'/media/{b.image}' if b.image else None,
             'surplus': b.surplus,
-            'discount': str(b.discount_percentage),
+            'discount': str(b.effective_discount),
             'availability': b.availability,
             'seasonStart': b.seasonStart,
             'seasonEnd': b.seasonEnd,
@@ -724,7 +726,7 @@ def upload_item(request):
             else:
                 discount_pct = class_discounts.get(quality_class, Decimal('0'))
             harvest_date = request.POST.get('harvest_date') or None
-            ProductBatch.objects.create(
+            new_batch = ProductBatch.objects.create(
                 product=product,
                 quality_class=quality_class,
                 stock=int(request.POST.get('stock') or 1),
