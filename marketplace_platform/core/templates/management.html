@@ -30,7 +30,7 @@
                     <label class="btn btn-outline-success" for="btnradio{{ forloop.counter }}">
                         {{ model_display_names|slice:forloop.counter|last }}
                         <!-- Producers - Show alert badges indicating stock and pending order counts -->
-                        {% if model_name == "Product" %}
+                        {% if model_name == "ProductBatch" %}
                             {% if stock_alert.warning_count > 0 %}
                             <span class="badge bg-warning">{{ stock_alert.warning_count }}</span>
                             {% endif %}
@@ -74,7 +74,7 @@
                         <input id="search-input" type="text" placeholder="Search…" autocomplete="off"
                             class="form-control border-0" style="padding-left:1.8rem">
                     </div>
-                    {% if user.is_superuser %}
+                    {% if user.is_superuser and selected_model_name != 'Order' %}
                     <a href="?model={{ selected_model_name }}&draft=true" class="btn btn-outline-success">
                         <i class="bi bi-plus-square-fill"></i>
                     </a>

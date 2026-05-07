@@ -55,6 +55,39 @@ function buildReceiptTable(receipt, canAdvance, showProducerCol) {
     return html;
 }
 
+function buildProducerOrdersSection(producerOrders) {
+    if (!producerOrders || !producerOrders.length) return '';
+    return producerOrders.map((po, i) => {
+        const advBtn = po.advance_url
+            ? `<div class="mt-2">
+                <textarea class="form-control form-control-sm mb-1" id="po-note-${i}" rows="2" placeholder="Optional note..."></textarea>
+                <button class="btn btn-sm btn-outline-success w-100 po-advance-btn"
+                    data-url="${po.advance_url}" data-note-id="po-note-${i}">
+                    Advance to ${po.next_status}
+                </button>
+               </div>`
+            : '';
+        const historyHtml = po.history && po.history.length
+            ? `<details class="mt-2">
+                <summary style="font-size:.75rem;color:#888;cursor:pointer;list-style:none;display:flex;align-items:center;gap:5px;">
+                    <span style="font-size:.65rem;color:#bbb;">&#9654;</span>
+                    History <span style="color:#bbb;">(${po.history.length})</span>
+                </summary>
+                <div class="mt-1 ps-2">${buildHistoryTimeline(po.history)}</div>
+               </details>`
+            : '';
+        return `<div class="border rounded p-2 mb-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <strong style="font-size:.85rem">${po.producer}</strong>
+                ${pill(po.status, true)}
+                <span class="text-muted" style="font-size:.8rem">Delivery: ${po.delivery_date || 'N/A'}</span>
+            </div>
+            ${historyHtml}
+            ${advBtn}
+        </div>`;
+    }).join('');
+}
+
 function buildHistoryTimeline(history) {
     if (!history || !history.length) return '<p class="text-muted" style="font-size:.82rem">No history yet.</p>';
     return history.map(h => `
@@ -67,78 +100,116 @@ function buildHistoryTimeline(history) {
         </div>`).join('');
 }
 
-buttons.forEach(button => {
-    button.addEventListener('click', function () {
-        const orderId = this.getAttribute('order-row-id');
-        modal.show();
-        document.getElementById('order-id').innerText = orderId;
-        document.getElementById('customer_name').innerText = 'Loading...';
-        document.getElementById('receipt-table').innerHTML = '<p class="text-muted p-3">Loading...</p>';
-        document.getElementById('error').innerText = '';
-        document.getElementById('advance-section').classList.add('d-none');
+function loadOrderSummary(orderId) {
+    document.getElementById('customer_name').innerText = 'Loading...';
+    document.getElementById('receipt-table').innerHTML = '<p class="text-muted p-3">Loading...</p>';
+    document.getElementById('error').innerText = '';
+    document.getElementById('advance-section').classList.add('d-none');
+    document.getElementById('producer-orders-section').style.display = 'none';
+    document.getElementById('producer-orders-list').innerHTML = '';
+    document.getElementById('status-history-section').style.display = '';
 
-        fetch(`/management/order/${orderId}/order_summary/`)
-            .then(r => r.json())
-            .then(data => {
-                if (data.error) { document.getElementById('error').innerText = `Error: ${data.error}`; return; }
+    fetch(`/management/order/${orderId}/order_summary/`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { document.getElementById('error').innerText = `Error: ${data.error}`; return; }
 
-                // Header fields
-                ['customer_name','customer_type','email','phone','address',
-                 'order_date','delivery_date','recurrence','instructions'].forEach(key => {
-                    const el = document.getElementById(key);
-                    if (el) el.innerText = data[key] || 'Not provided';
+            // Header fields
+            ['customer_name','customer_type','email','phone','address',
+             'order_date','delivery_date','recurrence','instructions'].forEach(key => {
+                const el = document.getElementById(key);
+                if (el) el.innerText = data[key] || 'Not provided';
+            });
+            const totalEl = document.getElementById('total_price');
+            if (totalEl) totalEl.innerText = `£${data.total_price}`;
+
+            // Overall status pill
+            const statusEl = document.getElementById('status');
+            statusEl.innerHTML = data.status + (STATUS_ICON_MAP[data.status] || '');
+            statusEl.className = `status-pill ms-2 status-pill-${data.status.toLowerCase()}`;
+
+            // Progress bar (overall)
+            const progressBar = document.getElementById('order-progress-bar');
+            if (data.status === 'CANCELLED') {
+                progressBar.style.width = '100%';
+                progressBar.className = 'progress-bar bg-danger';
+                progressBar.innerText = 'CANCELLED';
+            } else {
+                const percent = STATUS_PROGRESS_MAP[data.status] || 0;
+                const cls = data.status.toLowerCase();
+                setTimeout(() => { progressBar.style.width = `${percent}%`; }, 50);
+                progressBar.className = `progress-bar bg-${cls} progress-bar-striped progress-bar-animated`;
+                progressBar.innerText = `${percent}%`;
+                ['PENDING','CONFIRMED','READY','DELIVERED'].forEach(stage => {
+                    const lbl = document.getElementById(`label-${stage}`);
+                    lbl.className = stage === data.status ? `text-${stage.toLowerCase()}` : 'text-muted';
                 });
-                const totalEl = document.getElementById('total_price');
-                if (totalEl) totalEl.innerText = `£${data.total_price}`;
+            }
 
-                // Overall status pill
-                const statusEl = document.getElementById('status');
-                statusEl.innerHTML = data.status + (STATUS_ICON_MAP[data.status] || '');
-                statusEl.className = `status-pill ms-2 status-pill-${data.status.toLowerCase()}`;
+            const csrf = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+            const canAdvance = data.producer_orders
+                ? data.producer_orders.some(po => po.advance_url)
+                : !!data.advance_url;
 
-                // Progress bar (overall)
-                const progressBar = document.getElementById('order-progress-bar');
-                if (data.status === 'CANCELLED') {
-                    progressBar.style.width = '100%';
-                    progressBar.className = 'progress-bar bg-danger';
-                    progressBar.innerText = 'CANCELLED';
-                } else {
-                    const percent = STATUS_PROGRESS_MAP[data.status] || 0;
-                    const cls = data.status.toLowerCase();
-                    setTimeout(() => { progressBar.style.width = `${percent}%`; }, 50);
-                    progressBar.className = `progress-bar bg-${cls} progress-bar-striped progress-bar-animated`;
-                    progressBar.innerText = `${percent}%`;
-                    ['PENDING','CONFIRMED','READY','DELIVERED'].forEach(stage => {
-                        const lbl = document.getElementById(`label-${stage}`);
-                        lbl.className = stage === data.status ? `text-${stage.toLowerCase()}` : 'text-muted';
-                    });
-                }
+            // Receipt and history
+            document.getElementById('receipt-table').innerHTML =
+                buildReceiptTable(data.receipt, canAdvance, data.show_producer_col);
+            const historySection = document.getElementById('status-history-section');
+            if (data.producer_orders) {
+                historySection.style.display = 'none';
+            } else {
+                historySection.style.display = '';
+                document.getElementById('status-history').innerHTML = buildHistoryTimeline(data.status_history);
+            }
 
-                // Receipt and history
-                document.getElementById('receipt-table').innerHTML =
-                    buildReceiptTable(data.receipt, !!data.advance_url, data.show_producer_col);
-                document.getElementById('status-history').innerHTML =
-                    buildHistoryTimeline(data.status_history);
-
-                // Advance section
-                const advSection = document.getElementById('advance-section');
-                if (data.advance_url && data.next_status) {
-                    advSection.classList.remove('d-none');
-                    document.getElementById('advance-label').innerText = `Advance to ${data.next_status}`;
-                    const advBtn = document.getElementById('advance-btn');
-                    advBtn.innerText = `Advance to ${data.next_status}`;
-                    const fresh = advBtn.cloneNode(true);
-                    advBtn.parentNode.replaceChild(fresh, advBtn);
-                    const csrf = document.querySelector('[name="csrfmiddlewaretoken"]').value;
-                    fresh.addEventListener('click', () => {
-                        const note = document.getElementById('advance-note').value;
-                        fetch(data.advance_url, {
+            // Embedded producer orders section (superuser only)
+            const poSection = document.getElementById('producer-orders-section');
+            const poList = document.getElementById('producer-orders-list');
+            if (data.producer_orders && data.producer_orders.length) {
+                poList.innerHTML = buildProducerOrdersSection(data.producer_orders);
+                poSection.style.display = '';
+                poList.querySelectorAll('.po-advance-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const note = document.getElementById(btn.dataset.noteId).value;
+                        fetch(btn.dataset.url, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                             body: new URLSearchParams({ csrfmiddlewaretoken: csrf, note }),
-                        }).then(() => { modal.hide(); window.location.reload(); });
+                        }).then(() => loadOrderSummary(orderId));
                     });
-                }
-            });
+                });
+            } else {
+                poSection.style.display = 'none';
+            }
+
+            // Single advance section (producer only)
+            const advSection = document.getElementById('advance-section');
+            if (!data.producer_orders && data.advance_url && data.next_status) {
+                advSection.classList.remove('d-none');
+                document.getElementById('advance-label').innerText = `Advance to ${data.next_status}`;
+                const advBtn = document.getElementById('advance-btn');
+                advBtn.innerText = `Advance to ${data.next_status}`;
+                const fresh = advBtn.cloneNode(true);
+                advBtn.parentNode.replaceChild(fresh, advBtn);
+                fresh.addEventListener('click', () => {
+                    const note = document.getElementById('advance-note').value;
+                    fetch(data.advance_url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ csrfmiddlewaretoken: csrf, note }),
+                    }).then(() => loadOrderSummary(orderId));
+                });
+            } else if (data.producer_orders) {
+                advSection.classList.add('d-none');
+            }
+        });
+}
+
+buttons.forEach(button => {
+    button.addEventListener('click', function () {
+        const orderId = this.getAttribute('order-row-id');
+        document.getElementById('order-id').innerText = orderId;
+        modal.show();
+        loadOrderSummary(orderId);
     });
 });

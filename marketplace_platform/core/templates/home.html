@@ -86,13 +86,19 @@
          data-review-count="{{ item.review_count }}"
          data-product-id="{{ item.id }}">
       <div class="image">
-        {% if item.primary_image %}
-          <img src="/media/{{ item.primary_image }}" alt="{{ item.name }}">
+        {% if item.in_stock_batches.0.image %}
+          <img src="{{ item.in_stock_batches.0.thumbnail.url }}" 
+               data-src="{{ item.in_stock_batches.0.image.url }}" 
+               alt="{{ item.name }}" 
+               loading="lazy" 
+               class="product-image">
+        {% elif item.primary_image %}
+          <img src="{{ item.thumbnail.url }}" data-src="/media/{{ item.primary_image }}" alt="{{ item.name }}" loading="lazy" class="product-image">
         {% else %}
-          <img src="{% static 'test.jpg' %}" alt="{{ item.name }}">
+          <img src="{% static 'test.jpg' %}" alt="{{ item.name }}" loading="lazy">
         {% endif %}
         {% if item.organic %}
-          <img src="{% static 'organic_badge.svg' %}" alt="Organic" class="organic-badge">
+          <img src="{% static 'organic_badge.svg' %}" alt="Organic" class="organic-badge" loading="lazy">
         {% endif %}
       </div>
       <div class="card-info">
@@ -107,6 +113,7 @@
           {% else %}
             <span class="card-rating card-rating--none">No reviews yet</span>
           {% endif %}
+	  <br>
         </div>
         <div class="card-btn-wrap">
           <button type="button" class="add-to-cart-btn">Add</button>
@@ -156,7 +163,7 @@
       <div class="pm-body">
         <div class="pm-layout">
           <div class="pm-image-wrap">
-            <img id="modalImage" src="" alt="" class="pm-image">
+            <img id="modalImage" src="" alt="" class="pm-image" loading="lazy">
           </div>
           <div class="pm-details">
             <div class="pm-class-area">
@@ -211,9 +218,10 @@
             <div id="modalCartControls" class="pm-cart-controls">
               <div id="modalCartStepper" class="cart-stepper" style="display:none">
                 <button class="widget-stepper-btn" id="modalDecBtn">&#8722;</button>
-                <span class="stepper-qty" id="modalQty">1</span>
+                <input type="number" class="stepper-qty" id="modalQty" value="1" min="0">
                 <button class="widget-stepper-btn" id="modalIncBtn">+</button>
                 <span id="modalCartTotal" class="pm-cart-total"></span>
+                <button id="modalRemoveBtn" class="widget-stepper-btn" title="Remove from cart" style="color:#dc3545;font-size:1rem;"><i class="bi bi-trash3"></i></button>
               </div>
               <div class="pm-add-row">
                 <button id="modalAddBtn" class="add-to-cart-btn pm-add-btn">Add</button>
@@ -377,10 +385,16 @@
 
     const classSelect = document.getElementById('modalClassSelect');
     const labels = { A: 'Premium', B: 'Standard', C: 'Economy', D: 'Basic', Discounted: 'Surplus / Discount' };
-    classSelect.innerHTML = '<option value="" disabled selected>Select class…</option>' +
-      mergedBatches.map((b, i) =>
-        `<option value="${i}">Class ${b.quality_class} — ${labels[b.quality_class] || b.quality_class}</option>`
+    
+    if (mergedBatches.length > 0) {
+      classSelect.innerHTML = mergedBatches.map((b, i) =>
+        `<option value="${i}" ${i === 0 ? 'selected' : ''}>Class ${b.quality_class} — ${labels[b.quality_class] || b.quality_class}</option>`
       ).join('');
+      selectBatch(mergedBatches[0]);
+    } else {
+      classSelect.innerHTML = '<option value="" disabled selected>No classes available</option>';
+    }
+
     classSelect.onchange = function() {
       selectBatch(mergedBatches[parseInt(this.value)]);
     };
@@ -416,20 +430,34 @@
 
 <script>
   const ALLERGEN_SVGS = {
-    gluten:     `<line x1="12" y1="21" x2="12" y2="5"/><path d="M12 17C9 16 8 13 9 11 10 9 12 9 12 9"/><path d="M12 17C15 16 16 13 15 11 14 9 12 9 12 9"/><path d="M12 11C9 10 8 7 9 5 10 3 12 3 12 3"/><path d="M12 11C15 10 16 7 15 5 14 3 12 3 12 3"/>`,
-    crustacean: `<path d="M16 5C18 7 17 11 15 13L11 16C9 17 8 19 10 21"/><path d="M10 21C9 22 7 21 7 19 7 17 9 16 12 15"/><path d="M16 5L18 4M15 8L18 7M7 19L5 19M8 17L6 16"/>`,
-    egg:        `<path d="M12 4C7 4 5 9 5 13 5 18 8 21 12 21 16 21 19 18 19 13 19 9 17 4 12 4Z"/>`,
-    fish:       `<path d="M5 12C8 8 12 7 15 9 17 10 18 11 18 12 18 13 17 14 15 15 12 17 8 16 5 12Z"/><path d="M18 12L21 9 21 15Z"/><circle cx="9" cy="11" r="1" fill="#555"/>`,
-    peanuts:    `<ellipse cx="12" cy="8.5" rx="4" ry="4.5"/><ellipse cx="12" cy="17" rx="4" ry="4"/><line x1="8.5" y1="12.5" x2="15.5" y2="12.5" stroke-dasharray="2,1"/>`,
-    soya:       `<path d="M12 4C8 4 7 7 8 10 7 13 8 17 12 20 16 17 17 13 16 10 17 7 16 4 12 4Z"/><circle cx="12" cy="8.5" r="1.5"/><circle cx="12" cy="13" r="1.5"/><circle cx="12" cy="17.5" r="1.5"/>`,
-    milk:       `<path d="M9 7L8 21 16 21 15 7Z"/><path d="M9 7L10.5 4 13.5 4 15 7"/><line x1="8.5" y1="10" x2="15.5" y2="10"/>`,
-    nuts:       `<path d="M12 4C7 4 5 8 5 12 5 16.5 8 20 12 20 16 20 19 16.5 19 12 19 8 17 4 12 4Z"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="5" y1="12" x2="19" y2="12"/>`,
-    celery:     `<line x1="9" y1="20" x2="9" y2="13"/><line x1="12" y1="20" x2="12" y2="11"/><line x1="15" y1="20" x2="15" y2="13"/><path d="M7 13Q12 7 17 13" fill="none"/>`,
-    mustard:    `<rect x="10" y="5" width="4" height="9" rx="1"/><path d="M9 14L8 21 16 21 15 14Z"/><circle cx="12" cy="3.5" r="1.5"/>`,
-    sesame:     `<ellipse cx="9" cy="9" rx="2" ry="3" transform="rotate(-20 9 9)"/><ellipse cx="15" cy="8" rx="2" ry="3" transform="rotate(25 15 8)"/><ellipse cx="8" cy="15" rx="2" ry="3" transform="rotate(10 8 15)"/><ellipse cx="15" cy="15" rx="2" ry="3" transform="rotate(-15 15 15)"/><ellipse cx="12" cy="12" rx="2" ry="3"/>`,
-    sulphites:  `<polygon points="12,3 19.5,7.5 19.5,16.5 12,21 4.5,16.5 4.5,7.5"/><text x="12" y="14" text-anchor="middle" font-size="5.5" fill="#444" font-family="Arial" font-weight="bold" stroke="none">E-X</text>`,
-    shellfish:  `<path d="M12 20C8 20 5 17 5 13 5 9 7 6 12 5 17 6 19 9 19 13 19 17 16 20 12 20Z"/><line x1="12" y1="5" x2="12" y2="20"/><path d="M7 8Q12 11 17 8M5.5 12Q12 16 18.5 12M6 16Q12 19.5 18 16" fill="none"/>`,
-    lupins:     `<circle cx="9" cy="10" r="3.5"/><circle cx="15" cy="10" r="3.5"/><circle cx="12" cy="16.5" r="3.5"/>`,
+    // wheat stalk with two filled grain pods on sides + top grain
+    gluten:     `<line x1="12" y1="21" x2="12" y2="8"/><ellipse cx="9.5" cy="12" rx="2.5" ry="4.5" transform="rotate(-20 9.5 12)" fill="white" stroke="none"/><ellipse cx="14.5" cy="12" rx="2.5" ry="4.5" transform="rotate(20 14.5 12)" fill="white" stroke="none"/><ellipse cx="12" cy="6" rx="2" ry="3.5" fill="white" stroke="none"/>`,
+    // curved shrimp body with antennae and eye
+    crustacean: `<path d="M15 5C17 7 16 11 14 13L10 16C8 17 7 20 9 21"/><path d="M9 21C8 22.5 6 21 6 19C6 17 8 16 11 15"/><line x1="15" y1="5" x2="18" y2="3"/><line x1="17" y1="7" x2="20" y2="6"/><circle cx="14" cy="6" r="1.5" fill="white"/>`,
+    // simple egg oval
+    egg:        `<path d="M12 3C7 3 5 8.5 5 13C5 18 8 21 12 21C16 21 19 18 19 13C19 8.5 17 3 12 3Z" fill="white" stroke="none"/>`,
+    // fish body + triangular tail + amber eye
+    fish:       `<path d="M3 12C6 6 13 6 17 12C13 18 6 18 3 12Z" fill="white" stroke="none"/><path d="M17 12L22 7L22 17Z" fill="white" stroke="none"/><circle cx="8" cy="11" r="1.5" fill="#f59e0b"/>`,
+    // double-lobe peanut with amber seam
+    peanuts:    `<ellipse cx="12" cy="7.5" rx="4" ry="5.5" fill="white" stroke="none"/><ellipse cx="12" cy="17" rx="4" ry="4.5" fill="white" stroke="none"/><path d="M8.5 11.5C10.5 12.5 13.5 12.5 15.5 11.5" fill="none" stroke="#f59e0b" stroke-width="1.5"/><path d="M8.5 13C10.5 12 13.5 12 15.5 13" fill="none" stroke="#f59e0b" stroke-width="1.5"/>`,
+    // soybean pod shape with three amber bean dots inside
+    soya:       `<path d="M12 3C8 3 6 7 7 10.5C6 14.5 8 18.5 12 21C16 18.5 18 14.5 17 10.5C18 7 16 3 12 3Z" fill="white" stroke="none"/><circle cx="12" cy="8" r="1.5" fill="#f59e0b"/><circle cx="12" cy="12.5" r="1.5" fill="#f59e0b"/><circle cx="12" cy="17" r="1.5" fill="#f59e0b"/>`,
+    // milk bottle with amber label line
+    milk:       `<path d="M9 4L15 4L17 8L17.5 21L6.5 21L7 8Z" fill="white" stroke="none"/><path d="M9 4L15 4" stroke="#f59e0b" stroke-width="2" fill="none"/><path d="M7 11L17 11" stroke="#f59e0b" stroke-width="1.5" fill="none"/>`,
+    // walnut half: round shell with amber vein lines
+    nuts:       `<path d="M12 4C7.5 4 5 7.5 5 12C5 16.5 8 20 12 20C16 20 19 16.5 19 12C19 7.5 16.5 4 12 4Z" fill="white" stroke="none"/><line x1="12" y1="4" x2="12" y2="20" stroke="#f59e0b" stroke-width="1.5"/><path d="M5 12Q8 9 12 9Q16 9 19 12" stroke="#f59e0b" stroke-width="1.5" fill="none"/>`,
+    // three celery stalks with curved leaf top
+    celery:     `<path d="M9 21L9 14C9 9 6 7 7 4"/><path d="M12 21L12 12C12 6 12 3 12 3"/><path d="M15 21L15 14C15 9 18 7 17 4"/><path d="M6.5 14Q12 10 17.5 14" fill="none"/>`,
+    // mustard jar with lid and amber mustard circle
+    mustard:    `<rect x="8" y="10" width="8" height="11" rx="1" fill="white" stroke="none"/><path d="M9 10L9 7L11 5L13 5L15 7L15 10Z" fill="white" stroke="none"/><path d="M8 13L16 13" stroke="#f59e0b" stroke-width="1.5" fill="none"/><circle cx="12" cy="17" r="1.5" fill="#f59e0b"/>`,
+    // five sesame seeds in organic arrangement
+    sesame:     `<ellipse cx="12" cy="5.5" rx="2" ry="3.5" fill="white" stroke="none"/><ellipse cx="6.5" cy="11.5" rx="2" ry="3.5" transform="rotate(30 6.5 11.5)" fill="white" stroke="none"/><ellipse cx="17.5" cy="11.5" rx="2" ry="3.5" transform="rotate(-30 17.5 11.5)" fill="white" stroke="none"/><ellipse cx="8" cy="18.5" rx="2" ry="3.5" transform="rotate(-15 8 18.5)" fill="white" stroke="none"/><ellipse cx="16" cy="18.5" rx="2" ry="3.5" transform="rotate(15 16 18.5)" fill="white" stroke="none"/>`,
+    // white hexagon with amber SO₂ label
+    sulphites:  `<polygon points="12,2 21,7 21,17 12,22 3,17 3,7" fill="white" stroke="none"/><text x="12" y="15" text-anchor="middle" font-size="5.5" fill="#f59e0b" font-family="Arial" font-weight="bold" stroke="none">SO₂</text>`,
+    // scallop shell shape with amber stripe lines
+    shellfish:  `<path d="M12 21C7 21 4 17 4 13C4 8.5 7 5 12 4C17 5 20 8.5 20 13C20 17 17 21 12 21Z" fill="white" stroke="none"/><line x1="12" y1="4" x2="12" y2="21" stroke="#f59e0b" stroke-width="1.5"/><path d="M4.5 9.5Q12 13 19.5 9.5" stroke="#f59e0b" fill="none" stroke-width="1"/><path d="M4 14Q12 17.5 20 14" stroke="#f59e0b" fill="none" stroke-width="1"/>`,
+    // three lupin beans/peas in a cluster
+    lupins:     `<circle cx="9" cy="10" r="4" fill="white" stroke="none"/><circle cx="15" cy="10" r="4" fill="white" stroke="none"/><circle cx="12" cy="17" r="4" fill="white" stroke="none"/><line x1="12" y1="18" x2="12" y2="22"/>`,
   };
 
   function getAllergenKey(str) {
@@ -467,8 +495,8 @@
       const badge = document.createElement('div');
       badge.className = 'allergen-badge';
       badge.title = allergen;
-      badge.style.cssText = `position:absolute;bottom:8px;left:${8 + slotIndex * 26}px;width:22px;height:22px;background:white;border-radius:50%;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;z-index:${10 + slotIndex};`;
-      badge.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ALLERGEN_SVGS[key]}</svg>`;
+      badge.style.cssText = `position:absolute;bottom:8px;left:${8 + slotIndex * 34}px;width:30px;height:30px;background:#f59e0b;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;z-index:${10 + slotIndex};cursor:default;`;
+      badge.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ALLERGEN_SVGS[key]}</svg>`;
       imageDiv.appendChild(badge);
       slotIndex++;
     });
@@ -477,7 +505,7 @@
       const more = document.createElement('div');
       more.className = 'allergen-badge';
       more.title = allergens.slice(MAX_VISIBLE).join(', ');
-      more.style.cssText = `position:absolute;bottom:8px;left:${8 + slotIndex * 26}px;width:22px;height:22px;background:#444;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:${10 + slotIndex};color:white;font-size:9px;font-weight:700;`;
+      more.style.cssText = `position:absolute;bottom:8px;left:${8 + slotIndex * 34}px;width:30px;height:30px;background:#78716c;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:${10 + slotIndex};color:white;font-size:10px;font-weight:700;cursor:default;`;
       more.textContent = `+${extra}`;
       imageDiv.appendChild(more);
     }
@@ -512,7 +540,7 @@
       ? Math.min(currentBatchStock, currentBatchMaxQty)
       : currentBatchStock;
   
-    document.getElementById('modalQty').textContent = localQty;
+    document.getElementById('modalQty').value = localQty;
     document.getElementById('modalCartTotal').textContent = localQty > 0
       ? '£' + (localQty * currentItemPrice).toFixed(2) + ', ' + localQty + currentBatchUnit : '';
     stepper.style.display = localQty > 0 ? 'flex' : 'none';
@@ -597,7 +625,26 @@
     if (localQty < effectiveCap) { localQty++; updateModalCartUI(); }
   });
   document.getElementById('modalDecBtn').addEventListener('click', () => {
-    if (localQty > 1) { localQty--; updateModalCartUI(); }
+    if (localQty > 0) {
+      localQty--;
+      updateModalCartUI();
+      if (localQty === 0) commitCart();
+    }
+  });
+  document.getElementById('modalRemoveBtn').addEventListener('click', () => {
+    localQty = 0;
+    updateModalCartUI();
+    commitCart();
+  });
+  document.getElementById('modalQty').addEventListener('input', () => {
+    const effectiveCap = currentBatchMaxQty !== null
+      ? Math.min(currentBatchStock, currentBatchMaxQty) : currentBatchStock;
+    const raw = parseInt(document.getElementById('modalQty').value, 10);
+    if (!isNaN(raw)) {
+      localQty = Math.max(0, Math.min(raw, effectiveCap));
+      updateModalCartUI();
+      if (localQty === 0) commitCart();
+    }
   });
 
   function updateCardDiscountBadge(card) {
@@ -621,6 +668,16 @@
       updateCardCartBadge(card.dataset.productId);
       renderAllergenBadges(card);
       updateCardDiscountBadge(card);
+    });
+    
+    // Auto-swap to high-res images
+    document.querySelectorAll('.product-image[data-src]').forEach(img => {
+      const highRes = img.dataset.src;
+      const tempImg = new Image();
+      tempImg.src = highRes;
+      tempImg.onload = () => {
+        img.src = highRes;
+      };
     });
   }
   attachCardClickHandlers();
@@ -702,11 +759,11 @@
              data-review-count="${item.review_count || 0}"
              data-product-id="${item.id}">
           <div class="image">
-            ${item.image
-              ? `<img src="${item.image}" alt="${item.name}">`
-              : `<img src="/static/test.jpg" alt="${item.name}">`
+            ${item.thumbnail
+              ? `<img src="${item.thumbnail}" data-src="${item.image}" alt="${item.name}" loading="lazy" class="product-image">`
+              : `<img src="/static/test.jpg" alt="${item.name}" loading="lazy">`
             }
-            ${item.organic ? `<img src="/static/organic_badge.svg" alt="Organic" class="organic-badge">` : ''}
+            ${item.organic ? `<img src="/static/organic_badge.svg" alt="Organic" class="organic-badge" loading="lazy">` : ''}
           </div>
           <div class="card-info">
             <div class="card-info-left">
@@ -724,9 +781,10 @@
           </div>
         </div>
       `).join('');
-      attachCardClickHandlers();
-
-      const pag = document.getElementById('homePagination');
+       attachCardClickHandlers();
+       initProgressiveImages();
+ 
+       const pag = document.getElementById('homePagination');
       pag.innerHTML = '';
       if (data.has_prev) {
         const btn = document.createElement('button');

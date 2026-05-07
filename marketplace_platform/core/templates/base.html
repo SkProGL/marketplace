@@ -158,6 +158,21 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'cart.js' %}"></script>
+    <script>
+      function initProgressiveImages() {
+        document.querySelectorAll('.product-image[data-src]').forEach(img => {
+          if (img.dataset.processed) return; // Prevent double-processing
+          img.dataset.processed = 'true';
+          const highRes = img.dataset.src;
+          const tempImg = new Image();
+          tempImg.src = highRes;
+          tempImg.onload = () => {
+            img.src = highRes;
+          };
+        });
+      }
+      window.addEventListener('load', initProgressiveImages);
+    </script>
 
     <!-- To cause modal windows to respect base template (nav bar, etc.) -->
     {% block modals %}{% endblock %}

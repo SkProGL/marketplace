@@ -21,7 +21,8 @@ PRODUCER_ID_FIELDS = {'Product': 'producer', 'StoryPost': 'user', 'Recipe': 'use
 ## Fields to show first, per model
 MODEL_FIELD_PRIORITY = {
     'User': ['email', 'password', 'full_name', 'category', 'organisation_name','phone', 'addrss', 'postcode^'],
-    'Product': ['name', 'category', 'price', 'stock', 'alert_threshold', 'all_year', 'seasonStart', 'seasonEnd'],
+    'Product': ['name', 'category', 'price', 'stock_alert_threshold', 'all_year', 'seasonStart', 'seasonEnd'],
+    'ProductBatch': ['product', 'quality_class', 'stock', 'stock_alert_threshold', 'availability', 'best_before'],
     'Order': ['customer','order_status'],
     'ProducerOrder': ['order', 'producer', 'order_status', 'delivery_date'],
 }
@@ -178,20 +179,25 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                     row_data.setdefault('seasonStart', getattr(model_instance, 'seasonStart', 'January'))
                     row_data.setdefault('seasonEnd', getattr(model_instance, 'seasonEnd', 'December'))
 
-                # Backfill fields not submitted (e.g. password modal only sends a few fields)
+                # Backfill fields not submitted (e.g. disabled readonly inputs, password modal)
                 # so the form sees all required fields and validates correctly.
                 if not is_new_record:
+                    fk_fields = {f.name for f in model._meta.get_fields() if isinstance(f, models.ForeignKey)}
                     for f in DynamicForm.base_fields:
                         if f not in row_data:
-                            val = getattr(model_instance, f, None)
-                            if val is None:
-                                row_data.setdefault(f, '')
-                            elif isinstance(val, bool):
-                                row_data.setdefault(f, str(val))
-                            elif isinstance(val, list):
-                                row_data.setdefault(f, val)
+                            if f in fk_fields:
+                                # Use the raw PK so the FK form field gets a valid UUID/int
+                                row_data.setdefault(f, str(getattr(model_instance, f'{f}_id', '') or ''))
                             else:
-                                row_data.setdefault(f, str(val))
+                                val = getattr(model_instance, f, None)
+                                if val is None:
+                                    row_data.setdefault(f, '')
+                                elif isinstance(val, bool):
+                                    row_data.setdefault(f, str(val))
+                                elif isinstance(val, list):
+                                    row_data.setdefault(f, val)
+                                else:
+                                    row_data.setdefault(f, str(val))
 
                 # Password-only update - bypass the form entirely to avoid interference
                 password_provided = bool(selected_model_name == 'User' and row_data.get('password'))
@@ -301,7 +307,10 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
 
     # Sorting logic
     # Extract direction and header to sort by
-    default_sort = {'Order': ('order_date', 'descending')}.get(selected_model_name, (None, 'ascending'))
+    default_sort = {
+        'Order': ('order_date', 'descending'),
+        'ProducerOrder': ('delivery_date', 'ascending'),
+    }.get(selected_model_name, (None, 'ascending'))
     sort_field = request.GET.get('sortby', default_sort[0])
     sort_direction = request.GET.get('direction', default_sort[1])
     if sort_field:
@@ -386,6 +395,14 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
                     row_class = 'table-danger'
                 elif stock <= threshold:
                     row_class = 'table-warning'
+        elif selected_model_name == 'Product':
+            month_names = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December",
+            ]
+            next_month_name = month_names[timezone.now().month % 12]
+            if not getattr(record, 'all_year', True) and getattr(record, 'seasonStart', None) == next_month_name:
+                row_class = 'table-info'
 
         modal_id = str(getattr(record, modal_id_field)) if modal_id_field else str(record.pk)
         rows.append({'id': record.pk, 'modal_id': modal_id, 'cells': row_cells, 'row_class': row_class})
@@ -425,13 +442,27 @@ def format_for_display(field, raw_value):
         
 
 def get_low_stock_products(user):
-    """Returns Products whose total in-date stock is at or below their alert threshold."""
-    return [p for p in Product.objects.filter(producer=user) if p.stock <= p.stock_alert_threshold]
+    """Returns ProductBatches whose stock is at or below their per-batch alert threshold."""
+    from core.models import ProductBatch
+    from django.db.models import F
+    qs = ProductBatch.objects.filter(stock__lte=F('stock_alert_threshold')).select_related('product')
+    if not user.is_superuser:
+        qs = qs.filter(product__producer=user)
+    return qs
 
 def get_pending_orders(user):
     """Returns pending ProducerOrders for the given producer/superuser."""
     from core.models import ProducerOrder
     return ProducerOrder.objects.filter(producer=user, order_status='PENDING')
+
+def get_seasonal_coming_soon_products(user):
+    """Returns a producer's products whose season begins next calendar month."""
+    month_names = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    ]
+    next_month_name = month_names[timezone.now().month % 12]  # wraps Dec → Jan
+    return Product.objects.filter(producer=user, all_year=False, seasonStart=next_month_name)
     
 def get_next_occurrence(order: Order) -> date | None:
     """Calculate the next delivery date based on recurrence type."""
