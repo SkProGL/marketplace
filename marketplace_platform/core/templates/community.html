@@ -40,7 +40,7 @@
         <div class="ch-card" data-season="{{ recipe.season|lower }}">
             {% if recipe.image %}
             <div class="ch-card-img">
-                <img src="{{ recipe.image.url }}" alt="{{ recipe.title }}" style="width:100%;height:100%;object-fit:cover;">
+                <img src="{{ recipe.thumbnail.url }}" data-src="{{ recipe.image.url }}" alt="{{ recipe.title }}" class="product-image" style="width:100%;height:100%;object-fit:cover;">
             </div>
             {% else %}
             <div class="ch-card-img ch-placeholder">
@@ -112,7 +112,7 @@
         <div class="ch-card">
             {% if story.image %}
             <div class="ch-card-img">
-                <img src="{{ story.image.url }}" alt="Farm story" style="width:100%;height:100%;object-fit:cover;">
+                <img src="{{ story.thumbnail.url }}" data-src="{{ story.image.url }}" alt="Farm story" class="product-image" style="width:100%;height:100%;object-fit:cover;">
             </div>
             {% else %}
             <div class="ch-card-img ch-placeholder">

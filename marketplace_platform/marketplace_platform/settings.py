@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django_browser_reload',
     'axes',
     'django.contrib.postgres',
+    'imagekit',
 ]
 
 MIDDLEWARE = [

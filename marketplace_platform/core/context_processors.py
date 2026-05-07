@@ -150,8 +150,8 @@ def get_producer_alerts(request):
         pending_orders = ProducerOrder.objects.filter(order_status='PENDING').count()
     else:
         pending_orders = get_pending_orders(request.user).count()
-    for product in get_low_stock_products(request.user):
-        if product.stock == 0:
+    for batch in get_low_stock_products(request.user):
+        if batch.stock == 0:
             error_count += 1
         else:
             warning_count += 1

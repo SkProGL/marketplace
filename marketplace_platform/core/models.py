@@ -1,11 +1,16 @@
 from decimal import Decimal
 
 from django.db import models
+from imagekit.models import ImageSpecField
+from imagekit.processors import ResizeToFill
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.utils import timezone
 import uuid
+import random
+from django.utils import timezone
+from datetime import timedelta
 from simple_history.models import HistoricalRecords
 from django.db.models import Sum
 from django.utils import timezone
@@ -22,21 +27,22 @@ class UserManager(BaseUserManager):
         user.set_password(password)
         user.save(using=self._db)
         return user
-    
+
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError("The Email field must be set")
-        email=self.normalize_email(email)
-        user=self.model(email=email, **extra_fields)
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return User
+
 
 class User(AbstractUser):
     class Category(models.TextChoices):
         CUSTOMER = "Customer"
         PRODUCER = "Producer"
-        COMMUNITY = "Community","Community Group"
+        COMMUNITY = "Community", "Community Group"
         RESTAURANT = "Restaurant"
         ADMIN = "Admin"
 
@@ -166,7 +172,7 @@ class Product(models.Model):
     best_before = models.DateField(default="2026-04-04")
     # Percentage to indicate how much stock is left before an alert is sent
     # stock_alert_threshold = models.DecimalField(
-        # max_digits=5, decimal_places=2, default=0)
+    # max_digits=5, decimal_places=2, default=0)
     # Replace with absolute number as perecentage needs max stock
     stock_alert_threshold = models.IntegerField(verbose_name="Alert Threshold")
     # List of food allergens
@@ -176,11 +182,16 @@ class Product(models.Model):
     organic = models.BooleanField(default=False)
     # Surplus / discount fields (mirrored on ProductBatch; kept here for product-level defaults)
     surplus = models.BooleanField(default=False)
-    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0, blank=True)
+    discount_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0, blank=True)
     discount_expiry = models.DateTimeField(blank=True, null=True)
     discount_note = models.TextField(blank=True)
     image = models.ImageField(upload_to='item_images/', blank=True)
-    image_url = models.URLField(max_length=700,blank=True)
+    thumbnail = ImageSpecField(source='image',
+                               processors=[ResizeToFill(100, 100)],
+                               format='JPEG',
+                               options={'quality': 80})
+    image_url = models.URLField(max_length=700, blank=True)
 
     @property
     def availability(self):
@@ -190,7 +201,8 @@ class Product(models.Model):
         start = month_order.index(self.seasonStart)
         end = month_order.index(self.seasonEnd)
         current = timezone.now().month - 1
-        in_season = (start <= current <= end) if start <= end else (current >= start or current <= end)
+        in_season = (start <= current <= end) if start <= end else (
+            current >= start or current <= end)
         return self.SeasonalAvailability.AVAILABLE if in_season else self.SeasonalAvailability.UNAVAILABLE
 
     @property
@@ -199,10 +211,11 @@ class Product(models.Model):
         return self.batches.filter(
             best_before__gte=timezone.now().date()
         ).aggregate(total=Sum('stock'))['total'] or 0
-        
+
     @property
     def base_price(self):
-        batch = self.batches.filter(quality_class='A').order_by('-created_at').first()
+        batch = self.batches.filter(
+            quality_class='A').order_by('-created_at').first()
         return batch.price if batch else None
 
     def __str__(self):
@@ -227,11 +240,20 @@ class ProductBatch(models.Model):
     # Stock quantity
     stock = models.IntegerField(validators=[MinValueValidator(0)])
     # Absolute number of units before a low-stock alert is sent
-    stock_alert_threshold = models.IntegerField(default=0, verbose_name="Alert Threshold")
+    stock_alert_threshold = models.IntegerField(
+        default=0, verbose_name="Alert Threshold")
     # Max qty a standard customer can order; null = no limit (bulk buyers always unrestricted)
     max_order_qty = models.PositiveIntegerField(null=True, blank=True)
     # Associated image
     image = models.ImageField(upload_to='item_images/', blank=True)
+    thumbnail = ImageSpecField(source='image',
+                               processors=[ResizeToFill(100, 100)],
+                               format='JPEG',
+                               options={'quality': 80})
+    medium = ImageSpecField(source='image',
+                            processors=[ResizeToFill(400, 400)],
+                            format='JPEG',
+                            options={'quality': 80})
     # Harvest date
     harvest_date = models.DateField(blank=True, null=True)
     # Best before date
@@ -239,17 +261,18 @@ class ProductBatch(models.Model):
     # Whether the product is surplus and thus eligible for discounts
     surplus = models.BooleanField(default=False)
     # Discount % to apply automatically when this batch enters the surplus window
-    surplus_discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('20.00'))
+    surplus_discount_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal('20.00'))
     # Discount percentage (e.g. 20.00 = 20%)
     discount_percentage = models.DecimalField(
-            max_digits=5,       # Increased to 5 to allow '100.xx'
-            decimal_places=2, 
-            default=Decimal('0.00'), 
-            validators=[
-                MinValueValidator(Decimal('0.00')),
-                MaxValueValidator(Decimal('100.00')),
-          
-            ],   verbose_name="Discount %")
+        max_digits=5,       # Increased to 5 to allow '100.xx'
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[
+            MinValueValidator(Decimal('0.00')),
+            MaxValueValidator(Decimal('100.00')),
+
+        ],   verbose_name="Discount %")
     # Discount expiry date
     discount_expiry = models.DateTimeField(blank=True, null=True)
     # Note attached to discounts
@@ -267,7 +290,8 @@ class ProductBatch(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     # --- Convenience properties so templates can use batch.name, batch.producer etc. ---
-    _CLASS_DISCOUNTS = {'A': Decimal('0'), 'B': Decimal('15'), 'C': Decimal('30'), 'D': Decimal('45'), 'Discounted': Decimal('50')}
+    _CLASS_DISCOUNTS = {'A': Decimal('0'), 'B': Decimal('15'), 'C': Decimal(
+        '30'), 'D': Decimal('45'), 'Discounted': Decimal('50')}
 
     @property
     def effective_discount(self):
@@ -320,32 +344,14 @@ class ProductBatch(models.Model):
         if start == 1 and end == 12:
             return Product.SeasonalAvailability.ALL_YEAR
         current = timezone.now().month
-        in_season = (start <= current <= end) if start <= end else (current >= start or current <= end)
+        in_season = (start <= current <= end) if start <= end else (
+            current >= start or current <= end)
         return Product.SeasonalAvailability.AVAILABLE if in_season else Product.SeasonalAvailability.UNAVAILABLE
-
-    def _compress_image(self):
-        from PIL import Image
-        import io
-        import os
-        from django.core.files.base import ContentFile
-        img = Image.open(self.image)
-        if img.mode in ('RGBA', 'P'):
-            img = img.convert('RGB')
-        img.thumbnail((800, 800), Image.LANCZOS)
-        buffer = io.BytesIO()
-        img.save(buffer, format='JPEG', quality=80, optimize=True)
-        buffer.seek(0)
-        filename = os.path.splitext(os.path.basename(self.image.name))[0] + '.jpg'
-        self.image.save(filename, ContentFile(buffer.read()), save=False)
 
     def save(self, *args, **kwargs):
         if not self.batch_number:
             self.batch_number = self._generate_batch_number()
         self.availability = self._compute_availability()
-        if self.image:
-            from django.core.files.uploadedfile import UploadedFile
-            if isinstance(getattr(self.image, 'file', None), UploadedFile):
-                self._compress_image()
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -353,6 +359,7 @@ class ProductBatch(models.Model):
 
 
 class Order(models.Model):
+
     class Status(models.TextChoices):
         PENDING = "PENDING"
         CONFIRMED = "CONFIRMED"
@@ -374,6 +381,9 @@ class Order(models.Model):
         SAT = 6, 'Saturday'
         SUN = 7, 'Sunday'
 
+    def random_order_date():
+        return timezone.now() - timedelta(days=random.randint(0, 60))
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey(
         User,
@@ -384,11 +394,14 @@ class Order(models.Model):
         through="OrderProduct"
     )
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    order_date = models.DateTimeField(auto_now_add=True)
+    # order_date = models.DateTimeField(auto_now_add=True)
+
+    order_date = models.DateTimeField(default=random_order_date)
     delivery_date = models.DateTimeField()
     order_status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING)
-    special_instructions = models.TextField(blank=True, verbose_name="Instructions")
+    special_instructions = models.TextField(
+        blank=True, verbose_name="Instructions")
     paused = models.BooleanField(default=False)
     recurrence_type = models.CharField(
         max_length=20, choices=Recurrence.choices, default=Recurrence.NONE, verbose_name="Recurrence")
@@ -406,7 +419,8 @@ class Order(models.Model):
 
     def sync_status(self):
         """Derive overall order status from constituent ProducerOrders."""
-        statuses = set(self.producer_orders.values_list('order_status', flat=True))
+        statuses = set(self.producer_orders.values_list(
+            'order_status', flat=True))
         if not statuses or statuses <= {'CANCELLED'}:
             derived = 'CANCELLED'
         elif statuses <= {'DELIVERED', 'CANCELLED'}:
@@ -426,12 +440,16 @@ class Order(models.Model):
 
     # history = HistoricalRecords()
 
+
 class ProducerOrder(models.Model):
     """One producer's fulfilment slice of a customer Order."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='producer_orders')
-    producer = models.ForeignKey('User', on_delete=models.CASCADE, related_name='producer_orders')
-    order_status = models.CharField(max_length=20, choices=Order.Status.choices, default=Order.Status.PENDING)
+    order = models.ForeignKey(
+        Order, on_delete=models.CASCADE, related_name='producer_orders')
+    producer = models.ForeignKey(
+        'User', on_delete=models.CASCADE, related_name='producer_orders')
+    order_status = models.CharField(
+        max_length=20, choices=Order.Status.choices, default=Order.Status.PENDING)
     delivery_date = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -442,25 +460,28 @@ class ProducerOrder(models.Model):
         self.order.sync_status()
 
     def __str__(self):
-        name = getattr(self.producer, 'organisation_name', '') or self.producer.email
+        name = getattr(self.producer, 'organisation_name',
+                       '') or self.producer.email
         return f"{name} – {str(self.order_id)[:8]} ({self.order_status})"
 
 
 class OrderProduct(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    producer_order = models.ForeignKey(ProducerOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name='items')
+    producer_order = models.ForeignKey(
+        ProducerOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name='items')
     batch = models.ForeignKey(ProductBatch, on_delete=models.CASCADE)
     numPurchased = models.IntegerField(verbose_name="# Purchased")
-    price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Price at Purchase")
+    price_at_purchase = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0, verbose_name="Price at Purchase")
 
     class Meta:
         unique_together = ("order", "batch")
         verbose_name_plural = "Order Items"
+
     @property
     def product(self):
         return self.batch.product
-        
 
     @property
     def get_total_item_price(self):
@@ -471,15 +492,20 @@ class OrderProduct(models.Model):
 
     # history = HistoricalRecords()
 
+
 class StoryPost(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    title=models.CharField(max_length=128)
+    title = models.CharField(max_length=128)
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE
     )
     content = models.TextField()
     image = models.ImageField(upload_to='item_images/', blank=True)
+    thumbnail = ImageSpecField(source='image',
+                               processors=[ResizeToFill(100, 100)],
+                               format='JPEG',
+                               options={'quality': 80})
     date_posted = models.DateTimeField(auto_now_add=True)
     is_flagged = models.BooleanField(default=False)
 
@@ -501,6 +527,10 @@ class Recipe(models.Model):
     title = models.CharField(max_length=128)
     description = models.TextField()
     image = models.ImageField(upload_to='item_images/', blank=True)
+    thumbnail = ImageSpecField(source='image',
+                               processors=[ResizeToFill(100, 100)],
+                               format='JPEG',
+                               options={'quality': 80})
     instructions = models.TextField()
     season = models.CharField(
         max_length=20, choices=Season.choices, default=Season.SPRING)
@@ -526,8 +556,10 @@ class RecipeIngredients(models.Model):
 
 class FavouriteRecipe(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favourite_recipes')
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='favourited_by')
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='favourite_recipes')
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, related_name='favourited_by')
     saved_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -565,7 +597,7 @@ class Payment(models.Model):
         User,
         on_delete=models.CASCADE
     )
-    #orders = models.ManyToManyField("Order", through="OrderPayment")
+    # orders = models.ManyToManyField("Order", through="OrderPayment")
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE
@@ -577,10 +609,13 @@ class Payment(models.Model):
     processed_at = models.DateTimeField(null=True, blank=True)
     # history = HistoricalRecords()
 
+
 class OrderStatusHistory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='status_history', null=True, blank=True)
-    producer_order = models.ForeignKey('ProducerOrder', on_delete=models.CASCADE, related_name='status_history', null=True, blank=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE,
+                              related_name='status_history', null=True, blank=True)
+    producer_order = models.ForeignKey(
+        'ProducerOrder', on_delete=models.CASCADE, related_name='status_history', null=True, blank=True)
     from_status = models.CharField(max_length=20)
     to_status = models.CharField(max_length=20)
     changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
@@ -600,10 +635,12 @@ class Complaint(models.Model):
         OTHER = "Other"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    submitted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    submitted_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True)
     name = models.CharField(max_length=128)
     email = models.EmailField()
-    category = models.CharField(max_length=30, choices=Category.choices, default=Category.OTHER)
+    category = models.CharField(
+        max_length=30, choices=Category.choices, default=Category.OTHER)
     description = models.TextField()
     submitted_at = models.DateTimeField(auto_now_add=True)
     resolved = models.BooleanField(default=False)

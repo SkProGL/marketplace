@@ -48,6 +48,94 @@
 > docker compose exec web python manage.py createsuperuser
 > ```
 
+
+## User Roles and Credentials for Testing Login
+
+| Role   | Username   | Password    |
+|--------|------------|-------------|
+| admin  | admin      | Password123    |
+| producer   | producer@example.com   | Password123 |
+| community | community@example.com     | Password123    |
+| restaurant | restaurant@example.com     | Password123    |
+| customer  | customer@example.com      | Password123   |
+
+<details>
+<summary><b> &nbsp Repository Architecture (File tree)</b>
+</summary>
+<br/>
+<blockquote>
+
+```
+.
+├── architecture.md # Main file detailing repository architecture
+├── docker-compose.yml # Docker Compose configuration file
+├── Dockerfile # Dockerfile for building the application image
+├── LICENSE # License information file
+├── marketplace_platform # Main Django application for the marketplace platform
+│   ├── api # API app for the marketplace platform
+│   │   ├── admin.py # Django admin configurations for the API app
+│   │   ├── apps.py # Application configuration for the API app
+│   │   ├── __init__.py # Initializes the API package
+│   │   ├── migrations # Database migration files for the API app
+│   │   ├── models.py # Database models for the API app
+│   │   ├── __pycache__ # Cache directory for Python modules
+│   │   ├── tests.py # Tests for the API app
+│   │   ├── urls.py # URL configurations for the API app
+│   │   └── views.py # API views (endpoints) for the marketplace platform
+│   ├── api_requirements.txt # Specific package dependencies for the API
+│   ├── core # Core functionalities and utilities for the marketplace platform
+│   │   ├── admin.py # Django admin configurations for the core app
+│   │   ├── apps.py # Application configuration for the core app
+│   │   ├── backends.py # Custom authentication backends
+│   │   ├── context_processors.py # Django template context processors
+│   │   ├── forms.py # Django forms for the core app
+│   │   ├── __init__.py # Initializes the core package
+│   │   ├── management # Custom Django management commands
+│   │   ├── migrations # Database migration files for the core app
+│   │   ├── models.py # Database models for the core app
+│   │   ├── module # Module related to location data
+│   │   ├── permissions.py # Custom permission classes
+│   │   ├── __pycache__ # Cache directory for Python modules
+│   │   ├── static # Static files (CSS, JS, images) for the core app
+│   │   ├── templates # HTML templates for the core app
+│   │   ├── templatetags # Custom Django template tags
+│   │   ├── tests.py # Tests for the core app
+│   │   ├── urls.py # URL configurations for the core app
+│   │   ├── utils.py # Utility functions for the core app
+│   │   └── views.py # Core views for the marketplace platform
+│   ├── database_interactions.log # Log file for database interactions
+│   ├── manage.py # Django command-line utility script
+│   ├── marketplace_platform # Django project settings and configurations
+│   │   ├── asgi.py # ASGI configuration
+│   │   ├── __init__.py # Initializes the marketplace_platform package
+│   │   ├── __pycache__ # Cache directory for Python modules
+│   │   ├── settings.py # Django project settings
+│   │   ├── urls.py # Django project URL configurations
+│   │   └── wsgi.py # WSGI configuration
+│   ├── media # User-uploaded media files
+│   │   ├── CACHE # Cache directory for media
+│   │   └── item_images # Images for marketplace items
+│   ├── requirements.txt # Project dependencies
+│   └── synthetic_data # Scripts and data for generating synthetic test data
+│       ├── alter_order_pids.py # Script to alter order PIDs
+│       ├── archive # Archive directory for old data
+│       ├── orders.csv # Order data
+│       ├── ordersold2.csv # Another old order data file
+│       ├── products.csv # Product data
+│       ├── productsold2.csv # Another old product data file
+│       └── users.csv # User data
+├── README.md # Top-level README file for the project
+├── scripts # Utility scripts for development and deployment
+│   ├── hard_reset_server.bat # Windows script for hard server reset
+│   ├── hard_reset_server.sh # Linux/macOS script for hard server reset
+│   ├── restart_migration.bat # Windows script for restart migration
+│   ├── restart_migration.sh # Linux/macOS script for restart migration
+│   └── restart_server.bat # Windows script for server restart
+└── security_changes.md # Document detailing security-related changes
+```
+
+</blockquote>
+</details>
 <details>
 <summary><b> &nbsp Python </b>
 </summary>
@@ -299,4 +387,8 @@ to specify python version in docker, use slim build <br/>
 FROM python:3.11-slim
 </blockquote>
 </details>
+
+
+
+
 

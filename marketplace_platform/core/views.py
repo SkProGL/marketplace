@@ -14,7 +14,7 @@ from django.contrib.auth.forms import PasswordChangeForm
 from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe, Payment
 from core.forms import ComplaintForm, LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
-from core.utils import get_management_context, get_recurring_orders_context, handle_management_post, apply_surplus_if_due, SURPLUS_DAYS
+from core.utils import get_management_context, get_recurring_orders_context, handle_management_post, food_mile_session_builder, calculate_distance, get_producer_food_miles, apply_surplus_if_due, SURPLUS_DAYS
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.db import transaction
@@ -112,21 +112,35 @@ def cart_contents(request):
     total_price = 0
     if cart:
         batches = ProductBatch.objects.select_related('product__producer').filter(id__in=cart.keys())
-        for batch in batches:
-            qty = cart.get(str(batch.id), 0)
-            subtotal = float(batch.price) * qty
-            total_price += subtotal
-            producer = batch.product.producer
-            cart_items_data.append({
-                'id': str(batch.id),
-                'name': batch.name,
-                'price': float(batch.price),
-                'quantity': qty,
-                'subtotal': round(subtotal, 2),
-                'image': batch.image.url if batch.image else None,
-                'producer': getattr(producer, 'organisation_name', None) or str(producer),
-                'producer_id': str(producer.id),
-            })
+    for batch in batches:
+        qty = cart.get(str(batch.id), 0)
+        subtotal = float(batch.price) * qty
+        total_price += subtotal
+
+        producer = batch.product.producer
+
+        food_miles = None
+        coords = request.session.get("user_coords")
+
+        if coords:
+            food_miles = get_producer_food_miles(
+                producer,
+                (coords["lat"], coords["lon"])
+            )
+
+        cart_items_data.append({
+            'id': str(batch.id),
+            'name': batch.name,
+            'price': float(batch.price),
+            'quantity': qty,
+            'subtotal': round(subtotal, 2),
+            'image': batch.image.url if batch.image else None,
+            'producer': getattr(producer, 'organisation_name', None) or str(producer),
+            'producer_id': str(producer.id),
+
+            # IMPORTANT
+            'food_miles': float(food_miles) if food_miles is not None else None,
+        })
     return JsonResponse({
         'total_items': sum(cart.values()),
         'total_price': round(total_price, 2),
@@ -270,9 +284,30 @@ def checkout(request):
     cart_items = []
 
     for pid, qty in cart.items():
-        batch = get_object_or_404(ProductBatch.objects.select_related('product__producer'), id=pid)
-        total_price += batch.price * qty
-        cart_items.append({'product': batch, 'quantity': qty})
+            batch = get_object_or_404(
+                ProductBatch.objects.select_related('product__producer'),
+                id=pid
+            )
+
+            subtotal = batch.price * qty
+            total_price += subtotal
+
+            # 👇 ADD THIS
+            producer = batch.product.producer
+            food_miles = None
+
+            if request.session.get("user_coords"):
+                coords = request.session["user_coords"]
+                food_miles = get_producer_food_miles(
+                    producer,
+                    (coords["lat"], coords["lon"])
+                )
+
+            cart_items.append({
+                'product': batch,
+                'quantity': qty,
+                'food_miles': food_miles,   # ✅ ADD THIS
+            })
 
     groups = defaultdict(list)
     for item in cart_items:
@@ -513,6 +548,37 @@ def home_view(request):
     for allergen in exclude_allergens:
         items = items.exclude(allergens__contains=[allergen])
 
+    min_miles = request.GET.get("min_miles")
+    max_miles = request.GET.get("max_miles")
+    customer_coords = request.session.get("user_coords")
+
+    min_m = Decimal(min_miles) if min_miles else None
+    max_m = Decimal(max_miles) if max_miles else None
+
+    filtered_items = []
+
+    for item in items:
+        if customer_coords:
+            miles = get_producer_food_miles(
+                item.producer,
+                (customer_coords["lat"], customer_coords["lon"])
+            )
+            item.food_miles = miles
+        else:
+            item.food_miles = None
+
+        # apply filter only if needed
+        if customer_coords and (min_miles or max_miles):
+            if item.food_miles is None:
+                continue
+            if min_m is not None and item.food_miles < min_m:
+                continue
+            if max_m is not None and item.food_miles > max_m:
+                continue
+
+        filtered_items.append(item)
+
+    items = filtered_items
     suggestion = None
     if q and not items.exists():
         all_names = list(Product.objects.values_list('name', flat=True))
@@ -520,7 +586,7 @@ def home_view(request):
         if matches:
             suggestion = matches[0]
 
-    total_count = items.count()
+    total_count = len(items)
     paginator = Paginator(items, 12)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
@@ -590,7 +656,6 @@ def home_view(request):
                 'season': ri.recipe.season,
                 'producer': ri.recipe.user.organisation_name or ri.recipe.user.full_name or ri.recipe.user.email,
             })
-
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         data = [{
             'id': str(item.id),
@@ -598,6 +663,7 @@ def home_view(request):
             'price': str(item.price),
             'price_display': item.price_display,
             'image': f'/media/{item.primary_image}' if item.primary_image else None,
+            'thumbnail': item.thumbnail.url if item.image else None,
             'allergens': item.allergens,
             'description': item.description,
             'category': item.category,
@@ -606,6 +672,7 @@ def home_view(request):
             'organic_description': item.producer.organic_description,
             'avg_rating': round(item.avg_rating, 1) if item.avg_rating else None,
             'review_count': item.review_count,
+            'food_miles': item.food_miles
         } for item in items_list]
         return JsonResponse({
             'items': data,
@@ -694,6 +761,7 @@ def login_view(request):
 
             if user is not None:
                 login(request, user)
+                request.session.update(food_mile_session_builder(user))
                 if not remember_me:
                     request.session.set_expiry(0)
                 else:
@@ -1262,6 +1330,7 @@ def get_order_summary_json(request, order_id):
                 sub_advance = f"/management/order/{sub_po.id}/advance/" if sub_status in ('PENDING', 'CONFIRMED') else None
                 sub_next = {'PENDING': 'CONFIRMED', 'CONFIRMED': 'READY'}.get(sub_status)
                 prod = sub_po.producer
+                sub_history = sub_po.status_history.select_related('changed_by').order_by('changed_at')
                 producer_orders_data.append({
                     'id': str(sub_po.id),
                     'producer': prod.organisation_name or prod.full_name or prod.email,
@@ -1269,11 +1338,19 @@ def get_order_summary_json(request, order_id):
                     'delivery_date': sub_po.delivery_date.strftime('%Y-%m-%d') if sub_po.delivery_date else '',
                     'advance_url': sub_advance,
                     'next_status': sub_next,
+                    'history': [
+                        {
+                            'from': h.from_status,
+                            'to': h.to_status,
+                            'by': h.changed_by.email if h.changed_by else '—',
+                            'at': h.changed_at.strftime('%d %b %Y %H:%M'),
+                            'note': h.note,
+                        }
+                        for h in sub_history
+                    ],
                 })
             items = list(order.orderproduct_set.select_related('batch__product__producer'))
-            history_qs = OrderStatusHistory.objects.filter(
-                producer_order__order=order
-            ).select_related('changed_by').order_by('changed_at')
+            history_qs = []  # history is embedded per-producer in producer_orders_data
 
         receipt_data = []
         for item in items:
@@ -1581,3 +1658,86 @@ def delete_review(request, review_id):
         review.delete()
         messages.success(request, "Review deleted.")
     return redirect("orders")
+
+
+@login_required
+def finance_view(request):
+    user = request.user
+    is_admin = user.is_superuser or user.category == 'Admin'
+    
+    # Date filtering
+    date_from = request.GET.get('from')
+    date_to = request.GET.get('to')
+    
+    # Default to last 30 days for finance
+    if not date_from:
+        date_from = (timezone.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+    if not date_to:
+        date_to = timezone.now().strftime('%Y-%m-%d')
+        
+    date_from_dt = datetime_type.strptime(date_from, '%Y-%m-%d')
+    date_to_dt = datetime_type.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+    
+    payments = Payment.objects.select_related('producer', 'order').filter(
+        created_at__gte=date_from_dt,
+        created_at__lt=date_to_dt
+    ).order_by('-created_at')
+    
+    if not is_admin:
+        payments = payments.filter(producer=user)
+        
+    # Generate CSV if requested
+    if request.GET.get('format') == 'csv':
+        import csv
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="finance_report_{date_from}_{date_to}.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Date', 'Order ID', 'Producer', 'Order Total', 'Commission (5%)', 'Net Payment (95%)', 'Status'])
+        
+        for p in payments:
+            order_total = p.order.total_price
+            commission = (order_total * Decimal('0.05')).quantize(Decimal('0.01'))
+            net = (order_total * Decimal('0.95')).quantize(Decimal('0.01'))
+            writer.writerow([
+                p.created_at.strftime('%Y-%m-%d'),
+                str(p.order.id)[:8],
+                p.producer.organisation_name or p.producer.email,
+                order_total,
+                commission,
+                net,
+                p.status
+            ])
+        return response
+
+    # Prepare data for template
+    report_data = []
+    total_network_commission = Decimal('0')
+    total_producer_payout = Decimal('0')
+    
+    for p in payments:
+        order_total = p.order.total_price
+        commission = (order_total * Decimal('0.05')).quantize(Decimal('0.01'))
+        net = (order_total * Decimal('0.95')).quantize(Decimal('0.01'))
+        total_network_commission += commission
+        total_producer_payout += net
+        
+        report_data.append({
+            'date': p.created_at,
+            'order_id': str(p.order.id),
+            'producer': p.producer.organisation_name or p.producer.email,
+            'order_total': order_total,
+            'commission': commission,
+            'producer_payment': net,
+            'status': p.status,
+        })
+        
+    context = {
+        'report_data': report_data,
+        'total_network_commission': total_network_commission,
+        'total_producer_payout': total_producer_payout,
+        'date_from': date_from,
+        'date_to': date_to,
+        'is_admin': is_admin,
+    }
+    
+    return render(request, 'finance.html', context)

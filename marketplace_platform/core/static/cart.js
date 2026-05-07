@@ -119,7 +119,17 @@ function renderDrawer(data) {
             : `<div style="width:50px;height:50px;background:#f0f0f0;border-radius:6px;"></div>`}
           <div class="cart-drawer-item-info">
               <div class="cart-drawer-item-name">${item.name}</div>
-              <div class="cart-drawer-item-qty">£${item.price.toFixed(2)} each</div>
+
+              <div class="cart-drawer-item-qty">
+                  £${item.price.toFixed(2)} each
+              </div>
+
+              <!-- ✅ ADD THIS -->
+              ${item.food_miles !== null && item.food_miles !== undefined && item.food_miles !== ""
+                ? `<div class="cart-drawer-food-miles">
+                    🌍 ${parseFloat(item.food_miles).toFixed(1)} miles
+                  </div>`
+                : ''}
           </div>
           <div class="cart-drawer-stepper">
               <button class="widget-stepper-btn" onclick="drawerUpdateCart('${item.id}', -1, this)">−</button>
@@ -162,7 +172,6 @@ function drawerUpdateCart(productId, delta, btn) {
       return r.json();
     })
     .then((data) => {
-      if (!data) return;
       updateNavbarCart(data.total_items, data.total_price);
 
       // Sync cartState and card badge on the home page if available
