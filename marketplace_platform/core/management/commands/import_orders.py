@@ -39,16 +39,7 @@ class Command(BaseCommand):
 
         with open("synthetic_data/orders.csv", newline='', encoding="utf-8") as file:
             reader = csv.DictReader(file)
-            limit = 20
-
-            brfn_lat, brfn_lon = (51.503269, -2.602925)
             for row in reader:
-                # for (i, row) in enumerate(reader):
-                # if i>=limit:
-                #     break
-            for (i, row) in enumerate(reader):
-                if i>=limit:
-                    break
                 try:
                     indexes = row["product_ids"].replace('"', '').split(",")
                     batches_for_order = [
@@ -67,15 +58,11 @@ class Command(BaseCommand):
                             producer.id, Decimal("0.00"))
                         producer_totals[producer.id] += batch.price
 
-                        producer_postcode = producer.postcode
-                        prod_lat, prod_lon = get_cached_coords(
-                            producer_postcode)
-
-                        distance1 = calculate_distance(
-                            prod_lat, prod_lon, brfn_lat, brfn_lon)
-                        distance2 = calculate_distance(
-                            brfn_lat, brfn_lon, cus_lat, cus_lon)
-                        total_food_miles += (distance1+distance2)
+                        producer_postcode=producer.postcode
+                        prod_lat, prod_lon = get_cached_coords(producer_postcode)
+                        distance1 = calculate_distance(prod_lat,prod_lon,BRFN_LAT,BRFN_LON)
+                        distance2 = calculate_distance(BRFN_LAT,BRFN_LON,cus_lat,cus_lon)
+                        total_food_miles+=(distance1+distance2)
 
                     order = Order.objects.create(
                         customer_id=customer_id,
