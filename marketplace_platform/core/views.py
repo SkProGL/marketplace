@@ -938,13 +938,16 @@ def management_view(request: HttpResponse):
             # Producer specific handling for non-Order models
             if not is_superuser and user_category == 'Producer':
                 row_filter = {
-                    'Product':   {'producer': request.user},
-                    'StoryPost': {'user': request.user},
-                    'Recipe':    {'user': request.user},
+                    'Product':      {'producer': request.user},
+                    'ProductBatch': {'product__producer': request.user},
+                    'StoryPost':    {'user': request.user},
+                    'Recipe':       {'user': request.user},
                 }.get(selected_model_name, {})
                 if selected_model_name in ('Product', 'StoryPost', 'Recipe'):
                     owner_field = 'producer' if selected_model_name == 'Product' else 'user'
                     readonly_fields = {owner_field}
+                elif selected_model_name == 'ProductBatch':
+                    readonly_fields = {'product'}
 
             selected_model = app_config.get_model(selected_model_name)
             selected_data = get_management_context(

@@ -224,7 +224,7 @@ class ProductBatch(models.Model):
         max_length=10, choices=QualityClass.choices, default=QualityClass.A)
 
     # Stock quantity
-    stock = models.IntegerField()
+    stock = models.IntegerField(validators=[MinValueValidator(0)])
     # Absolute number of units before a low-stock alert is sent
     stock_alert_threshold = models.IntegerField(default=0, verbose_name="Alert Threshold")
     # Max qty a standard customer can order; null = no limit (bulk buyers always unrestricted)
