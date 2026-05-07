@@ -31,15 +31,15 @@
                                             </p>
                                         </div>
                                     {% endfor %}
-                                    <div style="padding-left:8px;margin-top:6px;font-size:0.82rem;color:#888;">
-                                        Network commission (5%): £{{ group.commission|floatformat:2 }}
+                                    <div style="padding-left:8px;margin-top:6px;font-size:0.82rem;color:#aaa;">
+                                        5% network commission deducted from producer: £{{ group.commission|floatformat:2 }}
                                     </div>
                                 </div>
                             {% endfor %}
 
                             <hr style="margin:12px 0;">
-                            <div style="font-size:0.82rem;color:#888;margin-bottom:8px;">
-                                Total network commission: £{{ total_commission|floatformat:2 }} <i class="bi bi-info-circle"></i>
+                            <div style="font-size:0.82rem;color:#aaa;margin-bottom:8px;">
+                                Total deducted from producers: £{{ total_commission|floatformat:2 }} <i class="bi bi-info-circle" title="This commission is taken from the producer payment, not charged to you."></i>
                             </div>
                             <p class="h5 text-success mb-0">Total: £{{ total_price|floatformat:2 }}</p>
                         </div>

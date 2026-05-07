@@ -74,6 +74,27 @@ def navbar_alerts(request):
                 "link_label": "View your orders",
             })
 
+        # Recurring order failure notifications
+        recurring_qs = (OrderStatusHistory.objects
+                        .filter(
+                            producer_order__order__customer=request.user,
+                            changed_by__isnull=True,
+                            note__startswith='Recurring order could not',
+                        )
+                        .order_by('-changed_at'))
+        if cleared_at:
+            recurring_qs = recurring_qs.filter(changed_at__gt=cleared_at)
+        for h in recurring_qs[:3]:
+            alerts.append({
+                "key": f"recurring_fail_{h.id}",
+                "icon": "arrow-repeat",
+                "colour": "warning",
+                "message": "Recurring order couldn't be placed — out of stock",
+                "message_status": "We'll try again next time",
+                "link_url": '/orders/',
+                "link_label": "View orders",
+            })
+
         # TC19: notify customers when products they've previously bought are on surplus/discount
         purchased_product_ids = (OrderProduct.objects
                                  .filter(order__customer=request.user)

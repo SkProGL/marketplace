@@ -398,7 +398,7 @@ class Order(models.Model):
     # Food miles - distance food travels from producer to customer
     food_miles = models.IntegerField(default=0)
 
-    # last_generated=models.DateTimeField(null=True,blank=True)
+    last_generated = models.DateField(null=True, blank=True)
 
     @property
     def calculated_total(self):
