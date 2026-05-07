@@ -2,7 +2,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django import forms
 from django.contrib.auth.forms import PasswordChangeForm
-from .models import Product, ProductBatch, User, Review
+from .models import Product, ProductBatch, User, Review, Recipe, StoryPost
 
 PASSWORD_STRENGTH_ERROR = "Password must be at least 8 characters and include 1 lowercase and 1 uppercase letter."
 
@@ -166,3 +166,27 @@ class ProductBatchForm(forms.ModelForm):
             'discount_expiry', 'discount_note',
             'seasonStart', 'seasonEnd',
         ]
+
+
+class RecipeForm(forms.ModelForm):
+    class Meta:
+        model = Recipe
+        fields = ['title', 'description', 'instructions', 'season', 'image', 'storage_guidance']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Recipe title'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Short description'}),
+            'instructions': forms.Textarea(attrs={'class': 'form-control', 'rows': 6, 'placeholder': 'Step-by-step cooking instructions'}),
+            'season': forms.Select(attrs={'class': 'form-select'}),
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'storage_guidance': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'e.g. Store carrots in a cool dark place for up to 2 weeks…'}),
+        }
+
+
+class StoryPostForm(forms.ModelForm):
+    class Meta:
+        model = StoryPost
+        fields = ['content', 'image']
+        widgets = {
+            'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Share your farm story, harvest update, or news…'}),
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }

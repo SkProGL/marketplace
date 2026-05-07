@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'community.css' %}">
+
+<div class="ch-header">
+    <h1>{{ action }} Recipe</h1>
+    <p>Share a seasonal recipe linked to your farm products</p>
+</div>
+
+<div class="ch-form-container">
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="ch-form-row">
+            <label class="form-label fw-semibold">Recipe title</label>
+            {{ form.title }}
+            {% if form.title.errors %}<div class="text-danger small mt-1">{{ form.title.errors }}</div>{% endif %}
+        </div>
+
+        <div class="ch-form-row">
+            <label class="form-label fw-semibold">Description</label>
+            {{ form.description }}
+            {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors }}</div>{% endif %}
+        </div>
+
+        <div class="ch-form-row">
+            <label class="form-label fw-semibold">Cooking instructions</label>
+            {{ form.instructions }}
+            {% if form.instructions.errors %}<div class="text-danger small mt-1">{{ form.instructions.errors }}</div>{% endif %}
+        </div>
+
+        <div class="ch-form-row">
+            <label class="form-label fw-semibold">Seasonal tag</label>
+            {{ form.season }}
+        </div>
+
+        <div class="ch-form-row">
+            <label class="form-label fw-semibold">Recipe image</label>
+            {{ form.image }}
+        </div>
+
+        <div class="ch-form-row">
+            <label class="form-label fw-semibold">Storage guidance <span style="font-weight:400; color:#6c757d;">(optional)</span></label>
+            {{ form.storage_guidance }}
+            <small class="text-muted">Help customers keep ingredients fresh — e.g. fridge life, freezing tips, best storage conditions.</small>
+        </div>
+
+        <div class="ch-form-row">
+            <label class="form-label fw-semibold">Link to your products</label>
+            <p class="text-muted small mb-2">Select products from your inventory and enter the required quantity for each.</p>
+
+            <div id="ingredients-list">
+                {% if existing_ingredients %}
+                    {% for ing in existing_ingredients %}
+                    <div class="ingredient-row d-flex gap-2 mb-2 align-items-center">
+                        <select name="ingredient_ids" class="form-select" style="flex:2;">
+                            <option value="">— select product —</option>
+                            {% for p in producer_products %}
+                            <option value="{{ p.id }}" {% if p.id == ing.product.id %}selected{% endif %}>{{ p.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="ingredient_quantities" class="form-control" style="flex:1;" placeholder="e.g. 500g" value="{{ ing.quantity }}">
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.ingredient-row').remove()">✕</button>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="ingredient-row d-flex gap-2 mb-2 align-items-center">
+                        <select name="ingredient_ids" class="form-select" style="flex:2;">
+                            <option value="">— select product —</option>
+                            {% for p in producer_products %}
+                            <option value="{{ p.id }}">{{ p.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="ingredient_quantities" class="form-control" style="flex:1;" placeholder="e.g. 500g">
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.ingredient-row').remove()">✕</button>
+                    </div>
+                {% endif %}
+            </div>
+
+            <button type="button" id="add-ingredient-btn" class="ch-btn-outline mt-2" style="font-size:0.82rem;">
+                + Add ingredient
+            </button>
+        </div>
+
+        <div class="ch-form-actions">
+            <button type="submit" class="ch-btn-primary">Publish recipe</button>
+            <a href="{% url 'community' %}" class="ch-btn-outline">Cancel</a>
+            {% if recipe %}
+            <form method="POST" action="{% url 'delete_recipe' recipe.id %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this recipe?')">Delete</button>
+            </form>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    const productOptions = `{% for p in producer_products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}`;
+    document.getElementById('add-ingredient-btn').addEventListener('click', function () {
+        const row = document.createElement('div');
+        row.className = 'ingredient-row d-flex gap-2 mb-2 align-items-center';
+        row.innerHTML = `
+            <select name="ingredient_ids" class="form-select" style="flex:2;">
+                <option value="">— select product —</option>
+                ${productOptions}
+            </select>
+            <input type="text" name="ingredient_quantities" class="form-control" style="flex:1;" placeholder="e.g. 500g">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.ingredient-row').remove()">✕</button>
+        `;
+        document.getElementById('ingredients-list').appendChild(row);
+    });
+})();
+</script>
+{% endblock %}

@@ -474,6 +474,7 @@ class StoryPost(models.Model):
     content = models.TextField()
     image = models.ImageField(upload_to='item_images/', blank=True)
     date_posted = models.DateTimeField(auto_now_add=True)
+    is_flagged = models.BooleanField(default=False)
 
     class Meta:
         verbose_name_plural = "Stories"
@@ -498,6 +499,11 @@ class Recipe(models.Model):
         max_length=20, choices=Season.choices, default=Season.SPRING)
     ingredients = models.ManyToManyField(
         "Product", through="RecipeIngredients")
+    storage_guidance = models.TextField(blank=True)
+    is_flagged = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.title
 
 
 class RecipeIngredients(models.Model):
@@ -509,6 +515,16 @@ class RecipeIngredients(models.Model):
     class Meta:
         unique_together = ("recipe", "product")
         verbose_name_plural = "Recipe Ingredients"
+
+
+class FavouriteRecipe(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favourite_recipes')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='favourited_by')
+    saved_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'recipe')
 
 
 class Review(models.Model):

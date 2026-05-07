@@ -10,14 +10,9 @@ from django.contrib.auth import authenticate, get_user_model, login, update_sess
 from django.http import Http404, HttpResponse, JsonResponse
 from django.core.paginator import Paginator
 from django.conf import settings
-<<<<<<< HEAD
-from .models import User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory
-from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm
-=======
 from django.contrib.auth.forms import PasswordChangeForm
-from .models import User, Product, ProductBatch, Order, OrderProduct, Review, OrderStatusHistory
-from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm
->>>>>>> eaf3b0b (Add profile editing and restore review edit/delete)
+from .models import User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe
+from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from django.contrib.auth.decorators import login_required
@@ -33,7 +28,7 @@ MANAGEMENT_SEARCH_FIELDS = {
                    lambda obj: f"{obj.order_status} · £{obj.total_price}"),
     'User':       (['email', 'first_name', 'last_name'],
                    lambda obj: obj.email),
-    'StoryPost':  (['title', 'body'],
+    'StoryPost':  (['content'],
                    lambda obj: ""),
     'Recipe':     (['title', 'description'],
                    lambda obj: ""),
@@ -485,6 +480,23 @@ def home_view(request):
                 'author': 'Anonymous' if r.anonymous else (r.user.full_name or r.user.email),
             })
 
+    # Build recipe suggestions: product_id -> list of {id, title, season, url}
+    recipe_suggestions = {}
+    if product_ids:
+        ri_qs = RecipeIngredients.objects.filter(
+            product_id__in=product_ids
+        ).select_related('recipe__user')
+        for ri in ri_qs:
+            pid = str(ri.product_id)
+            if pid not in recipe_suggestions:
+                recipe_suggestions[pid] = []
+            recipe_suggestions[pid].append({
+                'id': str(ri.recipe.id),
+                'title': ri.recipe.title,
+                'season': ri.recipe.season,
+                'producer': ri.recipe.user.organisation_name or ri.recipe.user.full_name or ri.recipe.user.email,
+            })
+
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         data = [{
             'id': str(item.id),
@@ -507,6 +519,7 @@ def home_view(request):
             'suggestion': suggestion,
             'batch_data': batch_data,
             'review_data': review_data,
+            'recipe_suggestions': recipe_suggestions,
             'page': page_obj.number,
             'total_pages': paginator.num_pages,
             'has_next': page_obj.has_next(),
@@ -521,6 +534,7 @@ def home_view(request):
         'items': items_list,
         'batch_data': batch_data,
         'review_data': review_data,
+        'recipe_suggestions': recipe_suggestions,
         'cart_items': cart,
         'cart_total_price': round(total_price, 2),
         'selected_categories': categories,
@@ -904,7 +918,187 @@ def management_view(request: HttpResponse):
 
 @login_required
 def community(request):
-    return render(request, 'community.html')
+    recipes = Recipe.objects.select_related('user').prefetch_related('recipeingredients_set__product').order_by('-id')
+    stories = StoryPost.objects.select_related('user').order_by('-date_posted')
+    return render(request, 'community.html', {
+        'recipes': recipes,
+        'stories': stories,
+    })
+
+
+@login_required
+def recipe_detail(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    ingredients = recipe.recipeingredients_set.select_related('product').all()
+    is_favourite = (
+        request.user.is_authenticated and
+        FavouriteRecipe.objects.filter(user=request.user, recipe=recipe).exists()
+    )
+    return render(request, 'recipe_detail.html', {
+        'recipe': recipe,
+        'ingredients': ingredients,
+        'is_favourite': is_favourite,
+    })
+
+
+@login_required
+def add_recipe(request):
+    if request.user.category != User.Category.PRODUCER:
+        messages.error(request, "Only producers can create recipes.")
+        return redirect('community')
+
+    if request.method == 'POST':
+        form = RecipeForm(request.POST, request.FILES)
+        ingredient_ids = request.POST.getlist('ingredient_ids')
+        quantities = request.POST.getlist('ingredient_quantities')
+        if form.is_valid():
+            recipe = form.save(commit=False)
+            recipe.user = request.user
+            recipe.save()
+            for pid, qty in zip(ingredient_ids, quantities):
+                if pid:
+                    try:
+                        product = Product.objects.get(pk=pid, producer=request.user)
+                        RecipeIngredients.objects.get_or_create(
+                            recipe=recipe, product=product,
+                            defaults={'quantity': qty or ''}
+                        )
+                    except Product.DoesNotExist:
+                        pass
+            messages.success(request, f'Recipe "{recipe.title}" published!')
+            return redirect('community')
+    else:
+        form = RecipeForm()
+
+    producer_products = Product.objects.filter(producer=request.user).order_by('name')
+    return render(request, 'recipe_form.html', {
+        'form': form,
+        'producer_products': producer_products,
+        'action': 'Create',
+    })
+
+
+@login_required
+def edit_recipe(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id, user=request.user)
+    if request.method == 'POST':
+        form = RecipeForm(request.POST, request.FILES, instance=recipe)
+        ingredient_ids = request.POST.getlist('ingredient_ids')
+        quantities = request.POST.getlist('ingredient_quantities')
+        if form.is_valid():
+            form.save()
+            recipe.recipeingredients_set.all().delete()
+            for pid, qty in zip(ingredient_ids, quantities):
+                if pid:
+                    try:
+                        product = Product.objects.get(pk=pid, producer=request.user)
+                        RecipeIngredients.objects.create(recipe=recipe, product=product, quantity=qty or '')
+                    except Product.DoesNotExist:
+                        pass
+            messages.success(request, "Recipe updated.")
+            return redirect('community')
+    else:
+        form = RecipeForm(instance=recipe)
+
+    producer_products = Product.objects.filter(producer=request.user).order_by('name')
+    existing_ingredients = list(recipe.recipeingredients_set.select_related('product').all())
+    return render(request, 'recipe_form.html', {
+        'form': form,
+        'producer_products': producer_products,
+        'existing_ingredients': existing_ingredients,
+        'action': 'Edit',
+        'recipe': recipe,
+    })
+
+
+@login_required
+def delete_recipe(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id, user=request.user)
+    if request.method == 'POST':
+        recipe.delete()
+        messages.success(request, "Recipe deleted.")
+    return redirect('community')
+
+
+@login_required
+def add_story(request):
+    if request.user.category != User.Category.PRODUCER:
+        messages.error(request, "Only producers can post farm stories.")
+        return redirect('community')
+
+    if request.method == 'POST':
+        form = StoryPostForm(request.POST, request.FILES)
+        if form.is_valid():
+            story = form.save(commit=False)
+            story.user = request.user
+            story.save()
+            messages.success(request, "Farm story published!")
+            return redirect('community')
+    else:
+        form = StoryPostForm()
+
+    return render(request, 'story_form.html', {'form': form, 'action': 'Create'})
+
+
+@login_required
+def edit_story(request, story_id):
+    story = get_object_or_404(StoryPost, id=story_id, user=request.user)
+    if request.method == 'POST':
+        form = StoryPostForm(request.POST, request.FILES, instance=story)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Story updated.")
+            return redirect('community')
+    else:
+        form = StoryPostForm(instance=story)
+
+    return render(request, 'story_form.html', {'form': form, 'action': 'Edit', 'story': story})
+
+
+@login_required
+def delete_story(request, story_id):
+    story = get_object_or_404(StoryPost, id=story_id, user=request.user)
+    if request.method == 'POST':
+        story.delete()
+        messages.success(request, "Story deleted.")
+    return redirect('community')
+
+
+@login_required
+def toggle_favourite_recipe(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    fav, created = FavouriteRecipe.objects.get_or_create(user=request.user, recipe=recipe)
+    if not created:
+        fav.delete()
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'community'
+    return redirect(next_url)
+
+
+@login_required
+def report_content(request):
+    if request.method == 'POST':
+        content_type = request.POST.get('content_type')
+        content_id = request.POST.get('content_id')
+        if content_type == 'recipe':
+            Recipe.objects.filter(id=content_id).update(is_flagged=True)
+        elif content_type == 'story':
+            StoryPost.objects.filter(id=content_id).update(is_flagged=True)
+        messages.success(request, "Content reported. Our team will review it shortly.")
+    return redirect(request.POST.get('next') or 'community')
+
+
+def producer_profile_public(request, producer_id):
+    producer = get_object_or_404(User, id=producer_id, category=User.Category.PRODUCER)
+    recipes = Recipe.objects.filter(user=producer).prefetch_related('recipeingredients_set__product').order_by('-id')
+    stories = StoryPost.objects.filter(user=producer).order_by('-date_posted')
+    products = Product.objects.filter(producer=producer).prefetch_related('batches')
+    return render(request, 'producer_profile_public.html', {
+        'producer': producer,
+        'recipes': recipes,
+        'stories': stories,
+        'products': products,
+    })
+
 
 @login_required
 def get_order_summary_json(request, order_id):
@@ -1050,12 +1244,25 @@ def advance_order_status(request, producer_order_id):
 
 
 @login_required
-@login_required
 def profile_view(request):
     """Display the logged-in user's profile page."""
     product_count = None
+    recipes = None
+    stories = None
+    recipe_count = 0
+    story_count = 0
+    saved_recipes = None
+
     if request.user.category == 'Producer':
         product_count = Product.objects.filter(producer=request.user).count()
+        recipes = Recipe.objects.filter(user=request.user).order_by('-id')
+        stories = StoryPost.objects.filter(user=request.user).order_by('-date_posted')
+        recipe_count = recipes.count()
+        story_count = stories.count()
+    else:
+        saved_recipes = FavouriteRecipe.objects.filter(
+            user=request.user
+        ).select_related('recipe__user').order_by('-saved_at')
 
     if request.method == 'POST' and request.user.category == 'Producer':
         request.user.organic_description = request.POST.get('organic_description', '').strip()
@@ -1063,7 +1270,14 @@ def profile_view(request):
         messages.success(request, 'Organic certification updated.')
         return redirect('profile')
 
-    return render(request, 'profile.html', {'product_count': product_count})
+    return render(request, 'profile.html', {
+        'product_count': product_count,
+        'recipes': recipes,
+        'stories': stories,
+        'recipe_count': recipe_count,
+        'story_count': story_count,
+        'saved_recipes': saved_recipes,
+    })
 
 
 
