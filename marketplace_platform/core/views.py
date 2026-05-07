@@ -986,18 +986,20 @@ def management_view(request: HttpResponse):
         # For the Order model, show one ProducerOrder row per producer slice
         # so each producer's status is independent and admins see per-producer rows
         if selected_model_name == 'Order':
-            selected_model = app_config.get_model('ProducerOrder')
             if is_superuser:
-                row_filter = {}
-                readonly_fields = {'order', 'producer'}
+                selected_model = app_config.get_model('Order')
+                readonly_fields = {'customer', 'total_price', 'order_status'}
+                selected_data = get_management_context(
+                    request, selected_model, 'Order',
+                    add_new=False, row_filter={}, distinct=False,
+                    readonly_fields=readonly_fields)
             else:
-                row_filter = {'producer': request.user}
+                selected_model = app_config.get_model('ProducerOrder')
                 readonly_fields = {'order', 'producer'}
-            modal_id_field = 'order_id'
-            selected_data = get_management_context(
-                request, selected_model, 'ProducerOrder',
-                add_new=False, row_filter=row_filter, distinct=False,
-                readonly_fields=readonly_fields, modal_id_field=modal_id_field)
+                selected_data = get_management_context(
+                    request, selected_model, 'ProducerOrder',
+                    add_new=False, row_filter={'producer': request.user},
+                    distinct=False, readonly_fields=readonly_fields)
         else:
             # Producer specific handling for non-Order models
             if not is_superuser and user_category == 'Producer':
@@ -1227,12 +1229,20 @@ def get_order_summary_json(request, order_id):
     Producers see only their ProducerOrder slice; superusers see all items combined.
     """
     try:
-        order = Order.objects.select_related('customer').get(pk=order_id)
         is_producer = not request.user.is_superuser and getattr(request.user, 'category', None) == 'Producer'
 
+        # order_id may be a ProducerOrder UUID (from table rows) or an Order UUID (legacy)
+        clicked_po = None
+        try:
+            clicked_po = ProducerOrder.objects.select_related('order__customer').get(pk=order_id)
+            order = clicked_po.order
+        except ProducerOrder.DoesNotExist:
+            order = Order.objects.select_related('customer').get(pk=order_id)
+
         # Resolve which ProducerOrder(s) to draw from
+        producer_orders_data = None
         if is_producer:
-            po = order.producer_orders.get(producer=request.user)
+            po = clicked_po or order.producer_orders.get(producer=request.user)
             status = po.order_status
             advance_url = f"/management/order/{po.id}/advance/" if status in ('PENDING', 'CONFIRMED') else None
             next_status = {'PENDING': 'CONFIRMED', 'CONFIRMED': 'READY'}.get(status)
@@ -1240,10 +1250,23 @@ def get_order_summary_json(request, order_id):
             history_qs = po.status_history.all()
         else:
             status = order.order_status
-            # For superusers, advance is per-ProducerOrder — find the first advanceable one
-            first_po = order.producer_orders.filter(order_status__in=('PENDING', 'CONFIRMED')).first()
-            advance_url = f"/management/order/{first_po.id}/advance/" if first_po else None
-            next_status = {'PENDING': 'CONFIRMED', 'CONFIRMED': 'READY'}.get(first_po.order_status) if first_po else None
+            advance_url = None
+            next_status = None
+            all_pos = order.producer_orders.select_related('producer').order_by('delivery_date')
+            producer_orders_data = []
+            for sub_po in all_pos:
+                sub_status = sub_po.order_status
+                sub_advance = f"/management/order/{sub_po.id}/advance/" if sub_status in ('PENDING', 'CONFIRMED') else None
+                sub_next = {'PENDING': 'CONFIRMED', 'CONFIRMED': 'READY'}.get(sub_status)
+                prod = sub_po.producer
+                producer_orders_data.append({
+                    'id': str(sub_po.id),
+                    'producer': prod.organisation_name or prod.full_name or prod.email,
+                    'status': sub_status,
+                    'delivery_date': sub_po.delivery_date.strftime('%Y-%m-%d') if sub_po.delivery_date else '',
+                    'advance_url': sub_advance,
+                    'next_status': sub_next,
+                })
             items = list(order.orderproduct_set.select_related('batch__product__producer'))
             history_qs = OrderStatusHistory.objects.filter(
                 producer_order__order=order
@@ -1269,10 +1292,12 @@ def get_order_summary_json(request, order_id):
             receipt_data.append(entry)
 
         visible_total = sum(item.numPurchased * item.batch.price for item in items)
+        effective_delivery = (po.delivery_date if is_producer else None) or order.delivery_date
         data = {
             'status': status,
             'advance_url': advance_url,
             'next_status': next_status,
+            'producer_orders': producer_orders_data,
             'customer_name': order.customer.full_name or order.customer.email,
             'customer_type': order.customer.category,
             'email': order.customer.email,
@@ -1280,7 +1305,7 @@ def get_order_summary_json(request, order_id):
             'address': f"{order.customer.address}, {order.customer.postcode}" if order.customer.address and order.customer.postcode else '',
             'instructions': order.special_instructions,
             'order_date': order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else '',
-            'delivery_date': order.delivery_date.strftime('%Y-%m-%d') if order.delivery_date else '',
+            'delivery_date': effective_delivery.strftime('%Y-%m-%d') if effective_delivery else '',
             'recurrence': f"{order.get_recurrence_day_display()} ({order.recurrence_type})" if order.recurrence_type != 'None' else '',
             'total_price': f"{order.total_price:.2f}",
             'visible_total': f"{visible_total:.2f}",
