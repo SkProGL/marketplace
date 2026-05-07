@@ -42,9 +42,10 @@ class Command(BaseCommand):
             limit = 20
 
             brfn_lat, brfn_lon = (51.503269, -2.602925)
-            for (i, row) in enumerate(reader):
-                if i>=limit:
-                    break
+            for row in reader:
+                # for (i, row) in enumerate(reader):
+                # if i>=limit:
+                #     break
                 try:
                     indexes = row["product_ids"].replace('"', '').split(",")
                     batches_for_order = [
