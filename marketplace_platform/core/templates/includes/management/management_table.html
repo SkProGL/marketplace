@@ -46,8 +46,33 @@
                 {% endif %}
                 {% for cell in row.cells %}
                 <td>
+                    {% if cell.is_choice and selected_model_name == 'Order' and cell.name == 'order_status' and row.id != 'draft' %}
+
+                    <!-- ORDER STATUS — visual pill only; advance action is in the info modal -->
+                    {% with status=cell.value %}
+                    {% if status == 'PENDING' or status == 'CONFIRMED' %}
+                    <div class="status-pill status-advance-btn d-flex justify-content-between align-items-center status-pill-{{ status|lower }} js-load-order-summary"
+                        style="cursor:pointer;" order-row-id="{{ row.modal_id|default:row.id }}">
+                        <span>{{ status }}</span><i class="bi bi-arrow-right ms-2"></i>
+                    </div>
+                    {% elif status == 'READY' %}
+                    <div class="status-pill d-flex justify-content-between align-items-center status-pill-ready">
+                        <span>READY</span><i class="bi bi-clock ms-2"></i>
+                    </div>
+                    {% elif status == 'DELIVERED' %}
+                    <div class="status-pill d-flex justify-content-between align-items-center status-pill-delivered">
+                        <span>DELIVERED</span><i class="bi bi-check2-circle ms-2"></i>
+                    </div>
+                    {% else %}
+                    <div class="status-pill d-flex justify-content-between align-items-center status-pill-cancelled">
+                        <span>CANCELLED</span><i class="bi bi-x-circle ms-2"></i>
+                    </div>
+                    {% endif %}
+                    <input type="hidden" name="cell_{{ row.id }}_{{ cell.name }}" value="{{ cell.value }}">
+                    {% endwith %}
+
                     <!-- READ-ONLY CELLS (As defined in utils) -->
-                    {% if cell.is_readonly %}
+                    {% elif cell.is_readonly %}
                     <input type="text" name="cell_{{ row.id }}_{{ cell.name }}" value="{{ cell.value }}"
                         class="form-control form-control-sm" disabled>
                     {% elif cell.is_password %}
@@ -83,30 +108,6 @@
                     <!-- Calendar selection for date -->
                     <input type="date" name="cell_{{ row.id }}_{{ cell.name }}" value="{{ cell.value }}"
                         class="form-control form-control-sm">
-                    {% elif cell.is_choice and selected_model_name == 'Order' and cell.name == 'order_status' and row.id != 'draft' %}
-
-                    <!-- ORDER STATUS — visual pill only; advance action is in the info modal -->
-                    {% with status=cell.value %}
-                    {% if status == 'PENDING' or status == 'CONFIRMED' %}
-                    <div class="status-pill status-advance-btn d-flex justify-content-between align-items-center status-pill-{{ status|lower }} js-load-order-summary"
-                        style="cursor:pointer;" order-row-id="{{ row.modal_id|default:row.id }}">
-                        <span>{{ status }}</span><i class="bi bi-arrow-right ms-2"></i>
-                    </div>
-                    {% elif status == 'READY' %}
-                    <div class="status-pill d-flex justify-content-between align-items-center status-pill-ready">
-                        <span>READY</span><i class="bi bi-clock ms-2"></i>
-                    </div>
-                    {% elif status == 'DELIVERED' %}
-                    <div class="status-pill d-flex justify-content-between align-items-center status-pill-delivered">
-                        <span>DELIVERED</span><i class="bi bi-check2-circle ms-2"></i>
-                    </div>
-                    {% else %}
-                    <div class="status-pill d-flex justify-content-between align-items-center status-pill-cancelled">
-                        <span>CANCELLED</span><i class="bi bi-x-circle ms-2"></i>
-                    </div>
-                    {% endif %}
-                    <input type="hidden" name="cell_{{ row.id }}_{{ cell.name }}" value="{{ cell.value }}">
-                    {% endwith %}
                     {% elif cell.is_choice %}
 
                     <!-- CHOICE DROP-DOWN - as defined by model enums -->

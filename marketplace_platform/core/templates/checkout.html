@@ -1,9 +1,65 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  :root { --main-color: #198754; }
+  .checkout-card {
+    width: 100%;
+    padding: 3rem;
+    align-items: flex-start;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+  }
+  .checkout-section-title {
+    color: var(--main-color);
+    margin-bottom: 1.5rem;
+  }
+  .checkout-pay {
+    width: 130px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: black;
+    border: none;
+    color: white;
+    font-weight: 600;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+    transition-duration: .3s;
+    margin-top: 2rem;
+  }
+  .svgIcon { width: 16px; }
+  .svgIcon path { fill: white; }
+  .checkout-pay::before {
+    width: 130px;
+    height: 130px;
+    position: absolute;
+    content: "";
+    background-color: white;
+    border-radius: 50%;
+    left: -100%;
+    top: 0;
+    transition-duration: .3s;
+    mix-blend-mode: difference;
+  }
+  .checkout-pay:hover::before {
+    transition-duration: .3s;
+    transform: translate(100%, -50%);
+    border-radius: 0;
+  }
+  .checkout-pay:active {
+    transform: translate(5px, 5px);
+    transition-duration: .3s;
+  }
+</style>
 
 <div class="container mt-5 d-flex justify-content-center">
-    <div class="widget-account-form-card" style="width: 100%; padding: 3rem; align-items: flex-start;">
-        <h2 style="color: var(--main-color); margin-bottom: 1.5rem;">Secure Checkout</h2>
+    <div class="checkout-card">
+        <h2 class="checkout-section-title">Secure Checkout</h2>
 
         <form action="{% url 'checkout' %}" method="POST" class="w-100">
             {% csrf_token %}
@@ -31,15 +87,25 @@
                                             </p>
                                         </div>
                                     {% endfor %}
-                                    <div style="padding-left:8px;margin-top:6px;font-size:0.82rem;color:#aaa;">
-                                        5% network commission deducted from producer: £{{ group.commission|floatformat:2 }}
+                                    <div style="padding-left:8px;margin-top:6px;font-size:0.82rem;color:#888;">
+                                        Network commission (5%): £{{ group.commission|floatformat:2 }}
+                                    </div>
+                                    <div style="padding-left:8px;margin-top:10px;">
+                                        <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:4px;color:#333;">
+                                            Delivery date — {{ group.producer.organisation_name|default:group.producer }}
+                                        </label>
+                                        <input type="date" name="delivery_date_{{ group.producer.id }}"
+                                               class="form-control form-control-sm"
+                                               min="{{ min_delivery_date }}" required
+                                               style="max-width:200px;">
+                                        <small class="text-muted" style="font-size:0.75rem;">Min. 48 hours from today</small>
                                     </div>
                                 </div>
                             {% endfor %}
 
                             <hr style="margin:12px 0;">
-                            <div style="font-size:0.82rem;color:#aaa;margin-bottom:8px;">
-                                Total deducted from producers: £{{ total_commission|floatformat:2 }} <i class="bi bi-info-circle" title="This commission is taken from the producer payment, not charged to you."></i>
+                            <div style="font-size:0.82rem;color:#888;margin-bottom:8px;">
+                                Total network commission: £{{ total_commission|floatformat:2 }} <i class="bi bi-info-circle"></i>
                             </div>
                             <p class="h5 text-success mb-0">Total: £{{ total_price|floatformat:2 }}</p>
                         </div>
@@ -63,14 +129,6 @@
                         <div id="postcodeArea" style="font-size:0.8rem;color:#555;margin-top:4px;"></div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label class="form-label">Select Delivery Date</label>
-                        <input type="date" name="delivery_date" class="form-control" min="{{ min_delivery_date }}" required>
-                        {% if form.delivery_date.errors %}
-                            <div class="text-danger mt-2 small">{{ form.delivery_date.errors|join:", " }}</div>
-                        {% endif %}
-                        <small class="text-muted">Note: Earliest delivery is 48 hours from now.</small>
-                    </div>
                 </div>
 
                 <div class="col-md-6 ps-md-4">
@@ -157,59 +215,5 @@
 
   if (postcodeInput.value.trim()) lookupPostcode();
 </script>
-<style>
-
-/* From Uiverse.io by vinodjangid07 */ 
-.checkout-pay {
-  width: 130px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: black;
-  border: none;
-  color: white;
-  font-weight: 600;
-  gap: 8px;
-  cursor: pointer;
-  box-shadow: var(--shadow);
-  position: relative;
-  overflow: hidden;
-  transition-duration: .3s;
-  margin-top:2rem;
-}
-
-.svgIcon {
-  width: 16px;
-}
-
-.svgIcon path {
-  fill: white;
-}
-
-.checkout-pay::before {
-  width: 130px;
-  height: 130px;
-  position: absolute;
-  content: "";
-  background-color: white;
-  border-radius: 50%;
-  left: -100%;
-  top: 0;
-  transition-duration: .3s;
-  mix-blend-mode: difference;
-}
-
-.checkout-pay:hover::before {
-  transition-duration: .3s;
-  transform: translate(100%,-50%);
-  border-radius: 0;
-}
-
-.checkout-pay:active {
-  transform: translate(5px,5px);
-  transition-duration: .3s;
-}
-</style>
 {% endblock %}
 

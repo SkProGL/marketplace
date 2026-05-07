@@ -3,6 +3,11 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'inventory_upload.css' %}">
 
+<div class="iu-header text-center">
+  <h1>Inventory Upload</h1>
+  <p>Add a new product or upload a batch for an existing listing</p>
+</div>
+
 <div class="form">
 
   {% if messages %}
@@ -13,31 +18,28 @@
     {% endfor %}
   {% endif %}
 
-  <!-- Tabs -->
   <div class="form-tabs">
     <button type="button" class="tab-btn active" id="tab-new" onclick="switchTab('new')">New Product</button>
     <button type="button" class="tab-btn" id="tab-batch" onclick="switchTab('batch')">Add Batch</button>
   </div>
 
-  <!-- ── TAB 1: New Product ─────────────────────────────── -->
   <div id="pane-new">
-    <p class="tab-hint">Creates a new generic product and sets its Class A (base) price.</p>
+    <p class="tab-hint">Creates a new product and sets its Class A (base) price.</p>
     <form method="POST" enctype="multipart/form-data">
       {% csrf_token %}
       <input type="hidden" name="form_type" value="new_product">
       <input type="hidden" name="stock_alert_threshold" value="0">
       <input type="file" name="image" accept="image/*" id="np-image" style="display:none;">
 
-      <div style="display:flex;gap:24px;align-items:flex-start;margin-bottom:16px;">
+      <div class="np-product-layout">
 
-        <!-- Left: image drop zone -->
-        <div id="np-dropzone" style="flex-shrink:0;width:200px;height:200px;border:2px dashed #ccc;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;background:#fafafa;transition:border-color 0.2s,background 0.2s;overflow:hidden;">
-          <div id="np-dz-placeholder" style="text-align:center;pointer-events:none;padding:16px;">
-            <div style="font-size:2.8rem;color:#ccc;line-height:1;font-weight:300;">+</div>
-            <div style="font-size:0.75rem;color:#aaa;margin-top:10px;line-height:1.4;">Drag or select<br>the image</div>
+        <div id="np-dropzone" class="np-dropzone">
+          <div id="np-dz-placeholder" class="np-dz-placeholder">
+            <div class="np-dz-plus">+</div>
+            <div class="np-dz-hint">Drag or select<br>the image</div>
           </div>
-          <img id="np-preview" src="" alt="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">
-          <button type="button" id="np-revert" title="Change image" style="display:none;position:absolute;top:0;left:0;width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,0.9);box-shadow:var(--shadow);cursor:pointer;align-items:center;justify-content:center;z-index:2;">
+          <img id="np-preview" src="" alt="" class="np-preview">
+          <button type="button" id="np-revert" class="np-revert" title="Change image">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
               <path d="M3 3v5h5"/>
@@ -45,15 +47,14 @@
           </button>
         </div>
 
-        <!-- Right: form fields -->
-        <div style="flex:1;min-width:0;">
+        <div class="np-fields">
           <label>Product name</label>
           <input type="text" name="name" placeholder="e.g. Granny Smith Apples" required />
 
           <label>Description</label>
           <textarea name="description" placeholder="Short product description" required></textarea>
 
-          <label>Allergens <span style="font-weight:400;color:#888;font-size:0.82rem;">(select all that apply)</span></label>
+          <label>Allergens <span class="label-note">(select all that apply)</span></label>
           <div class="toggles">
             {% for allergen in allergen_list %}
               <input type="checkbox" name="allergens" value="{{ allergen }}" id="al-{{ allergen }}">
@@ -120,7 +121,6 @@
     </form>
   </div>
 
-  <!-- ── TAB 2: Add Batch ───────────────────────────────── -->
   <div id="pane-batch" style="display:none">
     <p class="tab-hint">Add a lower-grade or surplus batch to an existing product. Price is suggested from the Class A base price.</p>
     <form method="POST" enctype="multipart/form-data">
@@ -129,43 +129,42 @@
 
       <label>Product</label>
       <select name="product_id" id="batch-product" required>
-        <option value="" disabled selected>Select product…</option>
+        <option value="" disabled selected>Select product&#8230;</option>
         {% for product in products %}
-          <option value="{{ product.id }}"
-                  data-base-price="{{ product.price }}">
-            {{ product.name }} — Class A: £{{ product.price }}
+          <option value="{{ product.id }}" data-base-price="{{ product.price }}">
+            {{ product.name }} &#8212; Class A: &#163;{{ product.price }}
           </option>
         {% endfor %}
       </select>
 
-      <div id="base-price-display" style="display:none; margin-top:8px; color:#555; font-size:0.88rem;">
-        Class A base price: <strong id="base-price-value">—</strong>
+      <div id="base-price-display" class="batch-base-price" style="display:none">
+        Class A base price: <strong id="base-price-value">&#8212;</strong>
       </div>
 
       <label>Quality class</label>
       <div class="toggles">
         <input type="radio" name="quality_class" value="A" id="qc-A" checked />
-        <label for="qc-A">A — Premium</label>
+        <label for="qc-A">A &#8212; Premium</label>
         <input type="radio" name="quality_class" value="B" id="qc-B" />
-        <label for="qc-B">B — Standard</label>
+        <label for="qc-B">B &#8212; Standard</label>
         <input type="radio" name="quality_class" value="C" id="qc-C" />
-        <label for="qc-C">C — Economy</label>
+        <label for="qc-C">C &#8212; Economy</label>
         <input type="radio" name="quality_class" value="D" id="qc-D" />
-        <label for="qc-D">D — Basic</label>
+        <label for="qc-D">D &#8212; Basic</label>
         <input type="radio" name="quality_class" value="Discounted" id="qc-S" />
         <label for="qc-S">Surplus / Discount</label>
       </div>
 
-      <div style="margin-top:10px; font-size:0.88rem; color:#555;">
-        Effective price: <strong id="effective-price-display">—</strong>
-        <span id="price-suggestion" style="color:#888; margin-left:6px;"></span>
+      <div class="effective-price-row">
+        Effective price: <strong id="effective-price-display">&#8212;</strong>
+        <span id="price-suggestion" class="price-suggestion"></span>
       </div>
       <input type="hidden" name="price" id="batch-price" value="0" />
 
       <label>Stock</label>
       <input type="number" name="stock" min="1" value="1" required />
 
-      <label>Max order quantity <span style="font-weight:400;color:#888;font-size:0.82rem;">(standard customers only — leave blank for no limit)</span></label>
+      <label>Max order quantity <span class="label-note">(standard customers only &#8212; leave blank for no limit)</span></label>
       <input type="number" name="max_order_qty" min="1" placeholder="e.g. 10" />
 
       <label>Harvest date</label>
@@ -174,8 +173,8 @@
       <label>Best before</label>
       <input type="date" name="best_before" required />
 
-      <label>Auto-surplus discount % <span style="font-weight:400;color:#888;font-size:0.82rem;">(applied automatically when nearing best before — default 20%)</span></label>
-      <input type="number" name="surplus_discount_percentage" min="1" max="100" step="0.01" value="20" />
+      <label>Auto-surplus discount % <span class="label-note">(applied near best-before date)</span></label>
+      <input type="number" name="surplus_discount_percentage" min="1" max="100" step="0.01" placeholder="Default: 20" />
 
       <div id="discount-row" style="display:none">
         <label>Discount %</label>
@@ -201,7 +200,6 @@
     document.getElementById('np-season-fields').style.display = allYear ? 'none' : '';
   }
 
-  // ── Tab switching ──────────────────────────────────────
   function switchTab(tab) {
     document.getElementById('pane-new').style.display   = tab === 'new'   ? '' : 'none';
     document.getElementById('pane-batch').style.display = tab === 'batch' ? '' : 'none';
@@ -210,13 +208,11 @@
     if (tab === 'batch') updateSuggestedPrice();
   }
 
-  // ── New product image drop zone ───────────────────────
   const npDropzone    = document.getElementById('np-dropzone');
   const npImageInput  = document.getElementById('np-image');
   const npPreview     = document.getElementById('np-preview');
   const npPlaceholder = document.getElementById('np-dz-placeholder');
-
-  const npRevert = document.getElementById('np-revert');
+  const npRevert      = document.getElementById('np-revert');
 
   function showNpPreview(file) {
     const reader = new FileReader();
@@ -224,8 +220,8 @@
       npPreview.src = e.target.result;
       npPreview.style.display = 'block';
       npPlaceholder.style.display = 'none';
-      npDropzone.style.borderStyle = 'solid';
-      npDropzone.style.borderColor = '#198754';
+      npDropzone.style.borderStyle  = 'solid';
+      npDropzone.style.borderColor  = '#198754';
       npRevert.style.display = 'flex';
     };
     reader.readAsDataURL(file);
@@ -233,14 +229,14 @@
 
   npRevert.addEventListener('click', e => {
     e.stopPropagation();
-    npImageInput.value = '';
+    npImageInput.value      = '';
     npPreview.style.display = 'none';
-    npPreview.src = '';
+    npPreview.src           = '';
     npPlaceholder.style.display = 'block';
-    npRevert.style.display = 'none';
+    npRevert.style.display  = 'none';
     npDropzone.style.borderStyle = 'dashed';
     npDropzone.style.borderColor = '#ccc';
-    npDropzone.style.background = '#fafafa';
+    npDropzone.style.background  = '#fafafa';
   });
 
   npDropzone.addEventListener('click', () => npImageInput.click());
@@ -270,7 +266,6 @@
     }
   });
 
-  // ── Batch tab image label update ──────────────────────
   const abImage = document.getElementById('ab-image');
   if (abImage) {
     abImage.addEventListener('change', function() {
@@ -279,7 +274,6 @@
     });
   }
 
-  // ── Season end constraints (batch tab) ────────────────
   function lockSeasonEnd(startId, endId) {
     const s = document.getElementById(startId);
     const e = document.getElementById(endId);
@@ -292,7 +286,6 @@
     update();
   }
 
-  // ── Batch tab: price suggestion ───────────────────────
   const discounts = { A: 0, B: 0.15, C: 0.30, D: 0.45, Discounted: 0.50 };
   const labels    = { A: 'base price', B: '−15% from base', C: '−30% from base', D: '−45% from base', Discounted: '−50% from base (suggested)' };
 
@@ -301,34 +294,33 @@
   const priceSuggLabel = document.getElementById('price-suggestion');
   const basePriceDisp  = document.getElementById('base-price-display');
   const basePriceVal   = document.getElementById('base-price-value');
+  const effectivePriceDisplay = document.getElementById('effective-price-display');
 
   function getSelectedBasePrice() {
     const opt = productSelect.options[productSelect.selectedIndex];
     return opt ? parseFloat(opt.dataset.basePrice) : NaN;
   }
 
-  const effectivePriceDisplay = document.getElementById('effective-price-display');
-
   function updateSuggestedPrice() {
     const base = getSelectedBasePrice();
     const qc   = document.querySelector('input[name="quality_class"]:checked')?.value;
     if (isNaN(base) || !qc) {
-      priceSuggLabel.textContent = '';
+      priceSuggLabel.textContent      = '';
       effectivePriceDisplay.textContent = '—';
       return;
     }
-    const discount = discounts[qc] ?? 0;
+    const discount  = discounts[qc] ?? 0;
     const effective = (base * (1 - discount)).toFixed(2);
     priceInput.value = effective;
     effectivePriceDisplay.textContent = `£${effective}`;
-    priceSuggLabel.textContent = `(${labels[qc]})`;
+    priceSuggLabel.textContent        = `(${labels[qc]})`;
   }
 
   productSelect.addEventListener('change', () => {
     const base = getSelectedBasePrice();
     if (!isNaN(base)) {
       basePriceDisp.style.display = '';
-      basePriceVal.textContent = `£${base.toFixed(2)}`;
+      basePriceVal.textContent    = `£${base.toFixed(2)}`;
     } else {
       basePriceDisp.style.display = 'none';
     }
@@ -339,7 +331,6 @@
     r.addEventListener('change', updateSuggestedPrice);
   });
 
-  // ── Surplus/Discounted class shows discount fields ─────
   function updateDiscountRow() {
     const qc = document.querySelector('input[name="quality_class"]:checked')?.value;
     document.getElementById('discount-row').style.display = qc === 'Discounted' ? '' : 'none';
@@ -351,7 +342,6 @@
 
   lockSeasonEnd('np-season-start', 'np-season-end');
 
-  // ── Restore correct tab if form was submitted with errors ──
   const formType = '{{ active_tab|default:"new" }}';
   if (formType === 'new_batch') switchTab('batch');
 </script>
