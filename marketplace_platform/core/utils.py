@@ -179,20 +179,25 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                     row_data.setdefault('seasonStart', getattr(model_instance, 'seasonStart', 'January'))
                     row_data.setdefault('seasonEnd', getattr(model_instance, 'seasonEnd', 'December'))
 
-                # Backfill fields not submitted (e.g. password modal only sends a few fields)
+                # Backfill fields not submitted (e.g. disabled readonly inputs, password modal)
                 # so the form sees all required fields and validates correctly.
                 if not is_new_record:
+                    fk_fields = {f.name for f in model._meta.get_fields() if isinstance(f, models.ForeignKey)}
                     for f in DynamicForm.base_fields:
                         if f not in row_data:
-                            val = getattr(model_instance, f, None)
-                            if val is None:
-                                row_data.setdefault(f, '')
-                            elif isinstance(val, bool):
-                                row_data.setdefault(f, str(val))
-                            elif isinstance(val, list):
-                                row_data.setdefault(f, val)
+                            if f in fk_fields:
+                                # Use the raw PK so the FK form field gets a valid UUID/int
+                                row_data.setdefault(f, str(getattr(model_instance, f'{f}_id', '') or ''))
                             else:
-                                row_data.setdefault(f, str(val))
+                                val = getattr(model_instance, f, None)
+                                if val is None:
+                                    row_data.setdefault(f, '')
+                                elif isinstance(val, bool):
+                                    row_data.setdefault(f, str(val))
+                                elif isinstance(val, list):
+                                    row_data.setdefault(f, val)
+                                else:
+                                    row_data.setdefault(f, str(val))
 
                 # Password-only update - bypass the form entirely to avoid interference
                 password_provided = bool(selected_model_name == 'User' and row_data.get('password'))
@@ -437,8 +442,13 @@ def format_for_display(field, raw_value):
         
 
 def get_low_stock_products(user):
-    """Returns Products whose total in-date stock is at or below their alert threshold."""
-    return [p for p in Product.objects.filter(producer=user) if p.stock <= p.stock_alert_threshold]
+    """Returns ProductBatches whose stock is at or below their per-batch alert threshold."""
+    from core.models import ProductBatch
+    from django.db.models import F
+    qs = ProductBatch.objects.filter(stock__lte=F('stock_alert_threshold')).select_related('product')
+    if not user.is_superuser:
+        qs = qs.filter(product__producer=user)
+    return qs
 
 def get_pending_orders(user):
     """Returns pending ProducerOrders for the given producer/superuser."""

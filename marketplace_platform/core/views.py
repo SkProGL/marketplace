@@ -1263,6 +1263,7 @@ def get_order_summary_json(request, order_id):
                 sub_advance = f"/management/order/{sub_po.id}/advance/" if sub_status in ('PENDING', 'CONFIRMED') else None
                 sub_next = {'PENDING': 'CONFIRMED', 'CONFIRMED': 'READY'}.get(sub_status)
                 prod = sub_po.producer
+                sub_history = sub_po.status_history.select_related('changed_by').order_by('changed_at')
                 producer_orders_data.append({
                     'id': str(sub_po.id),
                     'producer': prod.organisation_name or prod.full_name or prod.email,
@@ -1270,11 +1271,19 @@ def get_order_summary_json(request, order_id):
                     'delivery_date': sub_po.delivery_date.strftime('%Y-%m-%d') if sub_po.delivery_date else '',
                     'advance_url': sub_advance,
                     'next_status': sub_next,
+                    'history': [
+                        {
+                            'from': h.from_status,
+                            'to': h.to_status,
+                            'by': h.changed_by.email if h.changed_by else '—',
+                            'at': h.changed_at.strftime('%d %b %Y %H:%M'),
+                            'note': h.note,
+                        }
+                        for h in sub_history
+                    ],
                 })
             items = list(order.orderproduct_set.select_related('batch__product__producer'))
-            history_qs = OrderStatusHistory.objects.filter(
-                producer_order__order=order
-            ).select_related('changed_by').order_by('changed_at')
+            history_qs = []  # history is embedded per-producer in producer_orders_data
 
         receipt_data = []
         for item in items:
