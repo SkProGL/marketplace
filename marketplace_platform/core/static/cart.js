@@ -124,10 +124,9 @@ function renderDrawer(data) {
                   £${item.price.toFixed(2)} each
               </div>
 
-              <!-- ✅ ADD THIS -->
               ${item.food_miles !== null && item.food_miles !== undefined && item.food_miles !== ""
                 ? `<div class="cart-drawer-food-miles">
-                    🌍 ${parseFloat(item.food_miles).toFixed(1)} miles
+                    ${parseFloat(item.food_miles).toFixed(1)} miles
                   </div>`
                 : ''}
           </div>
