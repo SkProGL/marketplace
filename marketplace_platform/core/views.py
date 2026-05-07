@@ -18,7 +18,7 @@ from core.utils import get_management_context, get_recurring_orders_context, han
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, date as date_type, datetime as datetime_type
 from decimal import Decimal
 
 MANAGEMENT_SEARCH_FIELDS = {
@@ -307,84 +307,109 @@ def checkout(request):
     if request.method == "POST":
         form = CheckoutForm(request.POST)
         if form.is_valid():
-            recurrence_type = request.POST.get('recurrence_type', 'None')
-            recurrence_day = request.POST.get('recurrence_day', None)
-            try:
-                with transaction.atomic():
-                    # Lock all batch rows for the duration of this transaction
-                    batch_ids = [str(item['product'].pk) for item in cart_items]
-                    locked = {
-                        str(b.pk): b
-                        for b in ProductBatch.objects.select_for_update().filter(pk__in=batch_ids)
-                    }
+            # Validate a delivery date per producer
+            min_date = date_type.today() + timedelta(days=2)
+            producer_dates = {}
+            date_errors = []
+            for group in cart_by_producer:
+                pid = str(group['producer'].id)
+                raw = request.POST.get(f'delivery_date_{pid}', '').strip()
+                producer_name = group['producer'].organisation_name or str(group['producer'])
+                try:
+                    d = date_type.fromisoformat(raw)
+                    if d < min_date:
+                        date_errors.append(f"Delivery date for {producer_name} must be at least 48 hours from now.")
+                    else:
+                        producer_dates[pid] = d
+                except ValueError:
+                    date_errors.append(f"Please select a valid delivery date for {producer_name}.")
 
-                    # Validate stock before touching anything
-                    short = []
-                    for item in cart_items:
-                        b = locked[str(item['product'].pk)]
-                        if b.stock < item['quantity']:
-                            short.append(
-                                f"{item['product'].name}: only {b.stock} available, "
-                                f"you requested {item['quantity']}"
-                            )
-                    if short:
-                        raise ValueError(short)
-
-                    new_order = Order.objects.create(
-                        customer=request.user,
-                        total_price=round(total_price, 2),
-                        delivery_date=timezone.make_aware(
-                            timezone.datetime.combine(form.cleaned_data['delivery_date'], timezone.datetime.min.time())
-                        ),
-                        delivery_address=form.cleaned_data['delivery_address'],
-                        delivery_postcode=form.cleaned_data['delivery_postcode'],
-                        order_status='PENDING',
-                        recurrence_type=recurrence_type,
-                        recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
-                    )
-
-                    # One ProducerOrder per producer, then assign each item to its slice
-                    producer_orders = {}
-                    producer_subtotals = defaultdict(Decimal)
-                    for item in cart_items:
-                        batch = item['product']
-                        producer = batch.product.producer
-                        if producer.id not in producer_orders:
-                            producer_orders[producer.id] = ProducerOrder.objects.create(
-                                order=new_order,
-                                producer=producer,
-                                order_status='PENDING',
-                                delivery_date=form.cleaned_data['delivery_date'],
-                            )
-                        OrderProduct.objects.create(
-                            order=new_order,
-                            producer_order=producer_orders[producer.id],
-                            batch=batch,
-                            numPurchased=item['quantity'],
-                            price_at_purchase=batch.price,
-                        )
-                        producer_subtotals[producer.id] += batch.price * item['quantity']
-                        ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - item['quantity'])
-
-                    # Record a Payment (95% of subtotal) for each producer
-                    now = timezone.now()
-                    for prod_id, prod_order in producer_orders.items():
-                        prod_subtotal = producer_subtotals[prod_id]
-                        producer_amount = (prod_subtotal * Decimal('0.95')).quantize(Decimal('0.01'))
-                        payment = Payment.objects.create(
-                            producer=prod_order.producer,
-                            amount=producer_amount,
-                            status=Payment.Status.PROCESSED,
-                            processed_at=now,
-                        )
-                        OrderPayment.objects.create(order=new_order, payment=payment)
-
-                    request.session['cart'] = {}
-                    return redirect('order_confirmation', order_id=new_order.id)
-
-            except ValueError as e:
-                for msg in e.args[0]:
+            if date_errors:
+                for msg in date_errors:
                     messages.error(request, msg)
+            else:
+                recurrence_type = request.POST.get('recurrence_type', 'None')
+                recurrence_day = request.POST.get('recurrence_day', None)
+                earliest_date = min(producer_dates.values())
+                try:
+                    with transaction.atomic():
+                        # Lock all batch rows for the duration of this transaction
+                        batch_ids = [str(item['product'].pk) for item in cart_items]
+                        locked = {
+                            str(b.pk): b
+                            for b in ProductBatch.objects.select_for_update().filter(pk__in=batch_ids)
+                        }
+
+                        # Validate stock before touching anything
+                        short = []
+                        for item in cart_items:
+                            b = locked[str(item['product'].pk)]
+                            if b.stock < item['quantity']:
+                                short.append(
+                                    f"{item['product'].name}: only {b.stock} available, "
+                                    f"you requested {item['quantity']}"
+                                )
+                        if short:
+                            raise ValueError(short)
+
+                        new_order = Order.objects.create(
+                            customer=request.user,
+                            total_price=round(total_price, 2),
+                            delivery_date=timezone.make_aware(
+                                datetime_type.combine(earliest_date, datetime_type.min.time())
+                            ),
+                            delivery_address=form.cleaned_data['delivery_address'],
+                            delivery_postcode=form.cleaned_data['delivery_postcode'],
+                            order_status='PENDING',
+                            recurrence_type=recurrence_type,
+                            recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
+                        )
+
+                        # One ProducerOrder per producer, each with its own delivery date
+                        producer_orders = {}
+                        producer_subtotals = defaultdict(Decimal)
+                        for item in cart_items:
+                            batch = item['product']
+                            producer = batch.product.producer
+                            pid = str(producer.id)
+                            if producer.id not in producer_orders:
+                                producer_orders[producer.id] = ProducerOrder.objects.create(
+                                    order=new_order,
+                                    producer=producer,
+                                    order_status='PENDING',
+                                    delivery_date=timezone.make_aware(
+                                        datetime_type.combine(producer_dates[pid], datetime_type.min.time())
+                                    ),
+                                )
+                            OrderProduct.objects.create(
+                                order=new_order,
+                                producer_order=producer_orders[producer.id],
+                                batch=batch,
+                                numPurchased=item['quantity'],
+                                price_at_purchase=batch.price,
+                            )
+                            producer_subtotals[producer.id] += batch.price * item['quantity']
+                            ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - item['quantity'])
+
+                        # Record a Payment (95% of subtotal) for each producer
+                        now = timezone.now()
+                        for prod_id, prod_order in producer_orders.items():
+                            prod_subtotal = producer_subtotals[prod_id]
+                            producer_amount = (prod_subtotal * Decimal('0.95')).quantize(Decimal('0.01'))
+                            payment = Payment.objects.create(
+                                producer=prod_order.producer,
+                                amount=producer_amount,
+                                status=Payment.Status.PROCESSED,
+                                processed_at=now,
+                            )
+                            OrderPayment.objects.create(order=new_order, payment=payment)
+
+                        request.session['cart'] = {}
+                        return redirect('order_confirmation', order_id=new_order.id)
+
+                except ValueError as e:
+                    for msg in e.args[0]:
+                        messages.error(request, msg)
     else:
         form = CheckoutForm()
 
@@ -405,6 +430,11 @@ def order_confirmation(request, order_id):
     order = get_object_or_404(Order, id=order_id, customer=request.user)
     items = order.orderproduct_set.select_related('batch__product__producer').all()
 
+    producer_order_dates = {
+        str(po.producer_id): po.delivery_date
+        for po in ProducerOrder.objects.filter(order=order)
+    }
+
     groups = defaultdict(list)
     for op in items:
         producer = op.batch.product.producer
@@ -422,6 +452,7 @@ def order_confirmation(request, order_id):
             'subtotal': subtotal,
             'commission': commission,
             'producer_payment': (subtotal * Decimal('0.95')).quantize(Decimal('0.01')),
+            'delivery_date': producer_order_dates.get(str(producer.id)),
         })
 
     order_payments = OrderPayment.objects.filter(order=order).select_related('payment')
