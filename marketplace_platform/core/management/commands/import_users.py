@@ -22,16 +22,10 @@ class Command(BaseCommand):
                         "restaurant": "Restaurant",
                         "community group": "Community Group"
                     }
-<<<<<<< Updated upstream
-                    raw_category = row.get("category", "").lower()
-                    category = category_map.get(raw_category, "Customer")
-
-=======
                     raw_category=row.get("category","").lower()
                     category=category_map.get(raw_category,"Customer")
 
     
->>>>>>> Stashed changes
                     if User.objects.filter(full_name=name).first():
                         continue
 
@@ -45,11 +39,7 @@ class Command(BaseCommand):
                         postcode=row.get("postcode", ""),
                         organisation_name=row.get("organisation_name", "")
                     )
-<<<<<<< Updated upstream
-                    # print(f"Created: {name}")
-=======
                     print(f"Created: {name}")
->>>>>>> Stashed changes
                 except Exception as e:
                     print(f"Error with row {row}: {e}")
             print("done")

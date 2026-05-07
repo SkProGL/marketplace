@@ -85,6 +85,9 @@
                                             <p class="mb-0 text-muted" style="font-size:0.88rem;">
                                                 Qty: {{ item.quantity }} {{ item.product.product.unit }} &nbsp;·&nbsp; £{{ item.product.price }}/{{ item.product.product.unit }}
                                             </p>
+                                            <p class="mb-0 text-muted" style="font-size:0.88rem;">
+                                              Miles: {{ item.food_miles|floatformat:1 }}  
+                                            </p>
                                         </div>
                                     {% endfor %}
                                     <div style="padding-left:8px;margin-top:6px;font-size:0.82rem;color:#888;">

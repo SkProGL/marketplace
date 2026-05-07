@@ -585,13 +585,8 @@ def home_view(request):
         if matches:
             suggestion = matches[0]
 
-<<<<<<< Updated upstream
-    total_count = items.count()
-    paginator = Paginator(items, 24)
-=======
     total_count = len(items)
     paginator = Paginator(items, 12)
->>>>>>> Stashed changes
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     items_list = list(page_obj)
