@@ -1,79 +1,90 @@
 <div class="invoice-box">
   <table cellpadding="0" cellspacing="0">
+
+    <!-- Header: logo + order meta -->
     <tr class="top">
-      <td colspan="2">
+      <td colspan="4">
         <table>
           <tr>
             <td class="title">
               <a class="nav-home" href="/home">
-                <span>Bristol&nbsp</span>
-                <span>Marketplace</span>
+                <span>Bristol&nbsp;</span><span>Marketplace</span>
               </a>
             </td>
-
             <td class="title-column">
-              Order ID: #{{ order.id|stringformat:"s"|cut:"-"|slice:":8"|default:"N/A" }}<br />
-              Order Date: {{ order.order_date|date:"d M Y"|default:"N/A" }}<br />
-              Delivery Date: {{ order.delivery_date|date:"d M Y"|default:"N/A" }}<br />
-              Order Type: {{ order.get_recurrence_type_display|default:"One-off" }}
+              Invoice #{{ order.id|stringformat:"s"|cut:"-"|slice:":8"|upper|default:"N/A" }}<br/>
+              Order Date: {{ order.order_date|date:"d M Y"|default:"N/A" }}<br/>
+              Delivery Date: {{ order.delivery_date|date:"d M Y"|default:"TBC" }}<br/>
+              Status: {{ order.order_status|title|default:"Unknown" }}<br/>
+              {% if order.recurrence_type and order.recurrence_type != 'None' %}
+              Recurrence: {{ order.get_recurrence_type_display|default:"—" }}
+              {% endif %}
             </td>
           </tr>
         </table>
       </td>
     </tr>
 
-    <tr class="information">
-      <td colspan="2">
+    <!-- Seller + customer details -->
+    <tr class="information">  
+      <td colspan="4">
         <table>
           <tr>
             <td>
-              Bristol Regional Food Network<br />
-              20-Mile Community Marketplace<br />
+              Bristol Regional Food Network<br/>
+              20-Mile Community Marketplace<br/>
               Bristol, United Kingdom
             </td>
-
             <td>
-              Customer: {{ order.customer.organisation_name|default:order.customer.full_name|default:order.customer.email|default:"N/A" }}<br />
-              Contact: {{ order.customer.full_name|default:order.customer.email|default:"N/A" }}<br />
-              {{ order.customer.phone|default:"" }}<br />
-              {{ order.customer.email|default:"" }}
+              <strong>{{ customer_name|default:"N/A" }}</strong><br/>
+              {% if order.customer.phone %}{{ order.customer.phone }}<br/>{% endif %}
+              {{ order.customer.email|default:"—" }}<br/>
+              Delivery: {{ order.delivery_address|default:"Not provided" }}<br/>
+              {% if order.delivery_postcode %}{{ order.delivery_postcode }}<br/>{% endif %}
+              {% if order.special_instructions %}<em>Note: {{ order.special_instructions }}</em>{% endif %}
             </td>
           </tr>
         </table>
       </td>
     </tr>
 
+    <!-- Column headings -->
     <tr class="heading">
       <td>Product</td>
-      <td>Price</td>
+      <td style="text-align:center;">Qty</td>
+      <td style="text-align:right;">Unit Price</td>
+      <td style="text-align:right;">Total</td>
     </tr>
 
+    <!-- Line items -->
     {% for item in invoice_items %}
     <tr class="item">
       <td>
-        {{ item.name }} (x{{ item.quantity }})<br />
-        Producer: {{ item.producer.full_name|default:item.producer.organisation_name|default:item.producer.email }}<br />
-        {{ item.details }}<br />
-        Best Before: {{ item.best_before|date:"d M Y" }}
+        {{ item.name|default:"Unknown product" }}<br/>
+        <small style="color:#888;">
+          Class {{ item.quality_class|default:"—" }} - {{ item.producer_name|default:"Unknown producer" }}
+          {% if item.best_before %} - Best before: {{ item.best_before|date:"d M Y" }}{% endif %}
+        </small>
       </td>
-      <td>£{{ item.line_total|floatformat:2 }}</td>
+      <td style="text-align:center;">{{ item.quantity|default:"1" }}{% if item.unit %} {{ item.unit }}{% endif %}</td>
+      <td style="text-align:right;">£{{ item.unit_price|default:"0.00"|floatformat:2 }}</td>
+      <td style="text-align:right;">£{{ item.line_total|default:"0.00"|floatformat:2 }}</td>
     </tr>
     {% endfor %}
 
-    <tr class="item">
-      <td>Subtotal</td>
-      <td>£{{ subtotal|floatformat:2 }}</td>
-    </tr>
-
-    <tr class="item">
-      <td>Network Commission ({{ commission_rate|floatformat:2 }}%)</td>
-      <td>£{{ commission_amount|floatformat:2 }}</td>
-    </tr>
-
+    <!-- Total -->
     <tr class="total">
-      <td></td>
-      <td>Total: £{{ total|floatformat:2 }}</td>
+      <td colspan="3"></td>
+      <td style="text-align:right;">Total: £{{ total|floatformat:2 }}</td>
     </tr>
+
+    <!-- Commission transparency note -->
+    <tr>
+      <td colspan="4" style="font-size:0.78rem;color:#aaa;padding-top:10px;border-top:1px solid #eee;">
+        A {{ commission_rate|floatformat:0 }}% network commission (£{{ commission_amount|floatformat:2 }}) is deducted from producer payments. This does not affect the amount you pay.
+      </td> 
+    </tr>
+
   </table>
-  <button onclick="download_pdf()" type="button" id="invoice-download-pdf">Download .PDF</button>
+  <button class="btn btn-success" onclick="download_pdf()" type="button" id="invoice-download-pdf">Download .PDF</button>
 </div>

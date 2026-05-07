@@ -136,16 +136,15 @@ class CheckoutForm(forms.Form):
         max_length=20,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. SW1A 1AA'})
     )
-    
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
         fields = [
             'name', 'category', 'description', 'price',
-            'unit', 'all_year', 'seasonStart', 'seasonEnd',
-            'stock_alert_threshold',
+            'unit', 'seasonStart', 'seasonEnd',
+            'best_before', 'stock_alert_threshold',
             'allergens', 'organic', 'surplus', 'discount_percentage',
-            'discount_expiry', 'discount_note', 'image'
+            'discount_expiry', 'discount_note', 'image', 'image_url'
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),

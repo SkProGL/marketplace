@@ -470,7 +470,7 @@ def get_recurring_orders_context(user):
     today = timezone.now().date()
     orders = Order.objects.filter(
         customer=user,
-    ).exclude(recurrence_type='None').prefetch_related('orderproduct_set__batch__product')
+    ).exclude(recurrence_type='None').prefetch_related('orderproduct_set__batch__product__producer')
 
     result = []
     for order in orders:
