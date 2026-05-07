@@ -5,7 +5,7 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
 from core.models import Order, ProductBatch, User, OrderProduct, Payment
-from core.module.location import get_coordinates, calculate_distance
+from core.utils import get_coordinates, calculate_distance, BRFN_LAT, BRFN_LON
 
 
 def to_decimal(value, default=0):
@@ -39,12 +39,16 @@ class Command(BaseCommand):
 
         with open("synthetic_data/orders.csv", newline='', encoding="utf-8") as file:
             reader = csv.DictReader(file)
+<<<<<<< Updated upstream
             limit = 20
 
             brfn_lat, brfn_lon = (51.503269, -2.602925)
             for (i, row) in enumerate(reader):
                 if i>=limit:
                     break
+=======
+            for row in reader:
+>>>>>>> Stashed changes
                 try:
                     indexes = row["product_ids"].replace('"', '').split(",")
                     batches_for_order = [
@@ -63,6 +67,7 @@ class Command(BaseCommand):
                             producer.id, Decimal("0.00"))
                         producer_totals[producer.id] += batch.price
 
+<<<<<<< Updated upstream
                         producer_postcode = producer.postcode
                         prod_lat, prod_lon = get_cached_coords(
                             producer_postcode)
@@ -72,6 +77,13 @@ class Command(BaseCommand):
                         distance2 = calculate_distance(
                             brfn_lat, brfn_lon, cus_lat, cus_lon)
                         total_food_miles += (distance1+distance2)
+=======
+                        producer_postcode=producer.postcode
+                        prod_lat, prod_lon = get_cached_coords(producer_postcode)
+                        distance1 = calculate_distance(prod_lat,prod_lon,BRFN_LAT,BRFN_LON)
+                        distance2 = calculate_distance(BRFN_LAT,BRFN_LON,cus_lat,cus_lon)
+                        total_food_miles+=(distance1+distance2)
+>>>>>>> Stashed changes
 
                     order = Order.objects.create(
                         customer_id=customer_id,

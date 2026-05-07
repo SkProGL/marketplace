@@ -84,7 +84,8 @@
          data-organic-info="{{ item.producer.organic_description }}"
          data-avg-rating="{{ item.avg_rating|default:'' }}"
          data-review-count="{{ item.review_count }}"
-         data-product-id="{{ item.id }}">
+         data-product-id="{{ item.id }}"
+         data-food-miles="{{ item.food_miles|default:'' }}">
       <div class="image">
         {% if item.in_stock_batches.0.image %}
           <img src="{{ item.in_stock_batches.0.thumbnail.url }}" 
@@ -187,11 +188,14 @@
                 <span class="pm-info-val" id="modalSeason"></span>
               </div>
               <div class="pm-info-row">
+                <span class="pm-info-key" >Food mileage</span>
+                <span class="pm-info-val"><span id="modalFoodMiles"></span> miles</span>
+              </div>
+              <div class="pm-info-row">
                 <span class="pm-info-key" id="modalStockLabel">Total in stock</span>
                 <span class="pm-info-val"><span id="modalTotalStock"></span>&nbsp;<span id="modalStockUnit"></span></span>
               </div>
             </div>
-
             <div class="pm-desc-area">
               <label class="pm-label">Description</label>
               <p id="modalDescription" class="pm-desc"></p>
@@ -318,6 +322,7 @@
     document.getElementById('modalProducer').textContent    = d.producer;
     document.getElementById('modalDescription').textContent = d.description;
     document.getElementById('modalCategory').textContent    = d.category;
+    document.getElementById('modalFoodMiles').textContent   = d.foodMiles ? parseFloat(d.foodMiles).toFixed(1) : 'Unknown';
 
     const isOrganic = d.organic === 'True' || d.organic === 'true' || d.organic === true;
     const ratingEl  = document.getElementById('modalRating');
@@ -718,12 +723,19 @@
     if (resetPage) currentPage = 1;
     const form   = searchInput.closest('form');
     const params = new URLSearchParams(new FormData(form));
+    params.delete('min_miles');
+    params.delete('max_miles');
     params.set('page', currentPage);
 
     if (typeof window.fmGetParams === 'function') {
       const fm = window.fmGetParams();
-      if (fm.min_miles) params.set('min_miles', fm.min_miles);
-      if (fm.max_miles) params.set('max_miles', fm.max_miles);
+      if (fm.min_miles !== null && fm.min_miles !== undefined) {
+        params.set('min_miles', fm.min_miles);
+      }
+
+      if (fm.max_miles !== null && fm.max_miles !== undefined) {
+        params.set('max_miles', fm.max_miles);
+        }
     }
 
     fetch(`?${params.toString()}`, {
@@ -757,7 +769,8 @@
              data-organic-info="${item.organic_description || ''}"
              data-avg-rating="${item.avg_rating || ''}"
              data-review-count="${item.review_count || 0}"
-             data-product-id="${item.id}">
+             data-product-id="${item.id}"
+             data-food-miles="${item.food_miles || ''}">
           <div class="image">
             ${item.thumbnail
               ? `<img src="${item.thumbnail}" data-src="${item.image}" alt="${item.name}" loading="lazy" class="product-image">`
