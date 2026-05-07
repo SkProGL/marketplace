@@ -287,7 +287,7 @@ class ProductBatch(models.Model):
         max_length=20, choices=Product.Months.choices, default=Product.Months.JAN, verbose_name="Season Start")
     seasonEnd = models.CharField(
         max_length=20, choices=Product.Months.choices, default=Product.Months.DEC, verbose_name="Season End")
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
 
     # --- Convenience properties so templates can use batch.name, batch.producer etc. ---
     _CLASS_DISCOUNTS = {'A': Decimal('0'), 'B': Decimal('15'), 'C': Decimal(
@@ -410,7 +410,7 @@ class Order(models.Model):
     delivery_address = models.CharField(max_length=256, blank=True)
     delivery_postcode = models.CharField(max_length=20, blank=True)
     # Food miles - distance food travels from producer to customer
-    food_miles = models.IntegerField(default=0)
+    food_miles = models.FloatField(default=0.0)
     # last_generated=models.DateTimeField(null=True,blank=True)
 
     @property
@@ -506,7 +506,7 @@ class StoryPost(models.Model):
                                processors=[ResizeToFill(100, 100)],
                                format='JPEG',
                                options={'quality': 80})
-    date_posted = models.DateTimeField(auto_now_add=True)
+    date_posted = models.DateTimeField(default=timezone.now)
     is_flagged = models.BooleanField(default=False)
 
     class Meta:
@@ -560,7 +560,7 @@ class FavouriteRecipe(models.Model):
         User, on_delete=models.CASCADE, related_name='favourite_recipes')
     recipe = models.ForeignKey(
         Recipe, on_delete=models.CASCADE, related_name='favourited_by')
-    saved_at = models.DateTimeField(auto_now_add=True)
+    saved_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         unique_together = ('user', 'recipe')
@@ -582,7 +582,7 @@ class Review(models.Model):
     content = models.TextField()
     rating = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)])
-    date_posted = models.DateTimeField(auto_now_add=True)
+    date_posted = models.DateTimeField(default=timezone.now)
     anonymous = models.BooleanField(default=False)
 
 
@@ -605,7 +605,7 @@ class Payment(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     processed_at = models.DateTimeField(null=True, blank=True)
     # history = HistoricalRecords()
 
@@ -619,7 +619,7 @@ class OrderStatusHistory(models.Model):
     from_status = models.CharField(max_length=20)
     to_status = models.CharField(max_length=20)
     changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    changed_at = models.DateTimeField(auto_now_add=True)
+    changed_at = models.DateTimeField(default=timezone.now)
     note = models.TextField(blank=True)
 
     class Meta:
@@ -642,7 +642,7 @@ class Complaint(models.Model):
     category = models.CharField(
         max_length=30, choices=Category.choices, default=Category.OTHER)
     description = models.TextField()
-    submitted_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(default=timezone.now)
     resolved = models.BooleanField(default=False)
 
     class Meta:

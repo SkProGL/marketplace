@@ -14,13 +14,14 @@ from django.contrib.auth.forms import PasswordChangeForm
 from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe, Payment
 from core.forms import ComplaintForm, LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
-from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
+from core.utils import get_management_context, get_recurring_orders_context, handle_management_post, food_mile_session_builder, calculate_distance, get_producer_food_miles, apply_surplus_if_due, SURPLUS_DAYS
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.db import transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from decimal import Decimal
-from datetime import timedelta, date as date_type, datetime as datetime_type
+from datetime import time, timedelta, date as date_type, datetime as datetime_type
 
 
 MANAGEMENT_SEARCH_FIELDS = {
@@ -112,21 +113,33 @@ def cart_contents(request):
     total_price = 0
     if cart:
         batches = ProductBatch.objects.select_related('product__producer').filter(id__in=cart.keys())
-        for batch in batches:
-            qty = cart.get(str(batch.id), 0)
-            subtotal = float(batch.price) * qty
-            total_price += subtotal
-            producer = batch.product.producer
-            cart_items_data.append({
-                'id': str(batch.id),
-                'name': batch.name,
-                'price': float(batch.price),
-                'quantity': qty,
-                'subtotal': round(subtotal, 2),
-                'image': batch.image.url if batch.image else None,
-                'producer': getattr(producer, 'organisation_name', None) or str(producer),
-                'producer_id': str(producer.id),
-            })
+    for batch in batches:
+        qty = cart.get(str(batch.id), 0)
+        subtotal = float(batch.price) * qty
+        total_price += subtotal
+
+        producer = batch.product.producer
+
+        food_miles = None
+        coords = request.session.get("user_coords")
+
+        if coords:
+            food_miles = get_producer_food_miles(
+                producer,
+                (coords["lat"], coords["lon"])
+            )
+
+        cart_items_data.append({
+            'id': str(batch.id),
+            'name': batch.name,
+            'price': float(batch.price),
+            'quantity': qty,
+            'subtotal': round(subtotal, 2),
+            'image': batch.image.url if batch.image else None,
+            'producer': getattr(producer, 'organisation_name', None) or str(producer),
+            'producer_id': str(producer.id),
+            'food_miles': float(food_miles) if food_miles is not None else None,
+        })
     return JsonResponse({
         'total_items': sum(cart.values()),
         'total_price': round(total_price, 2),
@@ -260,132 +273,271 @@ def loading(request):
 def checkout(request):
     cart = request.session.get('cart', {})
 
-    # If memory is empty, kick them back home
     if not cart:
         messages.error(request, "You haven't selected any items.")
         return redirect('home')
 
-    # 1. Gather all batches and calculate the total price
-    total_price = 0
+    total_price = Decimal('0.00')
     cart_items = []
 
+    producer_miles_cache = {}
+
     for pid, qty in cart.items():
-        batch = get_object_or_404(ProductBatch.objects.select_related('product__producer'), id=pid)
-        total_price += batch.price * qty
-        cart_items.append({'product': batch, 'quantity': qty})
+
+        batch = get_object_or_404(
+            ProductBatch.objects.select_related('product__producer'),
+            id=pid
+        )
+
+        producer = batch.product.producer
+
+        if producer.id not in producer_miles_cache:
+
+            if request.session.get("user_coords"):
+
+                coords = request.session["user_coords"]
+
+                producer_miles_cache[producer.id] = get_producer_food_miles(
+                    producer,
+                    (coords["lat"], coords["lon"])
+                )
+
+            else:
+                producer_miles_cache[producer.id] = 0
+
+        food_miles = producer_miles_cache[producer.id]
+
+        subtotal = batch.price * qty
+        total_price += subtotal
+
+        cart_items.append({
+            'product': batch,
+            'quantity': qty,
+            'food_miles': food_miles,
+        })
 
     groups = defaultdict(list)
+
     for item in cart_items:
         producer = item['product'].product.producer
         groups[producer].append(item)
 
     cart_by_producer = []
-    total_commission = Decimal('0')
+    total_commission = Decimal('0.00')
+
     for producer, items in groups.items():
-        subtotal = sum(item['product'].price * item['quantity'] for item in items)
-        commission = (subtotal * Decimal('0.05')).quantize(Decimal('0.01'))
+
+        subtotal = sum(
+            item['product'].price * item['quantity']
+            for item in items
+        )
+
+        commission = (
+            subtotal * Decimal('0.05')
+        ).quantize(Decimal('0.01'))
+
         cart_by_producer.append({
             'producer': producer,
             'items': items,
             'subtotal': subtotal,
             'commission': commission,
         })
+
         total_commission += commission
 
-    min_delivery_date = (timezone.now().date() + timedelta(days=2)).strftime('%Y-%m-%d')
+    min_delivery_date = (
+        timezone.now().date() + timedelta(days=2)
+    ).strftime('%Y-%m-%d')
 
     if request.method == "POST":
+
         form = CheckoutForm(request.POST)
+
         if form.is_valid():
-            # Validate a delivery date per producer
+
+            total_food_miles = sum(
+                item['food_miles'] or 0
+                for item in cart_items
+            )
+
             min_date = date_type.today() + timedelta(days=2)
+
             producer_dates = {}
             date_errors = []
+
             for group in cart_by_producer:
+
                 pid = str(group['producer'].id)
-                raw = request.POST.get(f'delivery_date_{pid}', '').strip()
-                producer_name = group['producer'].organisation_name or str(group['producer'])
+
+                raw = request.POST.get(
+                    f'delivery_date_{pid}',
+                    ''
+                ).strip()
+
+                producer_name = (
+                    group['producer'].organisation_name
+                    or str(group['producer'])
+                )
+
                 try:
                     d = date_type.fromisoformat(raw)
+
                     if d < min_date:
-                        date_errors.append(f"Delivery date for {producer_name} must be at least 48 hours from now.")
+                        date_errors.append(
+                            f"Delivery date for {producer_name} "
+                            f"must be at least 48 hours from now."
+                        )
                     else:
                         producer_dates[pid] = d
+
                 except ValueError:
-                    date_errors.append(f"Please select a valid delivery date for {producer_name}.")
+                    date_errors.append(
+                        f"Please select a valid delivery date "
+                        f"for {producer_name}."
+                    )
 
             if date_errors:
+
                 for msg in date_errors:
                     messages.error(request, msg)
+
             else:
-                recurrence_type = request.POST.get('recurrence_type', 'None')
-                recurrence_day = request.POST.get('recurrence_day', None)
+
+                recurrence_type = request.POST.get(
+                    'recurrence_type',
+                    'None'
+                )
+
+                recurrence_day = request.POST.get(
+                    'recurrence_day',
+                    None
+                )
+
                 earliest_date = min(producer_dates.values())
+
                 try:
+
                     with transaction.atomic():
-                        # Lock all batch rows for the duration of this transaction
-                        batch_ids = [str(item['product'].pk) for item in cart_items]
+
+                        batch_ids = [
+                            str(item['product'].pk)
+                            for item in cart_items
+                        ]
+
                         locked = {
                             str(b.pk): b
-                            for b in ProductBatch.objects.select_for_update().filter(pk__in=batch_ids)
+                            for b in ProductBatch.objects
+                            .select_for_update()
+                            .filter(pk__in=batch_ids)
                         }
 
-                        # Validate stock before touching anything
                         short = []
+
                         for item in cart_items:
+
                             b = locked[str(item['product'].pk)]
+
                             if b.stock < item['quantity']:
+
                                 short.append(
-                                    f"{item['product'].name}: only {b.stock} available, "
-                                    f"you requested {item['quantity']}"
+                                    f"{item['product'].name}: "
+                                    f"only {b.stock} available, "
+                                    f"you requested "
+                                    f"{item['quantity']}"
                                 )
+
                         if short:
                             raise ValueError(short)
 
                         new_order = Order.objects.create(
                             customer=request.user,
                             total_price=round(total_price, 2),
+                            food_miles=round(total_food_miles, 2),
                             delivery_date=timezone.make_aware(
-                                datetime_type.combine(earliest_date, datetime_type.min.time())
+                                datetime_type.combine(
+                                    earliest_date,
+                                    datetime_type.min.time()
+                                )
                             ),
-                            delivery_address=form.cleaned_data['delivery_address'],
-                            delivery_postcode=form.cleaned_data['delivery_postcode'],
+                            delivery_address=form.cleaned_data[
+                                'delivery_address'
+                            ],
+                            delivery_postcode=form.cleaned_data[
+                                'delivery_postcode'
+                            ],
                             order_status='PENDING',
                             recurrence_type=recurrence_type,
-                            recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
+                            recurrence_day=(
+                                int(recurrence_day)
+                                if recurrence_day
+                                and recurrence_type != 'None'
+                                else None
+                            ),
                         )
 
-                        # One ProducerOrder per producer, each with its own delivery date
                         producer_orders = {}
-                        producer_subtotals = defaultdict(Decimal)
+
+                        producer_subtotals = defaultdict(
+                            Decimal
+                        )
+
                         for item in cart_items:
+
                             batch = item['product']
+
                             producer = batch.product.producer
+
                             pid = str(producer.id)
+
                             if producer.id not in producer_orders:
-                                producer_orders[producer.id] = ProducerOrder.objects.create(
-                                    order=new_order,
-                                    producer=producer,
-                                    order_status='PENDING',
-                                    delivery_date=timezone.make_aware(
-                                        datetime_type.combine(producer_dates[pid], datetime_type.min.time())
-                                    ),
+
+                                producer_orders[producer.id] = (
+                                    ProducerOrder.objects.create(
+                                        order=new_order,
+                                        producer=producer,
+                                        order_status='PENDING',
+                                        delivery_date=timezone.make_aware(
+                                            datetime_type.combine(
+                                                producer_dates[pid],
+                                                datetime_type.min.time()
+                                            )
+                                        ),
+                                    )
                                 )
                             OrderProduct.objects.create(
                                 order=new_order,
-                                producer_order=producer_orders[producer.id],
+                                producer_order=producer_orders[
+                                    producer.id
+                                ],
                                 batch=batch,
                                 numPurchased=item['quantity'],
                                 price_at_purchase=batch.price,
                             )
-                            producer_subtotals[producer.id] += batch.price * item['quantity']
-                            ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - item['quantity'])
 
-                        # Record a Payment (95% of subtotal) for each producer
+                            producer_subtotals[
+                                producer.id
+                            ] += (
+                                batch.price * item['quantity']
+                            )
+
+                            ProductBatch.objects.filter(
+                                pk=batch.pk
+                            ).update(
+                                stock=F('stock') - item['quantity']
+                            )
+
                         now = timezone.now()
+
                         for prod_id, prod_order in producer_orders.items():
-                            prod_subtotal = producer_subtotals[prod_id]
-                            producer_amount = (prod_subtotal * Decimal('0.95')).quantize(Decimal('0.01'))
+
+                            prod_subtotal = producer_subtotals[
+                                prod_id
+                            ]
+
+                            producer_amount = (
+                                prod_subtotal * Decimal('0.95')
+                            ).quantize(Decimal('0.01'))
+
                             Payment.objects.create(
                                 producer=prod_order.producer,
                                 order=new_order,
@@ -395,12 +547,21 @@ def checkout(request):
                             )
 
                         request.session['cart'] = {}
-                        confirm_url = reverse('order_confirmation', args=[new_order.id])
-                        return redirect(f'/loading/?next={confirm_url}')
+
+                        confirm_url = reverse(
+                            'order_confirmation',
+                            args=[new_order.id]
+                        )
+
+                        return redirect(
+                            f'/loading/?next={confirm_url}'
+                        )
 
                 except ValueError as e:
+
                     for msg in e.args[0]:
                         messages.error(request, msg)
+
     else:
         form = CheckoutForm()
 
@@ -414,7 +575,6 @@ def checkout(request):
         'user_address': request.user.address,
         'user_postcode': request.user.postcode
     })
-
 
 @login_required
 def order_confirmation(request, order_id):
@@ -465,7 +625,8 @@ def home_view(request):
             qty = cart.get(str(batch.id), 0)
             total_price += float(batch.price) * qty
 
-    in_stock_batches_qs = ProductBatch.objects.filter(stock__gt=0).order_by('quality_class')
+    min_best_before = date_type.today() + timedelta(days=2)
+    in_stock_batches_qs = ProductBatch.objects.filter(stock__gt=0, best_before__gt=min_best_before).order_by('quality_class')
 
     class_a_image = ProductBatch.objects.filter(
         product=OuterRef('pk'), quality_class='A'
@@ -512,6 +673,36 @@ def home_view(request):
     for allergen in exclude_allergens:
         items = items.exclude(allergens__contains=[allergen])
 
+    min_miles = request.GET.get("min_miles")
+    max_miles = request.GET.get("max_miles")
+    customer_coords = request.session.get("user_coords")
+
+    min_m = Decimal(min_miles) if min_miles else None
+    max_m = Decimal(max_miles) if max_miles else None
+
+    filtered_items = []
+
+    for item in items:
+        if customer_coords:
+            miles = get_producer_food_miles(
+                item.producer,
+                (customer_coords["lat"], customer_coords["lon"])
+            )
+            item.food_miles = miles
+        else:
+            item.food_miles = None
+
+        if customer_coords and (min_miles or max_miles):
+            if item.food_miles is None:
+                continue
+            if min_m is not None and item.food_miles < min_m:
+                continue
+            if max_m is not None and item.food_miles > max_m:
+                continue
+
+        filtered_items.append(item)
+
+    items = filtered_items
     suggestion = None
     if q and not items.exists():
         all_names = list(Product.objects.values_list('name', flat=True))
@@ -519,8 +710,8 @@ def home_view(request):
         if matches:
             suggestion = matches[0]
 
-    total_count = items.count()
-    paginator = Paginator(items, 24)
+    total_count = len(items)
+    paginator = Paginator(items, 12)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     items_list = list(page_obj)
@@ -589,7 +780,6 @@ def home_view(request):
                 'season': ri.recipe.season,
                 'producer': ri.recipe.user.organisation_name or ri.recipe.user.full_name or ri.recipe.user.email,
             })
-
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         data = [{
             'id': str(item.id),
@@ -606,6 +796,7 @@ def home_view(request):
             'organic_description': item.producer.organic_description,
             'avg_rating': round(item.avg_rating, 1) if item.avg_rating else None,
             'review_count': item.review_count,
+            'food_miles': item.food_miles
         } for item in items_list]
         return JsonResponse({
             'items': data,
@@ -694,6 +885,7 @@ def login_view(request):
 
             if user is not None:
                 login(request, user)
+                request.session.update(food_mile_session_builder(user))
                 if not remember_me:
                     request.session.set_expiry(0)
                 else:
@@ -739,18 +931,6 @@ def upload_item(request):
                     'seasonEnd': season_end,
                 }
             )
-            image = request.FILES.get('image')
-            if image and created:
-                from datetime import date, timedelta
-                ProductBatch.objects.create(
-                    product=product,
-                    quality_class='A',
-                    stock=1,
-                    best_before=date.today() + timedelta(days=365),
-                    image=image,
-                    seasonStart=season_start,
-                    seasonEnd=season_end,
-                )
             if created:
                 messages.success(request, f'"{product.name}" was created successfully!')
             else:
@@ -761,23 +941,34 @@ def upload_item(request):
             active_tab = 'batch'
             product = get_object_or_404(Product, id=request.POST.get('product_id'))
             quality_class = request.POST.get('quality_class', 'B')
+            surplus_discount_pct = Decimal(request.POST.get('surplus_discount_percentage') or '20')
+            best_before_str = request.POST.get('best_before')
+
+            # Resolve final quality class before writing to DB
+            if quality_class != 'Discounted' and best_before_str:
+                best_before_date = date_type.fromisoformat(best_before_str)
+                days = SURPLUS_DAYS.get(product.category, 5)
+                if best_before_date <= date_type.today() + timedelta(days=days):
+                    quality_class = 'Discounted'
+
             surplus = quality_class == 'Discounted'
+            class_discounts = {'A': Decimal('0'), 'B': Decimal('15'), 'C': Decimal('30'), 'D': Decimal('45'), 'Discounted': Decimal('50')}
+            if quality_class == 'Discounted':
+                discount_pct = Decimal(request.POST.get('discount_percentage') or str(surplus_discount_pct))
+            else:
+                discount_pct = class_discounts.get(quality_class, Decimal('0'))
+
             ref_batch = product.batches.filter(quality_class='A').order_by('-created_at').first() \
                         or product.batches.order_by('-created_at').first()
             season_start = ref_batch.seasonStart if ref_batch else 'January'
             season_end = ref_batch.seasonEnd if ref_batch else 'December'
-            class_discounts = {'A': Decimal('0'), 'B': Decimal('15'), 'C': Decimal('30'), 'D': Decimal('45'), 'Discounted': Decimal('50')}
-            if quality_class == 'Discounted':
-                discount_pct = Decimal(request.POST.get('discount_percentage') or '50')
-            else:
-                discount_pct = class_discounts.get(quality_class, Decimal('0'))
             harvest_date = request.POST.get('harvest_date') or None
-            new_batch = ProductBatch.objects.create(
+            ProductBatch.objects.create(
                 product=product,
                 quality_class=quality_class,
                 stock=int(request.POST.get('stock') or 1),
                 harvest_date=harvest_date,
-                best_before=request.POST.get('best_before'),
+                best_before=best_before_str,
                 seasonStart=season_start,
                 seasonEnd=season_end,
                 surplus=surplus,
@@ -785,7 +976,7 @@ def upload_item(request):
                 discount_note=request.POST.get('discount_note', ''),
                 image=request.FILES.get('image'),
                 max_order_qty=int(request.POST['max_order_qty']) if request.POST.get('max_order_qty') else None,
-                surplus_discount_percentage=Decimal(request.POST.get('surplus_discount_percentage') or '20'),
+                surplus_discount_percentage=surplus_discount_pct,
             )
             return redirect('home')
 
@@ -1598,23 +1789,24 @@ def finance_view(request):
     user = request.user
     is_admin = user.is_superuser or user.category == 'Admin'
     
-    # Date filtering
+
     date_from = request.GET.get('from')
     date_to = request.GET.get('to')
-    
-    # Default to last 30 days for finance
-    if not date_from:
-        date_from = (timezone.now() - timedelta(days=30)).strftime('%Y-%m-%d')
-    if not date_to:
-        date_to = timezone.now().strftime('%Y-%m-%d')
-        
-    date_from_dt = datetime_type.strptime(date_from, '%Y-%m-%d')
-    date_to_dt = datetime_type.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
-    
-    payments = Payment.objects.select_related('producer', 'order').filter(
-        created_at__gte=date_from_dt,
-        created_at__lt=date_to_dt
-    ).order_by('-created_at')
+
+    payments = Payment.objects.select_related('producer', 'order').all()
+
+    # Only filter if user provides dates
+    if date_from:
+        date_from = parse_date(date_from)
+        date_from_dt = timezone.make_aware(datetime_type.combine(date_from, time.min))
+        payments = payments.filter(created_at__gte=date_from_dt)
+
+    if date_to:
+        date_to = parse_date(date_to)
+        date_to_dt = timezone.make_aware(datetime_type.combine(date_to, time.max))
+        payments = payments.filter(created_at__lte=date_to_dt)
+
+    payments = payments.order_by('-created_at')
     
     if not is_admin:
         payments = payments.filter(producer=user)
@@ -1641,7 +1833,8 @@ def finance_view(request):
                 p.status
             ])
         return response
-
+    print(Payment.objects.count())
+    print(Payment.objects.first().created_at)
     # Prepare data for template
     report_data = []
     total_network_commission = Decimal('0')

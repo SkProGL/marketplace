@@ -5,6 +5,33 @@
 > docker-python version: 3.11-slim  
 
 
+| TC | Description | Result |
+|----|-------------|--------|
+| TC-001 | Producers can register an account using their details and a secure password. |  PASS |
+| TC-002 | Customers can create accounts with their personal information and delivery address to make purchases. |  PASS |
+| TC-003 | Producers can create detailed product listings that include price, stock levels and seasonal availability. |  PASS |
+| TC-004 | Customers can browse the marketplace by selecting specific product categories, such as vegetables or dairy. |  PASS |
+| TC-005 | Customers can successfully search for specific items using product names or descriptions. |  PASS |
+| TC-006 | Customers can add products to a shopping cart, modify quantities and see accurate price totals. |  PASS |
+| TC-007 | Customers can complete the checkout process and payment for an order from a single producer. |  PASS |
+| TC-008 | Customers can place a single multi-vendor order, which the system accurately splits by producer for delivery and payment. |  PASS |
+| TC-009 | Producers can view a dashboard of their incoming orders, displaying customer details and delivery dates. |  PASS |
+| TC-010 | Producers can update the status of their orders (e.g., Pending, Confirmed, Delivered) and trigger customer notifications. |  PASS |
+| TC-011 | Producers can easily update their product stock quantities and availability status, immediately reflecting on the storefront. |  PASS |
+| TC-012 | The system generates weekly payment settlements, distributing 95% of the order value to producers. |  PASS |
+| TC-013 | The system calculates and displays the food miles between the producer's farm and the customer's delivery postcode. |  PASS |
+| TC-014 | Customers can apply a filter to view only products that hold an organic certification. |  PASS |
+| TC-015 | Products clearly display necessary allergen warnings to ensure customer safety and regulatory compliance. |  PASS |
+| TC-016 | Producers can set specific date ranges for seasonal products and the system automatically shows relevant availability badges. |  PASS |
+| TC-017 | Community groups can register institutional accounts and place large bulk orders across multiple producers. |  PASS |
+| TC-018 | Restaurants and business accounts can set up automated, recurring weekly orders for local ingredients. |  PASS |
+| TC-019 | Producers can mark excess inventory as surplus, applying a discount percentage to help reduce food waste. |  PASS |
+| TC-020 | Producers can publish farm stories and recipes linked to their products to engage with the community. |  PASS |
+| TC-021 | Customers can view their complete order history and easily duplicate past purchases using a reorder function. |  PASS |
+| TC-022 | The system enforces secure authentication, password hashing and role-based access control for all users. |  PASS |
+| TC-023 | Producers receive automated low-stock notifications when their inventory drops below a customisable threshold. |  PASS |
+| TC-024 | Customers can leave star ratings and text reviews exclusively on products from orders that have been successfully delivered. |  PASS |
+| TC-025 | System administrators can generate financial reports to audit the 5% network commission and producer payouts. |  PASS |
 
 
 

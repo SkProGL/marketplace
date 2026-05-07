@@ -3,6 +3,7 @@ from django.apps import AppConfig
 from django.db import models
 from django.contrib import messages
 from django.contrib.postgres.fields import ArrayField
+from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
 from django.http import HttpRequest
 from django.utils import timezone
@@ -12,6 +13,10 @@ from django.utils.html import format_html
 from django.http import HttpRequest
 from core.forms import PASSWORD_STRENGTH_ERROR, SignupForm
 from core.models import Order, Product, ProductBatch
+from django.core.cache import cache
+import requests
+import math
+from decimal import Decimal
 
 # Management
 ## Universal readonly fields
@@ -26,6 +31,7 @@ MODEL_FIELD_PRIORITY = {
     'Order': ['customer','order_status'],
     'ProducerOrder': ['order', 'producer', 'order_status', 'delivery_date'],
 }
+BRFN_LAT,BRFN_LON=(51.503269,-2.602925)
 
 def create_draft_entry(request, headers, selected_model: Type[models.Model], cached_update_attempt=None, readonly_fields=None) -> dict[str, Any]:
     """
@@ -441,6 +447,30 @@ def format_for_display(field, raw_value):
     return display_value
         
 
+SURPLUS_DAYS = {
+    'Fruit':     5,
+    'Vegetable': 5,
+    'Preserve':  5,
+    'Dairy':     3,
+    'Bakery':    3,
+}
+
+def apply_surplus_if_due(batch):
+    """Mark batch as Discounted if it's within the surplus window. Returns True if updated."""
+    if batch.quality_class == 'Discounted':
+        return False
+    best_before = batch.best_before
+    if isinstance(best_before, str):
+        best_before = date.fromisoformat(best_before)
+    days = SURPLUS_DAYS.get(batch.product.category, 5)
+    if best_before <= timezone.now().date() + timedelta(days=days):
+        batch.quality_class = 'Discounted'
+        batch.surplus = True
+        batch.discount_percentage = batch.surplus_discount_percentage
+        batch.save(update_fields=['quality_class', 'surplus', 'discount_percentage'])
+        return True
+    return False
+
 def get_low_stock_products(user):
     """Returns ProductBatches whose stock is at or below their per-batch alert threshold."""
     from core.models import ProductBatch
@@ -511,3 +541,78 @@ def get_recurring_orders_context(user):
             'items': order.orderproduct_set.all(),
         })
     return result
+
+producer_distance_cache={}
+
+def get_coordinates(postcode):
+    postcode=postcode.replace(" ","")
+    url=f"https://api.postcodes.io/postcodes/{postcode}"
+
+    try:
+        response=requests.get(url)
+        data=response.json()
+
+        if data["status"]==200:
+            result=data["result"]
+            return result["latitude"],result["longitude"]
+    except Exception as e:
+        print(f"Geocoding error: {e}")
+    
+    return None, None
+
+def calculate_distance(lat1,lon1,lat2,lon2):
+    R=3959
+
+    lat1, lon1, lat2, lon2=map(math.radians, [lat1, lon1, lat2, lon2])
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    a=(math.sin(dlat/2)**2
+    + math.cos(lat1)
+    * math.cos(lat2)
+    * math.sin(dlon/2)**2
+    )
+    c=2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    return R * c
+
+User=get_user_model()
+
+def food_mile_session_builder(user):
+    session={}
+    if user.postcode:
+        lat,lon=get_coordinates(user.postcode)
+        if lat and lon:
+            session["user_coords"]={
+                "lat":lat,
+                "lon":lon
+            }
+    producers=User.objects.filter(category="Producer").values("id","postcode")
+    producer_coords={}
+
+    for p in producers:
+        if not p["postcode"]:
+            continue
+        lat, lon = get_coordinates(p["postcode"])
+        if lat and lon:
+            pid=str(p["id"])
+            producer_coords[pid]={
+                "lat":lat,
+                "lon":lon
+            }
+    session["producer_coords"]=producer_coords
+    return session
+
+def get_producer_food_miles(producer,customer_coords):
+    key=producer.id
+    if key not in producer_distance_cache:
+        prod_lat, prod_lon = get_coordinates(producer.postcode)
+        producer_distance_cache[key] = (prod_lat, prod_lon)
+
+    prod_lat, prod_lon = producer_distance_cache[key]
+    cus_lat, cus_lon = customer_coords
+
+    d1 = calculate_distance(prod_lat, prod_lon, BRFN_LAT, BRFN_LON)
+    d2 = calculate_distance(BRFN_LAT, BRFN_LON, cus_lat, cus_lon)
+
+    return Decimal(d1 + d2)

@@ -22,9 +22,10 @@ class Command(BaseCommand):
                         "restaurant": "Restaurant",
                         "community group": "Community Group"
                     }
-                    raw_category = row.get("category", "").lower()
-                    category = category_map.get(raw_category, "Customer")
+                    raw_category=row.get("category","").lower()
+                    category=category_map.get(raw_category,"Customer")
 
+    
                     if User.objects.filter(full_name=name).first():
                         continue
 
@@ -38,7 +39,7 @@ class Command(BaseCommand):
                         postcode=row.get("postcode", ""),
                         organisation_name=row.get("organisation_name", "")
                     )
-                    # print(f"Created: {name}")
+                    print(f"Created: {name}")
                 except Exception as e:
                     print(f"Error with row {row}: {e}")
             print("done")

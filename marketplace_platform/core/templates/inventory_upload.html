@@ -168,10 +168,10 @@
       <input type="number" name="max_order_qty" min="1" placeholder="e.g. 10" />
 
       <label>Harvest date</label>
-      <input type="date" name="harvest_date" />
+      <input type="date" id="harvest_date" name="harvest_date" />
 
       <label>Best before</label>
-      <input type="date" name="best_before" required />
+      <input type="date" id="best_before" name="best_before" required />
 
       <label>Auto-surplus discount % <span class="label-note">(applied near best-before date)</span></label>
       <input type="number" name="surplus_discount_percentage" min="1" max="100" step="0.01" placeholder="Default: 20" />
@@ -195,7 +195,26 @@
 
 </div>
 
+<script id="product-season-data" type="application/json">
+{
+  {% for product in products %}"{{ product.id }}": {"seasonStart": "{{ product.seasonStart }}", "seasonEnd": "{{ product.seasonEnd }}", "allYear": {{ product.all_year|yesno:"true,false" }}}{% if not forloop.last %},{% endif %}
+  {% endfor %}
+}
+</script>
+
 <script>
+  (function() {
+    const min = new Date();
+    min.setTime(min.getTime() + 72 * 60 * 60 * 1000);
+    const y = min.getFullYear();
+    const m = String(min.getMonth() + 1).padStart(2, '0');
+    const d = String(min.getDate()).padStart(2, '0');
+    const minDate = `${y}-${m}-${d}`;
+    const picker = document.getElementById('best_before');
+    picker.min = minDate;
+    if (!picker.value || picker.value < minDate) picker.value = minDate;
+  })();
+
   function toggleSeasonFields(allYear) {
     document.getElementById('np-season-fields').style.display = allYear ? 'none' : '';
   }
@@ -316,6 +335,28 @@
     priceSuggLabel.textContent        = `(${labels[qc]})`;
   }
 
+  const PRODUCT_SEASONS = JSON.parse(document.getElementById('product-season-data').textContent);
+  const MONTH_NUMS = {
+    'January':1,'February':2,'March':3,'April':4,'May':5,'June':6,
+    'July':7,'August':8,'September':9,'October':10,'November':11,'December':12
+  };
+
+  function updateHarvestDateBounds() {
+    const harvestPicker = document.getElementById('harvest_date');
+    if (!harvestPicker) return;
+    const today = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+    harvestPicker.max = todayStr;
+    const season = PRODUCT_SEASONS[productSelect.value];
+    if (!season || season.allYear) { harvestPicker.min = ''; return; }
+    const startNum = MONTH_NUMS[season.seasonStart];
+    if (!startNum) return;
+    const currentMonth = today.getMonth() + 1;
+    const year = currentMonth >= startNum ? today.getFullYear() : today.getFullYear() - 1;
+    harvestPicker.min = `${year}-${pad(startNum)}-01`;
+  }
+
   productSelect.addEventListener('change', () => {
     const base = getSelectedBasePrice();
     if (!isNaN(base)) {
@@ -325,6 +366,7 @@
       basePriceDisp.style.display = 'none';
     }
     updateSuggestedPrice();
+    updateHarvestDateBounds();
   });
 
   document.querySelectorAll('input[name="quality_class"]').forEach(r => {
