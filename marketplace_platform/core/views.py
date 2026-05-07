@@ -267,7 +267,7 @@ def checkout(request):
         cart_items.append({'product': batch, 'quantity': qty})
 
     min_delivery_date = (timezone.now() + timedelta(hours=48)
-                         ).strftime('%Y-%m-%dT%H:%M')
+                         ).strftime('%Y-%m-%d')
     checkout_fee = total_price * Decimal('0.05')
     total_price += checkout_fee
 
