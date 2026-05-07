@@ -1,7 +1,5 @@
 @import 'globals.css';
 
-:root { --main-color: #198754; }
-
 .oh-header { padding: 32px 0 16px; }
 .oh-header h1 { font-size: 1.8rem; font-weight: 600; margin-bottom: 4px; }
 .oh-header p { color: #888; font-size: 0.9rem; }

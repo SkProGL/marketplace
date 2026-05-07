@@ -1,4 +1,4 @@
-<div {% if orders_with_next %}class="oh-card"{% endif %}>
+<div class="oh-card">
   {% if orders_with_next %}
     {% for entry in orders_with_next %}
     <div class="widget-account-form-card {% if entry.order.paused %}oh-card-paused{% else %}oh-card-active{% endif %}">
@@ -33,19 +33,9 @@
             <tbody>
               {% for op in entry.items %}
               <tr>
-                <td>
-                  <a href="/?q={{ op.batch.product.name|urlencode }}" style="font-weight:500;text-decoration:none;color:inherit;">
-                    {{ op.batch.product.name }}
-                  </a>
-                  <br>
-                  <small class="text-muted">
-                    Class {{ op.batch.quality_class }}
-                    {% if op.batch.product.unit %} · {{ op.batch.product.unit }}{% endif %}
-                    · {{ op.batch.product.producer.organisation_name|default:op.batch.product.producer.email }}
-                  </small>
-                </td>
+                <td>{{ op.product.name }}</td>
                 <td>{{ op.numPurchased }}</td>
-                <td>£{{ op.batch.price }}</td>
+                <td>£{{ op.product.price }}</td>
                 <td>£{{ op.get_total_item_price }}</td>
               </tr>
               {% endfor %}
@@ -82,6 +72,6 @@
     {% endfor %}
 
   {% else %}
-    <p class="oh-empty">You have no recurring orders. Set one up at checkout!</p>
+    <p class="text-muted">You have no recurring orders. Set one up at checkout!</p>
   {% endif %}
 </div>

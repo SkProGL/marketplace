@@ -30,7 +30,6 @@ urlpatterns = [
     # Order URLs
     path('orders/', views.orders, name='orders'),
     path('orders/<uuid:order_id>/reorder/', views.reorder, name='reorder'),
-    path('orders/<uuid:order_id>/cancel/', views.cancel_order, name='cancel_order'),
     path('orders/<uuid:order_id>/', views.order_detail, name='order_detail'),
     path('add_batch/', views.add_batch, name='add_batch'),
     path('invoice/<str:order_code>/', views.invoice_view, name='invoice'),
@@ -45,7 +44,6 @@ urlpatterns = [
     path('cart/update/<uuid:product_id>/', views.update_cart_ajax, name='update_cart_ajax'),
     path('cart/clear/', views.clear_cart, name='clear_cart'),
     path('checkout/', views.checkout, name='checkout'),
-    path('loading/', views.loading, name='loading'),
     path('order-confirmation/<uuid:order_id>/', views.order_confirmation, name='order_confirmation'),
     path('notifications/clear/', views.clear_notifications, name='clear_notifications'),
     # Password reset

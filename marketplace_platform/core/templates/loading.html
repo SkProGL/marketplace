@@ -1,5 +1,3 @@
-{% extends "base.html" %}
-{% block content %}
 <div class="loading-container">
   <div class="loading-content">
     <svg viewBox="0 0 187.3 93.7" height="200px" width="300px" class="svgbox">
@@ -9,6 +7,7 @@
           <stop stop-color="blue" offset="100%"></stop>
         </linearGradient>
       </defs>
+
       <path
         stroke="url(#gradient)"
         d="M93.9,46.4c9.3,9.5,13.8,17.9,23.5,17.9s17.5-7.8,17.5-17.5s-7.8-17.6-17.5-17.5c-9.7,0.1-13.3,7.2-22.1,17.1c-8.9,8.8-15.7,17.9-25.4,17.9s-17.5-7.8-17.5-17.5s7.8-17.5,17.5-17.5S86.2,38.6,93.9,46.4z"
@@ -20,7 +19,7 @@
 
 <script>
   setTimeout(() => {
-    window.location.href = "{{ next_url }}";
+    window.location.href = "{% url 'orders' %}";
   }, 3000);
 </script>
 
@@ -30,8 +29,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 70vh;
-    width: 100%;
+    height: 100vh;
+    width: 100vw;
+    background-color: white;
   }
 
   .loading-content {
@@ -56,8 +56,11 @@
   }
 
   @keyframes dash_682 {
-    from { stroke-dashoffset: 192; }
-    to   { stroke-dashoffset: 1;   }
+    from {
+      stroke-dashoffset: 192;
+    }
+    to {
+      stroke-dashoffset: 1;
+    }
   }
 </style>
-{% endblock %}
