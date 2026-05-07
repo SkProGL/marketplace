@@ -20,7 +20,6 @@ class Command(BaseCommand):
                 
                 try:
                     name=row.get("name")
-
                     #MOD:name,category,description,price,unit,availability,seasonStart,seasonEnd,best_before,food_miles,stock,stock_alert_threshold,allergens,organic,surplus,discount_percentage,discount_expiry,discount_note,image,producer
                     #CSV:name,category,description,price,unit,availability,seasonStart,seasonEnd,best_before,food_miles,stock,stock_alert_threshold,allergens,organic,surplus,discount_percentage,discount_expiry,discount note,images,producer_id
                     products.append(Product(
@@ -40,7 +39,8 @@ class Command(BaseCommand):
                         organic=row["organic"]=="True",
                         surplus=row["surplus"]=="True",
                         discount_percentage=to_decimal(row["discount_percentage"]),
-                        image_url=row["images"]
+                        image_url=row["images"],
+                        image=f"item_images/{row['img_path']}"
                     ))
                     print(f"Created: {name}")
                 except Exception as e:
