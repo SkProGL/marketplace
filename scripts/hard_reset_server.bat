@@ -21,7 +21,8 @@ docker compose run ^
   -e DJANGO_SUPERUSER_USERNAME=root ^
   -e DJANGO_SUPERUSER_EMAIL=root@example.com ^
   -e DJANGO_SUPERUSER_PASSWORD=Password123 ^
-  --rm web sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py createsuperuser --noinput && python manage.py seed_users %IMPORT_CMDS%"
+  --rm web sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py createsuperuser --noinput && python manage.py import_users && python manage.py import_products && python manage.py import_orders && python manage.py seed_users"
+:: --rm web sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py createsuperuser --noinput && python manage.py %IMPORT_CMDS% seed_users"
 
 :: Start the containers
 docker compose up
