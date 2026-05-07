@@ -1278,7 +1278,7 @@ def get_order_summary_json(request, order_id):
             'address': f"{order.customer.address}, {order.customer.postcode}" if order.customer.address and order.customer.postcode else '',
             'instructions': order.special_instructions,
             'order_date': order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else '',
-            'delivery_date': order.delivery_date.strftime('%Y-%m-%d') if order.delivery_date else '',
+            'delivery_date': (po.delivery_date.strftime('%Y-%m-%d') if is_producer and po.delivery_date else order.delivery_date.strftime('%Y-%m-%d') if order.delivery_date else ''),
             'recurrence': f"{order.get_recurrence_day_display()} ({order.recurrence_type})" if order.recurrence_type != 'None' else '',
             'total_price': f"{order.total_price:.2f}",
             'visible_total': f"{visible_total:.2f}",
