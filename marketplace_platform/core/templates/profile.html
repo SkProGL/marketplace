@@ -129,14 +129,14 @@
     </div>
     <div class="profile-header-info">
       <h1>{{ user.full_name|default:"No name set" }}</h1>
+      <a href="{% url 'edit_profile' %}" class="btn btn-sm btn-outline-dark mt-2">
+        Edit Profile
+      </a>
       {% if user.is_superuser %}
         <span class="profile-badge badge-superuser">Superuser / Admin</span>
       {% else %}
         <span class="profile-badge badge-{{ user.category|cut:' ' }}">{{ user.category }}</span>
       {% endif %}
-            <a href="{% url 'edit_profile' %}" class="btn btn-sm btn-outline-dark m-2">
-        Edit Profile
-    </a>
     </div>
   </div>
   {% if user.is_superuser %}
@@ -222,6 +222,32 @@
       {% endif %}
     </div>
   </div>
+  {% if saved_recipes is not None %}
+  <div class="profile-card">
+    <div class="profile-card-title">Saved recipes</div>
+    {% if saved_recipes %}
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      {% for fav in saved_recipes %}
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border);">
+        <div>
+          <span class="profile-badge" style="background:#e8f5e9;color:#2e7d32;margin-right:8px;">{{ fav.recipe.season }}</span>
+          <a href="{% url 'recipe_detail' fav.recipe.id %}" style="color:var(--text);font-weight:600;font-size:0.9rem;text-decoration:none;">{{ fav.recipe.title }}</a>
+          <span style="font-size:0.78rem;color:var(--muted);margin-left:8px;">by {{ fav.recipe.user.organisation_name|default:fav.recipe.user.full_name|default:fav.recipe.user.email }}</span>
+        </div>
+        <form method="POST" action="{% url 'toggle_favourite_recipe' fav.recipe.id %}" style="margin:0;">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'profile' %}">
+          <button type="submit" style="background:none;border:none;color:#dc3545;cursor:pointer;font-size:0.8rem;padding:0;">♥ Remove</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:var(--muted);font-size:0.88rem;margin:0;">No saved recipes yet. Browse the <a href="{% url 'community' %}" style="color:var(--green);">Community Hub</a> to find recipes.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {% if user.category == 'Producer' and not user.is_superuser %}
   <div class="profile-card">
     <div class="profile-card-title">Producer tools</div>
@@ -234,8 +260,68 @@
         <label>Management panel</label>
         <p><a href="{% url 'management' %}" style="color:var(--green);font-weight:600;">Go to panel →</a></p>
       </div>
+      <div class="profile-field">
+        <label>Recipes published</label>
+        <p>{{ recipe_count|default:"0" }} — <a href="{% url 'community' %}" style="color:var(--green);font-weight:600;">Manage →</a></p>
+      </div>
+      <div class="profile-field">
+        <label>Farm stories</label>
+        <p>{{ story_count|default:"0" }} — <a href="{% url 'community' %}" style="color:var(--green);font-weight:600;">View →</a></p>
+      </div>
     </div>
   </div>
+
+  {% if recipes %}
+  <div class="profile-card">
+    <div class="profile-card-title">Your recipes</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      {% for recipe in recipes %}
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border);">
+        <div>
+          <span class="profile-badge" style="background:#e8f5e9;color:#2e7d32;margin-right:8px;">{{ recipe.season }}</span>
+          <a href="{% url 'recipe_detail' recipe.id %}" style="color:var(--text);font-weight:600;font-size:0.9rem;text-decoration:none;">{{ recipe.title }}</a>
+        </div>
+        <a href="{% url 'edit_recipe' recipe.id %}" style="color:var(--muted);font-size:0.8rem;">Edit</a>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="margin-top:14px;">
+      <a href="{% url 'add_recipe' %}" class="btn btn-sm" style="background:var(--green);color:#fff;border-radius:8px;padding:0.4rem 1.2rem;">+ Add recipe</a>
+    </div>
+  </div>
+  {% else %}
+  <div class="profile-card">
+    <div class="profile-card-title">Your recipes</div>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:14px;">You haven't published any recipes yet.</p>
+    <a href="{% url 'add_recipe' %}" class="btn btn-sm" style="background:var(--green);color:#fff;border-radius:8px;padding:0.4rem 1.2rem;">+ Add recipe</a>
+  </div>
+  {% endif %}
+
+  {% if stories %}
+  <div class="profile-card">
+    <div class="profile-card-title">Your farm stories</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      {% for story in stories %}
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--border);">
+        <div>
+          <p style="font-size:0.88rem;color:var(--muted);margin:0 0 2px;">{{ story.date_posted|date:"d M Y" }}</p>
+          <p style="font-size:0.9rem;color:var(--text);margin:0;">{{ story.content|truncatechars:100 }}</p>
+        </div>
+        <a href="{% url 'edit_story' story.id %}" style="color:var(--muted);font-size:0.8rem;white-space:nowrap;margin-left:12px;">Edit</a>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="margin-top:14px;">
+      <a href="{% url 'add_story' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;padding:0.4rem 1.2rem;">+ Share story</a>
+    </div>
+  </div>
+  {% else %}
+  <div class="profile-card">
+    <div class="profile-card-title">Your farm stories</div>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:14px;">You haven't shared any farm stories yet.</p>
+    <a href="{% url 'add_story' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;padding:0.4rem 1.2rem;">+ Share story</a>
+  </div>
+  {% endif %}
   <div class="profile-card">
     <div class="profile-card-title">Organic certification</div>
     {% if messages %}

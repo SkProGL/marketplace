@@ -1,8 +1,8 @@
-from datetime import timedelta
+from datetime import timedelta, date
 from django.utils import timezone
 from django import forms
 from django.contrib.auth.forms import PasswordChangeForm
-from .models import Product, ProductBatch, User, Review
+from .models import Complaint, Product, ProductBatch, User, Review, Recipe, StoryPost
 
 PASSWORD_STRENGTH_ERROR = "Password must be at least 8 characters and include 1 lowercase and 1 uppercase letter."
 
@@ -13,10 +13,6 @@ class SignupForm(forms.ModelForm):
     organization_name = forms.CharField(required=False)
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'})
-    )
-    remember_me = forms.BooleanField(
-        required=False, 
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
     accept_policy = forms.BooleanField(
         required=True,
@@ -131,22 +127,26 @@ class LoginForm(forms.Form):
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
 class CheckoutForm(forms.Form):
-    
+
+    delivery_address = forms.CharField(
+        max_length=256,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Street address'})
+    )
+    delivery_postcode = forms.CharField(
+        max_length=20,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. SW1A 1AA'})
+    )
     delivery_date = forms.DateField(
         widget=forms.DateInput(attrs={
-            'type': 'date', 
+            'type': 'date',
             'class': 'form-control'
         })
     )
 
     def clean_delivery_date(self):
         delivery_date = self.cleaned_data.get('delivery_date')
-        
-        # Check if delivery_date is not None (in case of empty input)
-        if delivery_date:
-            # Check if it's at least 48 hours away (2 days)
-            if delivery_date < (timezone.now() + timedelta(hours=48)).date():
-                raise forms.ValidationError("Delivery must be at least 48 hours from now.")
+        if delivery_date and delivery_date < date.today() + timedelta(days=2):
+            raise forms.ValidationError("Delivery must be at least 48 hours from now.")
         return delivery_date
     
 class ProductForm(forms.ModelForm):
@@ -154,10 +154,10 @@ class ProductForm(forms.ModelForm):
         model = Product
         fields = [
             'name', 'category', 'description', 'price',
-            'unit', 'all_year', 'seasonStart', 'seasonEnd',
-            'stock_alert_threshold',
+            'unit', 'seasonStart', 'seasonEnd',
+            'best_before', 'stock_alert_threshold',
             'allergens', 'organic', 'surplus', 'discount_percentage',
-            'discount_expiry', 'discount_note', 'image'
+            'discount_expiry', 'discount_note', 'image', 'image_url'
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
@@ -186,3 +186,39 @@ class ProductBatchForm(forms.ModelForm):
             'discount_expiry', 'discount_note',
             'seasonStart', 'seasonEnd',
         ]
+
+
+class RecipeForm(forms.ModelForm):
+    class Meta:
+        model = Recipe
+        fields = ['title', 'description', 'instructions', 'season', 'image', 'storage_guidance']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Recipe title'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Short description'}),
+            'instructions': forms.Textarea(attrs={'class': 'form-control', 'rows': 6, 'placeholder': 'Step-by-step cooking instructions'}),
+            'season': forms.Select(attrs={'class': 'form-select'}),
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'storage_guidance': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'e.g. Store carrots in a cool dark place for up to 2 weeks…'}),
+        }
+
+
+class StoryPostForm(forms.ModelForm):
+    class Meta:
+        model = StoryPost
+        fields = ['content', 'image']
+        widgets = {
+            'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Share your farm story, harvest update, or news…'}),
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+
+class ComplaintForm(forms.ModelForm):
+    class Meta:
+        model = Complaint
+        fields = ['name', 'email', 'category', 'description']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Your full name'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'your@email.com'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Please describe your complaint in detail…'}),
+        }

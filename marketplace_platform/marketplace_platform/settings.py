@@ -130,6 +130,12 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# Email — console backend for development (reset links appear in Docker logs)
+# Swap to smtp.EmailBackend + EMAIL_HOST/PORT/USER/PASSWORD for production
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@marketplace.local'
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'admin@marketplace.local')
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 

@@ -5,19 +5,24 @@ from django.db.models import Q, Sum, Subquery, OuterRef, Prefetch, Avg, Count, F
 from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
+from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe
+from core.forms import ComplaintForm, LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
 from django.contrib.auth import authenticate, login, update_session_auth_hash
-from django.http import HttpResponse, JsonResponse
+from django.core.mail import send_mail
 from django.core.paginator import Paginator
+from django.http import HttpResponse, JsonResponse
+from django.conf import settings
 from django.contrib.auth.forms import PasswordChangeForm
-from .models import User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory
-from core.forms import LoginForm,  ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm
+from core.forms import ComplaintForm, LoginForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from django.contrib.auth.decorators import login_required
+from django.urls import reverse
 from django.db import transaction
 from django.utils import timezone
-from datetime import timedelta
 from decimal import Decimal
+from datetime import timedelta
+
 
 MANAGEMENT_SEARCH_FIELDS = {
     'Product':    (['name', 'category', 'description'],
@@ -26,7 +31,7 @@ MANAGEMENT_SEARCH_FIELDS = {
                    lambda obj: f"{obj.order_status} · £{obj.total_price}"),
     'User':       (['email', 'first_name', 'last_name'],
                    lambda obj: obj.email),
-    'StoryPost':  (['title', 'body'],
+    'StoryPost':  (['content'],
                    lambda obj: ""),
     'Recipe':     (['title', 'description'],
                    lambda obj: ""),
@@ -151,21 +156,7 @@ def get_next_occurrence(order):
 
 @login_required
 def recurring_orders(request):
-    orders = Order.objects.filter(
-        customer=request.user,
-    ).exclude(recurrence_type='None').prefetch_related('orderproduct_set__batch__product')
-
-    orders_with_next = []
-    for order in orders:
-        orders_with_next.append({
-            'order': order,
-            'next_date': get_next_occurrence(order),
-            'items': order.orderproduct_set.all(),
-        })
-
-    return render(request, 'recurring_orders.html', {
-        'orders_with_next': orders_with_next
-    })
+    return redirect('orders')
 
 
 @login_required
@@ -173,43 +164,22 @@ def modify_recurring_order(request, order_id):
     order = get_object_or_404(Order, id=order_id, customer=request.user)
 
     if request.method == 'POST':
-        # Create a brand new one-off order for next occurrence only
-        for order_product in order.orderproduct_set.all():
-            new_quantity = int(request.POST.get(f'qty_{order_product.id}', order_product.numPurchased))
-            order_product.numPurchased = new_quantity
-            order_product.save()
         order.recurrence_type = request.POST.get('recurrence_type', order.recurrence_type)
-        next_date = get_next_occurrence(order)
-        new_order = Order.objects.create(
-            customer=request.user,
-            total_price=order.total_price,
-            delivery_date=timezone.make_aware(
-                timezone.datetime.combine(
-                    next_date, timezone.datetime.min.time())
-            ),
-            order_status='PENDING',
-            recurrence_type='None',
-        )
+        recurrence_day = request.POST.get('recurrence_day')
+        if recurrence_day:
+            order.recurrence_day = int(recurrence_day)
+        order.save(update_fields=['recurrence_type', 'recurrence_day'])
 
-        # Copy items with updated quantities from POST
         for op in order.orderproduct_set.all():
             new_qty = int(request.POST.get(f'qty_{op.id}', op.numPurchased))
-            OrderProduct.objects.create(
-                order=new_order,
-                batch=op.batch,
-                numPurchased=new_qty,
-                price_at_purchase=op.price_at_purchase,
-            )
+            if new_qty != op.numPurchased:
+                op.numPurchased = new_qty
+                op.save(update_fields=['numPurchased'])
 
-        messages.success(
-            request, "Next occurrence updated. The recurring template is unchanged.")
-        return redirect('recurring_orders')
+        messages.success(request, "Recurring order updated.")
+        return redirect('orders')
 
-    return render(request, 'modify_occurrence.html', {
-        'order': order,
-        'next_date': get_next_occurrence(order),
-        'items': order.orderproduct_set.all(),
-    })
+    return redirect('orders')
    
 @login_required
 def pause_recurring_order(request, order_id):
@@ -230,11 +200,33 @@ def delete_recurring_order(request, order_id):
     return redirect('orders')
 
 @login_required
+def cancel_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id, customer=request.user)
+    if request.method == 'POST' and order.order_status == 'PENDING':
+        with transaction.atomic():
+            for op in order.orderproduct_set.select_related('batch').all():
+                ProductBatch.objects.filter(pk=op.batch_id).update(stock=F('stock') + op.numPurchased)
+            order.delete()
+        messages.success(request, "Order cancelled and stock restored.")
+    else:
+        messages.error(request, "Only pending orders can be cancelled.")
+    return redirect('orders')
+
+
+@login_required
 def orders(request):
-    orders = Order.objects.filter(customer=request.user).order_by('-order_date')
-    print(orders)
+    qs = (Order.objects
+          .filter(customer=request.user)
+          .order_by('-order_date')
+          .prefetch_related(
+              'orderproduct_set__batch__product__producer',
+              'producer_orders__status_history',
+          ))
+    paginator = Paginator(qs, 5)
+    page_obj = paginator.get_page(request.GET.get('page'))
     return render(request, 'orders.html', {
-        'orders': orders,
+        'orders': page_obj,
+        'page_obj': page_obj,
         'orders_with_next': get_recurring_orders_context(request.user)
     })
 
@@ -262,7 +254,8 @@ def reorder(request, order_id):
 
 @login_required
 def loading(request):
-    return render(request, 'loading.html')
+    next_url = request.GET.get('next', '/orders/')
+    return render(request, 'loading.html', {'next_url': next_url})
 
 @login_required
 def checkout(request):
@@ -286,12 +279,21 @@ def checkout(request):
     for item in cart_items:
         producer = item['product'].product.producer
         groups[producer].append(item)
-    cart_by_producer = [{'producer': p, 'items': items} for p, items in groups.items()]
 
-    min_delivery_date = (timezone.now() + timedelta(hours=48)
-                         ).strftime('%Y-%m-%d')
-    checkout_fee = total_price * Decimal('0.05')
-    total_price += checkout_fee
+    cart_by_producer = []
+    total_commission = Decimal('0')
+    for producer, items in groups.items():
+        subtotal = sum(item['product'].price * item['quantity'] for item in items)
+        commission = (subtotal * Decimal('0.05')).quantize(Decimal('0.01'))
+        cart_by_producer.append({
+            'producer': producer,
+            'items': items,
+            'subtotal': subtotal,
+            'commission': commission,
+        })
+        total_commission += commission
+
+    min_delivery_date = (timezone.now().date() + timedelta(days=2)).strftime('%Y-%m-%d')
 
     if request.method == "POST":
         form = CheckoutForm(request.POST)
@@ -307,14 +309,13 @@ def checkout(request):
                         for b in ProductBatch.objects.select_for_update().filter(pk__in=batch_ids)
                     }
 
-                    # Validate stock before touching anything
+                    # Check every item has enough stock before touching anything
                     short = []
                     for item in cart_items:
                         b = locked[str(item['product'].pk)]
                         if b.stock < item['quantity']:
                             short.append(
-                                f"{item['product'].name}: only {b.stock} available, "
-                                f"you requested {item['quantity']}"
+                                f"{item['product'].name}: only {b.stock} available, you requested {item['quantity']}"
                             )
                     if short:
                         raise ValueError(short)
@@ -322,36 +323,30 @@ def checkout(request):
                     new_order = Order.objects.create(
                         customer=request.user,
                         total_price=round(total_price, 2),
-                        delivery_date=form.cleaned_data['delivery_date'],
+                        delivery_date=timezone.make_aware(
+                            timezone.datetime.combine(form.cleaned_data['delivery_date'], timezone.datetime.min.time())
+                        ),
+                        delivery_address=form.cleaned_data['delivery_address'],
+                        delivery_postcode=form.cleaned_data['delivery_postcode'],
                         order_status='PENDING',
                         recurrence_type=recurrence_type,
                         recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
                     )
 
-                    # One ProducerOrder per producer, then assign each item to its slice
-                    producer_orders = {}
                     for item in cart_items:
                         batch = item['product']
-                        producer = batch.product.producer
-                        if producer.id not in producer_orders:
-                            producer_orders[producer.id] = ProducerOrder.objects.create(
-                                order=new_order,
-                                producer=producer,
-                                order_status='PENDING',
-                                delivery_date=form.cleaned_data['delivery_date'],
-                            )
+                        qty = item['quantity']
                         OrderProduct.objects.create(
                             order=new_order,
-                            producer_order=producer_orders[producer.id],
                             batch=batch,
-                            numPurchased=item['quantity'],
+                            numPurchased=qty,
                             price_at_purchase=batch.price,
                         )
-                        ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - item['quantity'])
+                        ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - qty)
 
                     request.session['cart'] = {}
-                    messages.success(request, "Order placed successfully!")
-                    return redirect('loading')
+                    confirm_url = reverse('order_confirmation', args=[new_order.id])
+                    return redirect(f'/loading/?next={confirm_url}')
 
             except ValueError as e:
                 for msg in e.args[0]:
@@ -363,10 +358,41 @@ def checkout(request):
         'form': form,
         'cart_items': cart_items,
         'cart_by_producer': cart_by_producer,
+        'total_commission': total_commission,
         'total_price': total_price,
         'min_delivery_date': min_delivery_date,
         'user_address': request.user.address,
         'user_postcode': request.user.postcode
+    })
+
+
+@login_required
+def order_confirmation(request, order_id):
+    order = get_object_or_404(Order, id=order_id, customer=request.user)
+    items = order.orderproduct_set.select_related('batch__product__producer').all()
+
+    groups = defaultdict(list)
+    for op in items:
+        producer = op.batch.product.producer
+        groups[producer].append(op)
+
+    cart_by_producer = []
+    total_commission = Decimal('0')
+    for producer, ops in groups.items():
+        subtotal = sum(op.price_at_purchase * op.numPurchased for op in ops)
+        commission = (subtotal * Decimal('0.05')).quantize(Decimal('0.01'))
+        total_commission += commission
+        cart_by_producer.append({
+            'producer': producer,
+            'items': ops,
+            'subtotal': subtotal,
+            'commission': commission,
+        })
+
+    return render(request, 'order_confirmation.html', {
+        'order': order,
+        'cart_by_producer': cart_by_producer,
+        'total_commission': total_commission,
     })
 
 
@@ -389,7 +415,12 @@ def home_view(request):
         Prefetch('batches', queryset=in_stock_batches_qs, to_attr='in_stock_batches')
     ).annotate(
         total_stock=Sum('batches__stock'),
-        primary_image=Subquery(class_a_image.values('image')[:1]),
+        primary_image=Subquery(
+            ProductBatch.objects.filter(
+                product=OuterRef('pk'),
+                image__isnull=False
+            ).order_by('id').values('image')[:1]
+        ),
         avg_rating=Avg('review__rating'),
         review_count=Count('review'),
     ).filter(total_stock__gt=0)
@@ -444,7 +475,7 @@ def home_view(request):
             'best_before': str(b.best_before),
             'image': f'/media/{b.image}' if b.image else None,
             'surplus': b.surplus,
-            'discount': str(b.discount_percentage),
+            'discount': str(b.effective_discount),
             'availability': b.availability,
             'seasonStart': b.seasonStart,
             'seasonEnd': b.seasonEnd,
@@ -482,6 +513,23 @@ def home_view(request):
                 'author': 'Anonymous' if r.anonymous else (r.user.full_name or r.user.email),
             })
 
+    # Build recipe suggestions: product_id -> list of {id, title, season, url}
+    recipe_suggestions = {}
+    if product_ids:
+        ri_qs = RecipeIngredients.objects.filter(
+            product_id__in=product_ids
+        ).select_related('recipe__user')
+        for ri in ri_qs:
+            pid = str(ri.product_id)
+            if pid not in recipe_suggestions:
+                recipe_suggestions[pid] = []
+            recipe_suggestions[pid].append({
+                'id': str(ri.recipe.id),
+                'title': ri.recipe.title,
+                'season': ri.recipe.season,
+                'producer': ri.recipe.user.organisation_name or ri.recipe.user.full_name or ri.recipe.user.email,
+            })
+
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         data = [{
             'id': str(item.id),
@@ -504,6 +552,7 @@ def home_view(request):
             'suggestion': suggestion,
             'batch_data': batch_data,
             'review_data': review_data,
+            'recipe_suggestions': recipe_suggestions,
             'page': page_obj.number,
             'total_pages': paginator.num_pages,
             'has_next': page_obj.has_next(),
@@ -518,6 +567,7 @@ def home_view(request):
         'items': items_list,
         'batch_data': batch_data,
         'review_data': review_data,
+        'recipe_suggestions': recipe_suggestions,
         'cart_items': cart,
         'cart_total_price': round(total_price, 2),
         'selected_categories': categories,
@@ -608,6 +658,10 @@ def upload_item(request):
             active_tab = 'new'
             allergens = request.POST.getlist('allergens')
 
+            all_year = 'all_year' in request.POST
+            season_start = request.POST.get('season_start', 'January')
+            season_end = request.POST.get('season_end', 'December')
+
             product, created = Product.objects.get_or_create(
                 name=request.POST.get('name', '').strip(),
                 defaults={
@@ -619,6 +673,9 @@ def upload_item(request):
                     'stock_alert_threshold': 0,
                     'allergens': allergens,
                     'organic': 'organic' in request.POST,
+                    'all_year': all_year,
+                    'seasonStart': season_start,
+                    'seasonEnd': season_end,
                 }
             )
             image = request.FILES.get('image')
@@ -630,6 +687,8 @@ def upload_item(request):
                     stock=1,
                     best_before=date.today() + timedelta(days=365),
                     image=image,
+                    seasonStart=season_start,
+                    seasonEnd=season_end,
                 )
             if created:
                 messages.success(request, f'"{product.name}" was created successfully!')
@@ -652,7 +711,7 @@ def upload_item(request):
             else:
                 discount_pct = class_discounts.get(quality_class, Decimal('0'))
             harvest_date = request.POST.get('harvest_date') or None
-            ProductBatch.objects.create(
+            new_batch = ProductBatch.objects.create(
                 product=product,
                 quality_class=quality_class,
                 stock=int(request.POST.get('stock') or 1),
@@ -711,27 +770,32 @@ def signup_view(request):
     if request.method == "POST":
         form = SignupForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            remember_me = form.cleaned_data.get('remember_me')
-            print("SIGNUP SUCCESS")
+            category = form.cleaned_data.get('category')
 
-            print(f"\033[42m\033[30msignup success\033[0m")
-            print("Created user:", {
-                "id": str(user.id),
-                "username": getattr(user, "username", ""),
-                "full_name": user.full_name,
-                "email": user.email,
-                "phone": user.phone,
-                "address": user.address,
-                "postcode": user.postcode,
-                "category": user.category,
-                "organisation_name": user.organisation_name,
-            })
+            if category == User.Category.PRODUCER:
+                details = (
+                    f"Name: {form.cleaned_data.get('full_name')}\n"
+                    f"Email: {form.cleaned_data.get('email')}\n"
+                    f"Organisation: {form.cleaned_data.get('organization_name', '')}\n"
+                    f"Phone: {form.cleaned_data.get('phone', '')}\n"
+                    f"Address: {form.cleaned_data.get('address', '')}, {form.cleaned_data.get('postcode', '')}"
+                )
+                send_mail(
+                    subject="New Producer Application",
+                    message=f"A new producer has applied for an account:\n\n{details}",
+                    from_email=settings.ADMIN_EMAIL,
+                    recipient_list=[settings.ADMIN_EMAIL],
+                    fail_silently=True,
+                )
+                messages.success(
+                    request,
+                    "Thank you for applying as a producer! Your application is under review — we'll be in touch by email shortly."
+                )
+                return redirect("home")
+
+            user = form.save()
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            if not remember_me:
-                request.session.set_expiry(0)
-            else:
-                request.session.set_expiry(1209600)  # 2 weeks
+            request.session.set_expiry(0)
             messages.success(request, "Account created successfully.")
             return redirect("home")
 
@@ -748,10 +812,9 @@ def signup_view(request):
 @login_required
 def invoice_view(request, order_code=None):
     order_qs = Order.objects.filter(customer=request.user).prefetch_related(
-        'orderproduct_set__batch__product', 'customer')
+        'orderproduct_set__batch__product__producer')
     if order_code:
-        order = order_qs.filter(id__startswith=order_code).order_by(
-            'order_date').first()
+        order = order_qs.filter(id__startswith=order_code).order_by('order_date').first()
     else:
         order = order_qs.order_by('order_date').first()
 
@@ -762,24 +825,32 @@ def invoice_view(request, order_code=None):
     total = Decimal('0.00')
 
     if order:
-        items = order.orderproduct_set.all()
-        for item in items:
+        for item in order.orderproduct_set.all():
             line_total = item.numPurchased * item.price_at_purchase
             subtotal += line_total
+            producer = item.batch.product.producer
             invoice_items.append({
-                'name': item.batch.name,
-                'producer': item.batch.producer,
+                'name': item.batch.product.name,
+                'quality_class': item.batch.quality_class,
+                'producer_name': producer.organisation_name or ' '.join(filter(None, [producer.first_name, producer.last_name])) or producer.email,
                 'quantity': item.numPurchased,
-                'price': item.price_at_purchase,
+                'unit_price': item.price_at_purchase,
                 'line_total': line_total,
-                'details': item.batch.description,
                 'best_before': item.batch.best_before,
+                'unit': item.batch.product.unit,
             })
         commission_amount = subtotal * (commission_rate / Decimal('100.00'))
-        total = subtotal + commission_amount
+        total = subtotal
+
+    customer_name = None
+    if order:
+        c = order.customer
+        full = ' '.join(filter(None, [c.first_name, c.last_name]))
+        customer_name = c.organisation_name or full or c.email
 
     context = {
         'order': order,
+        'customer_name': customer_name,
         'invoice_items': invoice_items,
         'subtotal': subtotal,
         'commission_rate': commission_rate,
@@ -901,7 +972,193 @@ def management_view(request: HttpResponse):
 
 @login_required
 def community(request):
-    return render(request, 'community.html')
+    recipes = Recipe.objects.select_related('user').prefetch_related('recipeingredients_set__product').order_by('-id')
+    stories = StoryPost.objects.select_related('user').order_by('-date_posted')
+    return render(request, 'community.html', {
+        'recipes': recipes,
+        'stories': stories,
+    })
+
+
+@login_required
+def recipe_detail(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    ingredients = recipe.recipeingredients_set.select_related('product').all()
+    is_favourite = (
+        request.user.is_authenticated and
+        FavouriteRecipe.objects.filter(user=request.user, recipe=recipe).exists()
+    )
+    return render(request, 'recipe_detail.html', {
+        'recipe': recipe,
+        'ingredients': ingredients,
+        'is_favourite': is_favourite,
+    })
+
+
+@login_required
+def add_recipe(request):
+    if request.user.category != User.Category.PRODUCER:
+        messages.error(request, "Only producers can create recipes.")
+        return redirect('community')
+
+    if request.method == 'POST':
+        form = RecipeForm(request.POST, request.FILES)
+        ingredient_ids = request.POST.getlist('ingredient_ids')
+        quantities = request.POST.getlist('ingredient_quantities')
+        if form.is_valid():
+            recipe = form.save(commit=False)
+            recipe.user = request.user
+            recipe.save()
+            for pid, qty in zip(ingredient_ids, quantities):
+                if pid:
+                    try:
+                        product = Product.objects.get(pk=pid, producer=request.user)
+                        RecipeIngredients.objects.get_or_create(
+                            recipe=recipe, product=product,
+                            defaults={'quantity': qty or ''}
+                        )
+                    except Product.DoesNotExist:
+                        pass
+            messages.success(request, f'Recipe "{recipe.title}" published!')
+            return redirect('community')
+    else:
+        form = RecipeForm()
+
+    producer_products = Product.objects.filter(producer=request.user).order_by('name')
+    return render(request, 'recipe_form.html', {
+        'form': form,
+        'producer_products': producer_products,
+        'action': 'Create',
+    })
+
+
+@login_required
+def edit_recipe(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id, user=request.user)
+    if request.method == 'POST':
+        form = RecipeForm(request.POST, request.FILES, instance=recipe)
+        ingredient_ids = request.POST.getlist('ingredient_ids')
+        quantities = request.POST.getlist('ingredient_quantities')
+        if form.is_valid():
+            form.save()
+            recipe.recipeingredients_set.all().delete()
+            for pid, qty in zip(ingredient_ids, quantities):
+                if pid:
+                    try:
+                        product = Product.objects.get(pk=pid, producer=request.user)
+                        RecipeIngredients.objects.create(recipe=recipe, product=product, quantity=qty or '')
+                    except Product.DoesNotExist:
+                        pass
+            messages.success(request, "Recipe updated.")
+            return redirect('community')
+    else:
+        form = RecipeForm(instance=recipe)
+
+    producer_products = Product.objects.filter(producer=request.user).order_by('name')
+    existing_ingredients = list(recipe.recipeingredients_set.select_related('product').all())
+    return render(request, 'recipe_form.html', {
+        'form': form,
+        'producer_products': producer_products,
+        'existing_ingredients': existing_ingredients,
+        'action': 'Edit',
+        'recipe': recipe,
+    })
+
+
+@login_required
+def delete_recipe(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id, user=request.user)
+    if request.method == 'POST':
+        recipe.delete()
+        messages.success(request, "Recipe deleted.")
+    return redirect('community')
+
+
+@login_required
+def add_story(request):
+    if request.user.category != User.Category.PRODUCER:
+        messages.error(request, "Only producers can post farm stories.")
+        return redirect('community')
+
+    if request.method == 'POST':
+        form = StoryPostForm(request.POST, request.FILES)
+        if form.is_valid():
+            story = form.save(commit=False)
+            story.user = request.user
+            story.save()
+            messages.success(request, "Farm story published!")
+            return redirect('community')
+    else:
+        form = StoryPostForm()
+
+    return render(request, 'story_form.html', {'form': form, 'action': 'Create'})
+
+
+@login_required
+def edit_story(request, story_id):
+    story = get_object_or_404(StoryPost, id=story_id, user=request.user)
+    if request.method == 'POST':
+        form = StoryPostForm(request.POST, request.FILES, instance=story)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Story updated.")
+            return redirect('community')
+    else:
+        form = StoryPostForm(instance=story)
+
+    return render(request, 'story_form.html', {'form': form, 'action': 'Edit', 'story': story})
+
+
+@login_required
+def delete_story(request, story_id):
+    story = get_object_or_404(StoryPost, id=story_id, user=request.user)
+    if request.method == 'POST':
+        story.delete()
+        messages.success(request, "Story deleted.")
+    return redirect('community')
+
+
+@login_required
+def story_detail(request, story_id):
+    story = get_object_or_404(StoryPost, id=story_id)
+    return render(request, 'story_detail.html', {'story': story})
+
+
+@login_required
+def toggle_favourite_recipe(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    fav, created = FavouriteRecipe.objects.get_or_create(user=request.user, recipe=recipe)
+    if not created:
+        fav.delete()
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'community'
+    return redirect(next_url)
+
+
+@login_required
+def report_content(request):
+    if request.method == 'POST':
+        content_type = request.POST.get('content_type')
+        content_id = request.POST.get('content_id')
+        if content_type == 'recipe':
+            Recipe.objects.filter(id=content_id).update(is_flagged=True)
+        elif content_type == 'story':
+            StoryPost.objects.filter(id=content_id).update(is_flagged=True)
+        messages.success(request, "Content reported. Our team will review it shortly.")
+    return redirect(request.POST.get('next') or 'community')
+
+
+def producer_profile_public(request, producer_id):
+    producer = get_object_or_404(User, id=producer_id, category=User.Category.PRODUCER)
+    recipes = Recipe.objects.filter(user=producer).prefetch_related('recipeingredients_set__product').order_by('-id')
+    stories = StoryPost.objects.filter(user=producer).order_by('-date_posted')
+    products = Product.objects.filter(producer=producer).prefetch_related('batches')
+    return render(request, 'producer_profile_public.html', {
+        'producer': producer,
+        'recipes': recipes,
+        'stories': stories,
+        'products': products,
+    })
+
 
 @login_required
 def get_order_summary_json(request, order_id):
@@ -1047,12 +1304,25 @@ def advance_order_status(request, producer_order_id):
 
 
 @login_required
-@login_required
 def profile_view(request):
     """Display the logged-in user's profile page."""
     product_count = None
+    recipes = None
+    stories = None
+    recipe_count = 0
+    story_count = 0
+    saved_recipes = None
+
     if request.user.category == 'Producer':
         product_count = Product.objects.filter(producer=request.user).count()
+        recipes = Recipe.objects.filter(user=request.user).order_by('-id')
+        stories = StoryPost.objects.filter(user=request.user).order_by('-date_posted')
+        recipe_count = recipes.count()
+        story_count = stories.count()
+    else:
+        saved_recipes = FavouriteRecipe.objects.filter(
+            user=request.user
+        ).select_related('recipe__user').order_by('-saved_at')
 
     if request.method == 'POST' and request.user.category == 'Producer':
         request.user.organic_description = request.POST.get('organic_description', '').strip()
@@ -1060,7 +1330,44 @@ def profile_view(request):
         messages.success(request, 'Organic certification updated.')
         return redirect('profile')
 
-    return render(request, 'profile.html', {'product_count': product_count})
+    return render(request, 'profile.html', {
+        'product_count': product_count,
+        'recipes': recipes,
+        'stories': stories,
+        'recipe_count': recipe_count,
+        'story_count': story_count,
+        'saved_recipes': saved_recipes,
+    })
+
+
+
+@login_required
+def edit_profile(request):
+    if request.method == "POST":
+        profile_form = ProfileEditForm(request.POST, request.FILES, instance=request.user)
+        password_form = PasswordChangeForm(request.user, request.POST)
+
+        if "update_profile" in request.POST:
+            if profile_form.is_valid():
+                profile_form.save()
+                messages.success(request, "Profile updated successfully.")
+                return redirect("profile")
+
+        elif "change_password" in request.POST:
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, "Password changed successfully.")
+                return redirect("profile")
+
+    else:
+        profile_form = ProfileEditForm(instance=request.user)
+        password_form = PasswordChangeForm(request.user)
+
+    return render(request, "edit_profile.html", {
+        "profile_form": profile_form,
+        "password_form": password_form,
+    })
 
 
 
@@ -1097,6 +1404,24 @@ def edit_profile(request):
 def terms_view(request):
     """Display the terms and conditions / cookie policy page."""
     return render(request, 'terms.html')
+
+
+def submit_complaint(request):
+    if request.method == 'POST':
+        form = ComplaintForm(request.POST)
+        if form.is_valid():
+            complaint = form.save(commit=False)
+            if request.user.is_authenticated:
+                complaint.submitted_by = request.user
+            complaint.save()
+            messages.success(request, "Your complaint has been submitted. Our compliance team will review it shortly.")
+            return redirect('home')
+    else:
+        initial = {}
+        if request.user.is_authenticated:
+            initial = {'name': request.user.full_name or '', 'email': request.user.email}
+        form = ComplaintForm(initial=initial)
+    return render(request, 'complaint_form.html', {'form': form})
 
 
 @login_required
