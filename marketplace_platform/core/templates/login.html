@@ -29,9 +29,12 @@
 <button type="button" class="password-toggle" aria-label="Show password" onclick="const i=this.parentElement.querySelector('[name=password]'); i.type = i.type === 'password' ? 'text' : 'password'; this.textContent = i.type === 'password' ? 'show' : 'hide'">show</button>
             </div>
             
-            <div style="text-align: left; margin-bottom: 15px; margin-top: 10px;">
-                <input type="checkbox" name="remember_me" id="remember_me">
-                <label for="remember_me" style="font-size: 0.9em; color: #555;">Remember me</label>
+            <div style="margin-bottom:15px;margin-top:10px;">
+                <div style="margin-bottom:6px;">
+                    <input type="checkbox" name="remember_me" id="remember_me">
+                    <label for="remember_me" style="font-size:0.9em;color:#555;">Remember me</label>
+                </div>
+                <a href="{% url 'password_reset' %}" style="font-size:0.85em;color:#198754;">Forgot password?</a>
             </div>
 	    <br>
 
