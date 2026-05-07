@@ -1,23 +1,16 @@
 import json
-import os
 import difflib
 from collections import defaultdict
 from django.db.models import Q, Sum, Subquery, OuterRef, Prefetch, Avg, Count, F
 from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from django.contrib.auth import authenticate, get_user_model, login, update_session_auth_hash
-from django.http import Http404, HttpResponse, JsonResponse
+from django.contrib.auth import authenticate, login, update_session_auth_hash
+from django.http import HttpResponse, JsonResponse
 from django.core.paginator import Paginator
-from django.conf import settings
-<<<<<<< HEAD
 from django.contrib.auth.forms import PasswordChangeForm
-from .models import User, Product, ProductBatch, Order, OrderProduct, Review, OrderStatusHistory
-from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm
-=======
 from .models import User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory
-from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm
->>>>>>> 6a93a25a55738dd8d39c0e9e30115c0f8154f114
+from core.forms import LoginForm,  ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from django.contrib.auth.decorators import login_required
