@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, update_session_auth_hash
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
-from django.http import Http404, HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.conf import settings
 from django.contrib.auth.forms import PasswordChangeForm
 from .models import User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe
@@ -157,21 +157,7 @@ def get_next_occurrence(order):
 
 @login_required
 def recurring_orders(request):
-    orders = Order.objects.filter(
-        customer=request.user,
-    ).exclude(recurrence_type='None').prefetch_related('orderproduct_set__batch__product')
-
-    orders_with_next = []
-    for order in orders:
-        orders_with_next.append({
-            'order': order,
-            'next_date': get_next_occurrence(order),
-            'items': order.orderproduct_set.all(),
-        })
-
-    return render(request, 'recurring_orders.html', {
-        'orders_with_next': orders_with_next
-    })
+    return redirect('orders')
 
 
 @login_required
@@ -179,43 +165,22 @@ def modify_recurring_order(request, order_id):
     order = get_object_or_404(Order, id=order_id, customer=request.user)
 
     if request.method == 'POST':
-        # Create a brand new one-off order for next occurrence only
-        for order_product in order.orderproduct_set.all():
-            new_quantity = int(request.POST.get(f'qty_{order_product.id}', order_product.numPurchased))
-            order_product.numPurchased = new_quantity
-            order_product.save()
         order.recurrence_type = request.POST.get('recurrence_type', order.recurrence_type)
-        next_date = get_next_occurrence(order)
-        new_order = Order.objects.create(
-            customer=request.user,
-            total_price=order.total_price,
-            delivery_date=timezone.make_aware(
-                timezone.datetime.combine(
-                    next_date, timezone.datetime.min.time())
-            ),
-            order_status='PENDING',
-            recurrence_type='None',
-        )
+        recurrence_day = request.POST.get('recurrence_day')
+        if recurrence_day:
+            order.recurrence_day = int(recurrence_day)
+        order.save(update_fields=['recurrence_type', 'recurrence_day'])
 
-        # Copy items with updated quantities from POST
         for op in order.orderproduct_set.all():
             new_qty = int(request.POST.get(f'qty_{op.id}', op.numPurchased))
-            OrderProduct.objects.create(
-                order=new_order,
-                batch=op.batch,
-                numPurchased=new_qty,
-                price_at_purchase=op.price_at_purchase,
-            )
+            if new_qty != op.numPurchased:
+                op.numPurchased = new_qty
+                op.save(update_fields=['numPurchased'])
 
-        messages.success(
-            request, "Next occurrence updated. The recurring template is unchanged.")
-        return redirect('recurring_orders')
+        messages.success(request, "Recurring order updated.")
+        return redirect('orders')
 
-    return render(request, 'modify_occurrence.html', {
-        'order': order,
-        'next_date': get_next_occurrence(order),
-        'items': order.orderproduct_set.all(),
-    })
+    return redirect('orders')
    
 @login_required
 def pause_recurring_order(request, order_id):
@@ -236,11 +201,33 @@ def delete_recurring_order(request, order_id):
     return redirect('orders')
 
 @login_required
+def cancel_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id, customer=request.user)
+    if request.method == 'POST' and order.order_status == 'PENDING':
+        with transaction.atomic():
+            for op in order.orderproduct_set.select_related('batch').all():
+                ProductBatch.objects.filter(pk=op.batch_id).update(stock=F('stock') + op.numPurchased)
+            order.delete()
+        messages.success(request, "Order cancelled and stock restored.")
+    else:
+        messages.error(request, "Only pending orders can be cancelled.")
+    return redirect('orders')
+
+
+@login_required
 def orders(request):
-    orders = Order.objects.filter(customer=request.user).order_by('-order_date')
-    print(orders)
+    qs = (Order.objects
+          .filter(customer=request.user)
+          .order_by('-order_date')
+          .prefetch_related(
+              'orderproduct_set__batch__product__producer',
+              'producer_orders__status_history',
+          ))
+    paginator = Paginator(qs, 5)
+    page_obj = paginator.get_page(request.GET.get('page'))
     return render(request, 'orders.html', {
-        'orders': orders,
+        'orders': page_obj,
+        'page_obj': page_obj,
         'orders_with_next': get_recurring_orders_context(request.user)
     })
 
@@ -821,10 +808,9 @@ def signup_view(request):
 @login_required
 def invoice_view(request, order_code=None):
     order_qs = Order.objects.filter(customer=request.user).prefetch_related(
-        'orderproduct_set__batch__product', 'customer')
+        'orderproduct_set__batch__product__producer')
     if order_code:
-        order = order_qs.filter(id__startswith=order_code).order_by(
-            'order_date').first()
+        order = order_qs.filter(id__startswith=order_code).order_by('order_date').first()
     else:
         order = order_qs.order_by('order_date').first()
 
@@ -835,24 +821,32 @@ def invoice_view(request, order_code=None):
     total = Decimal('0.00')
 
     if order:
-        items = order.orderproduct_set.all()
-        for item in items:
+        for item in order.orderproduct_set.all():
             line_total = item.numPurchased * item.price_at_purchase
             subtotal += line_total
+            producer = item.batch.product.producer
             invoice_items.append({
-                'name': item.batch.name,
-                'producer': item.batch.producer,
+                'name': item.batch.product.name,
+                'quality_class': item.batch.quality_class,
+                'producer_name': producer.organisation_name or ' '.join(filter(None, [producer.first_name, producer.last_name])) or producer.email,
                 'quantity': item.numPurchased,
-                'price': item.price_at_purchase,
+                'unit_price': item.price_at_purchase,
                 'line_total': line_total,
-                'details': item.batch.description,
                 'best_before': item.batch.best_before,
+                'unit': item.batch.product.unit,
             })
         commission_amount = subtotal * (commission_rate / Decimal('100.00'))
-        total = subtotal + commission_amount
+        total = subtotal
+
+    customer_name = None
+    if order:
+        c = order.customer
+        full = ' '.join(filter(None, [c.first_name, c.last_name]))
+        customer_name = c.organisation_name or full or c.email
 
     context = {
         'order': order,
+        'customer_name': customer_name,
         'invoice_items': invoice_items,
         'subtotal': subtotal,
         'commission_rate': commission_rate,
