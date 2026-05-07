@@ -1,69 +1,140 @@
 
 from core.utils import get_low_stock_products, get_pending_orders
+from .models import OrderProduct, OrderStatusHistory, ProductBatch, ProducerOrder
+
 
 def navbar_alerts(request):
     """
     Navigation bar notification bell.
-    Pass incoming order and stock warning counts for given user
+    Producers: low stock + pending orders.
+    Customers: order status changes.
     """
-    # validate that user is authenticated AND a producer
-    if not request.user.is_authenticated or getattr(request.user, 'category', None) != 'Producer':
-        return {"navbar_alerts": [], "navbar_alert_count": 0}
+    # Define notification display limit
+    LIMIT = 4
+    if not request.user.is_authenticated:
+        return {"navbar_alerts": [], "navbar_alert_count": 0, "navbar_total_alert_count": 0}
 
     alerts = []
+    category = getattr(request.user, 'category', None)
 
-    # Iterate over all producer products and append stock alerts (stock threshold or stock == 0)
-    for product in get_low_stock_products(request.user):
-        alerts.append({
-            "icon": "exclamation-triangle-fill",
-            "colour": "warning" if product.stock > 0 else "danger",
-            "message": f"Low stock: {product.name} ({product.stock} left)" if product.stock > 0 else f"No stock: {product.name}",
-            "link_url": '/management/?model=Product',
-            "link_label": "Manage products",
-        })
+    if request.user.is_superuser or category in ('Producer', 'Admin'):
+        cleared_at = getattr(request.user, 'notifications_cleared_at', None)
+        for product in get_low_stock_products(request.user):
+            alerts.append({
+                "key": f"stock_{product.id}",
+                "icon": "exclamation-triangle-fill",
+                "colour": "warning" if product.stock > 0 else "danger",
+                "message": product.name,
+                "message_status": f"{product.stock} left" if product.stock > 0 else "Out of stock",
+                "link_url": '/management/?model=Product',
+                "link_label": "Manage products",
+            })
+        pending_orders = get_pending_orders(request.user)
+        if cleared_at:
+            pending_orders = pending_orders.filter(order__order_date__gt=cleared_at)
+        for pending_order in pending_orders.select_related('order').prefetch_related('items__batch__product'):
+            items = list(pending_order.items.all())
+            # Item 1, Item 2, + x more...
+            names = [i.batch.product.name for i in items[:2]]
+            suffix = f" +{len(items) - 2} more" if len(items) > 2 else ""
+            alerts.append({
+                "key": f"order_{pending_order.id}",
+                "icon": "bag-check-fill",
+                "colour": "success",
+                "message": "Outstanding order:",
+                "message_status": ", ".join(names) + suffix,
+                "link_url": '/management/?model=Order',
+                "link_label": "View orders",
+            })
 
-    # Iterate through all assigned orders and append pending order alerts
-    for order in get_pending_orders(request.user):
-        items = order.orderproduct_set.select_related("product")
-        item_summary = ", ".join(f"{item.product.name} x {item.numPurchased}" for item in items)
-        alerts.append({
-            "icon": "bag-check-fill",
-            "colour": "success",
-            "message": f"New order {order.customer.email}: {item_summary}",
-            "link_url": '/management/?model=Order',
-            "link_label": "View orders",
-        })
-    return {"navbar_alerts": alerts, "navbar_alert_count": len(alerts)}
+    if category == 'Customer':
+        cleared_at = request.user.notifications_cleared_at
+        qs_filter = {'producer_order__order__customer': request.user, 'changed_by__isnull': False}
+        if cleared_at:
+            qs_filter['changed_at__gt'] = cleared_at
+        recent_changes = (OrderStatusHistory.objects
+                          .filter(**qs_filter)
+                          .select_related('producer_order__order')
+                          .prefetch_related('producer_order__items__batch__product')
+                          .order_by('-changed_at')[:5])
+        for h in recent_changes:
+            key = f"status_{h.id}"
+            items = list(h.producer_order.items.all())
+            names = [i.batch.product.name for i in items[:2]]
+            suffix = f" +{len(items) - 2} more" if len(items) > 2 else ""
+            item_summary = ", ".join(names) + suffix
+            alerts.append({
+                "key": key,
+                "icon": "bag-check-fill",
+                "colour": "success",
+                "message": f"Your order for {item_summary}:",
+                "message_status": f"{h.from_status.title()} → {h.to_status.title()}",
+                "note": h.note or "",
+                "link_url": '/orders/',
+                "link_label": "View your orders",
+            })
+
+        # TC19: notify customers when products they've previously bought are on surplus/discount
+        purchased_product_ids = (OrderProduct.objects
+                                 .filter(order__customer=request.user)
+                                 .values_list('batch__product_id', flat=True)
+                                 .distinct())
+        surplus_filter = {'product__in': purchased_product_ids, 'surplus': True, 'stock__gt': 0}
+        if cleared_at:
+            surplus_filter['created_at__gt'] = cleared_at
+        surplus_batches = (ProductBatch.objects
+                           .filter(**surplus_filter)
+                           .select_related('product__producer')[:3])
+        for batch in surplus_batches:
+            discount = int(batch.effective_discount)
+            alerts.append({
+                "key": f"surplus_{batch.id}",
+                "icon": "tag-fill",
+                "colour": "warning",
+                "message": f"{batch.product.name} is on discount!",
+                "message_status": f"{discount}% off - {batch.product.producer.organisation_name or batch.product.producer.email}",
+                "link_url": '/',
+                "link_label": "Shop now",
+            })
+    visible = alerts[-LIMIT:]
+    return {"navbar_alerts": visible, "navbar_alert_count": len(visible), "navbar_total_alert_count": len(alerts)}
 
 
 def get_producer_alerts(request):
     """Notification badges for management panel"""
+
     warning_count = 0
     error_count = 0
     pending_orders = 0
-    if request.user.is_authenticated and getattr(request.user, 'category', None) == 'Producer':
-        low_stock_products = get_low_stock_products(request.user)
+    if not request.user.is_authenticated:
+        return {'stock_alert': {'warning_count': 0, 'error_count': 0, 'pending_orders': 0, 'total': 0}}
+
+    category = getattr(request.user, 'category', None)
+    if not (request.user.is_superuser or category == 'Producer'):
+        return {'stock_alert': {'warning_count': 0, 'error_count': 0, 'pending_orders': 0, 'total': 0}}
+
+    if request.user.is_superuser:
+        pending_orders = ProducerOrder.objects.filter(order_status='PENDING').count()
+    else:
         pending_orders = get_pending_orders(request.user).count()
-        for product in low_stock_products:
-            if product.stock == 0:
-                error_count += 1
-            else:
-                warning_count +=1
+    for product in get_low_stock_products(request.user):
+        if product.stock == 0:
+            error_count += 1
+        else:
+            warning_count += 1
 
-    return {'stock_alert': {'warning_count': warning_count, 'error_count': error_count, 'pending_orders': pending_orders}}
+    total = warning_count + error_count + pending_orders
+    return {'stock_alert': {'warning_count': warning_count, 'error_count': error_count, 'pending_orders': pending_orders, 'total': total}}
 
-# core/context_processors.py
-from .models import Product
 def cart_processor(request):
     cart = request.session.get('cart', {})
-    # cart is assumed to be {product_id: {'price': x, 'quantity': y}}
     total_items = sum(cart.values())
     total_price = 0
     if cart:
-        products = Product.objects.filter(id__in=cart.keys())
-        for product in products:
-            quantity = cart.get(str(product.id), 0)
-            total_price += product.price * quantity
+        batches = ProductBatch.objects.filter(id__in=cart.keys())
+        for batch in batches:
+            quantity = cart.get(str(batch.id), 0)
+            total_price += batch.price * quantity
 
     return {
         'cart_total_items': total_items,

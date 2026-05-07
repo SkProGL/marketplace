@@ -3,20 +3,28 @@ from django.apps import AppConfig
 from django.db import models
 from django.contrib import messages
 from django.contrib.postgres.fields import ArrayField
+from django.core.paginator import Paginator
 from django.http import HttpRequest
 from django.utils import timezone
 from typing import Type, Any
 from django.forms import modelform_factory
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 from django.http import HttpRequest
 from core.forms import PASSWORD_STRENGTH_ERROR, SignupForm
-from core.models import Order, Product
+from core.models import Order, Product, ProductBatch
 
 # Management
 ## Universal readonly fields
 READONLY_FIELDS = ['id', 'date_joined', 'last_login']
 ## Producer specific fields
-PRODUCER_ID_FIELDS = {'Product': 'producer', 'StoryPost': 'user', 'Recipe': 'user'} 
+PRODUCER_ID_FIELDS = {'Product': 'producer', 'StoryPost': 'user', 'Recipe': 'user'}
+## Fields to show first, per model
+MODEL_FIELD_PRIORITY = {
+    'User': ['email', 'password', 'full_name', 'category', 'organisation_name','phone', 'addrss', 'postcode^'],
+    'Product': ['name', 'category', 'price', 'stock', 'alert_threshold', 'all_year', 'seasonStart', 'seasonEnd'],
+    'Order': ['customer','order_status'],
+    'ProducerOrder': ['order', 'producer', 'order_status', 'delivery_date'],
+}
 
 def create_draft_entry(request, headers, selected_model: Type[models.Model], cached_update_attempt=None, readonly_fields=None) -> dict[str, Any]:
     """
@@ -48,6 +56,7 @@ def create_draft_entry(request, headers, selected_model: Type[models.Model], cac
         field = selected_model._meta.get_field(field_name)
 
         # Use data from previous attempt or default as defined in models.py, otherwise defer to default defined above
+        base_value = ""
         if field_name in cached_update_attempt:
             base_value = cached_update_attempt[field_name]
         elif field.has_default():
@@ -91,9 +100,13 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
     """
     model = app_config.get_model(selected_model_name)
     user_category = getattr(request.user, 'category', None)
-    if user_category == 'Producer' and selected_model_name == "Order":
-        messages.error(request, "Producers cannot modify orders.")
+    if user_category == 'Producer' and selected_model_name == "Order" and 'delete' in request.POST:
+        messages.error(request, "Producers cannot delete orders.")
         return False
+    print("="*50)
+    print(request.POST)
+    print("="*50)
+
     # DELETE
     if 'delete' in request.POST:
         delete_id = request.POST.get('delete')
@@ -119,7 +132,7 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
         try:
             # Create a dynamic form class for current model
             # Exclude ID and 'password' for special handling
-            exclude_fields = ['id', 'password', 'date_joined', 'last_login', 'products']
+            exclude_fields = ['id', 'password', 'date_joined', 'last_login', 'products', 'groups', 'user_permissions']
             DynamicForm = modelform_factory(model, exclude=exclude_fields)
 
             #Extract unqiue row_ids and iterate through rows
@@ -152,66 +165,85 @@ def handle_management_post(request: HttpRequest, app_config: AppConfig, selected
                     id_field = PRODUCER_ID_FIELDS[selected_model_name]
                     row_data[id_field] = str(request.user.pk)
 
-                print(f"\n {row_data}\n")
+                # print(f"\n {row_data}\n")
 
                 if is_new_record:
                     model_instance = model()
                 else:
                     model_instance = model.objects.get(pk=row_id)
 
+                # Season fields are disabled (not submitted) when all_year is True.
+                # Add the instance's current values so the form sees no change for those fields.
+                if row_data.get('all_year') in ('True', 'true', '1'):
+                    row_data.setdefault('seasonStart', getattr(model_instance, 'seasonStart', 'January'))
+                    row_data.setdefault('seasonEnd', getattr(model_instance, 'seasonEnd', 'December'))
+
+                # Backfill fields not submitted (e.g. password modal only sends a few fields)
+                # so the form sees all required fields and validates correctly.
+                if not is_new_record:
+                    for f in DynamicForm.base_fields:
+                        if f not in row_data:
+                            val = getattr(model_instance, f, None)
+                            if val is None:
+                                row_data.setdefault(f, '')
+                            elif isinstance(val, bool):
+                                row_data.setdefault(f, str(val))
+                            elif isinstance(val, list):
+                                row_data.setdefault(f, val)
+                            else:
+                                row_data.setdefault(f, str(val))
+
+                # Password-only update - bypass the form entirely to avoid interference
+                password_provided = bool(selected_model_name == 'User' and row_data.get('password'))
+                if password_provided:
+                    password = row_data.get('password')
+                    if password != row_data.get('confirm_password'):
+                        error_msg = f"Passwords do not match."
+                    elif not SignupForm.validate_password(password):
+                        error_msg = PASSWORD_STRENGTH_ERROR
+                    else:
+                        #TODO DELETE DISPLAYING RAW PW
+                        model_instance.set_password(password)
+                        print(f"[pw_debug] set_password called, new hash prefix: {model_instance.password[:30]}")
+                        model_instance.save(update_fields=['password'])
+                        fresh = model_instance.__class__.objects.get(pk=model_instance.pk)
+                        print(f"[pw_debug] DB hash after save: {fresh.password[:30]}, check_password: {fresh.check_password(password)}")
+                        messages.success(request, f"Password updated for row {str(row_id)[:8]}.")
+                        continue
+                    if error_msg:
+                        messages.error(request, error_msg)
+                        return False
+
                 # Apply data to model form
                 form = DynamicForm(row_data, instance=model_instance)
-
                 # Use built-in data validation
                 if form.is_valid():
-                    # Force trigger on pw change
-                    password_provided = bool(selected_model_name == 'User' and row_data.get('password'))
-                    
-                    # Validate if something has changed
-                    if form.has_changed() or is_new_record or password_provided:
-                        print(f"[has_changed] {form.changed_data}")
-                        saved_record = form.save(commit=False)         
-
-                        # User - Validate entered passwords and apply built-in password hashing
-                        if selected_model_name == 'User' and password_provided:
-                            password = row_data.get('password')
-                            if password == row_data.get('confirm_password'):
-                                if SignupForm.validate_password(password):
-                                     saved_record.set_password(password)
-                                else:
-                                    error_msg = PASSWORD_STRENGTH_ERROR
+                    print(f"[has_changed] { {f: (form.initial.get(f), form.cleaned_data.get(f)) for f in form.changed_data} }")
+                    saved_record = form.save(commit=False)
+                    if error_msg:
+                        messages.error(request, error_msg)
+                        # Store data from update attempt to continue editing
+                        _cache_attempt(request, selected_model_name, row_id, row_data)
+                        return False
+                    else:
+                        try:
+                            saved_record.save()  
+                            if is_new_record:
+                                messages.success(request, f"New {selected_model_name} created!")
                             else:
-                                error_msg = f"Passwords do not match for row {str(row_id)[:8]}."
-                        if error_msg:
-                            messages.error(request, error_msg)
-                            # Store data from update attempt to continue editing
-                            _cache_attempt(request, selected_model_name, row_id, row_data)
+                                changes = ",".join(form.changed_data)
+                                messages.success(request, f"Updated row {str(row_id)[:8]}: {changes}")
+                            # Clear update attempt on success
+                            cached_update_attempt = request.session.get('cached_update_attempt', {})
+                            cached_update_attempt.pop(selected_model_name, None)
+                            request.session.modified = True
+                        except Exception as e:
+                            messages.error(request, f"Update error: {e}")
                             return False
-                        else:
-                            try:
-                                saved_record.save()  
-                                if is_new_record:
-                                    messages.success(request, f"New {selected_model_name} created!")
-                                else:
-                                    # Signal success field updates
-                                    # Manually include 'password' in the text since it's excluded
-                                    changed_list = list(form.changed_data)
-                                    if password_provided:
-                                        changed_list.append('password')
-                                    
-                                    changes = ",".join(changed_list)
-                                    messages.success(request, f"Updated row {str(row_id)[:8]}: {changes}")
-                                # Clear update attempt on success
-                                cached_update_attempt = request.session.get('cached_update_attempt', {})
-                                cached_update_attempt.pop(selected_model_name, None)
-                                request.session.modified = True
-                            except Exception as e:
-                                messages.error(request, f"Update error: {e}")
-                                return False
                 else:
                     # Signal unsuccesful field updates using built-in django validation error
-                    # Must mark_safe to render to html
-                    error_html = mark_safe(f"<b>Error on row {str(row_id)[:8]}:</b><br>{form.errors}")
+                    # Must format_html to render to html safely
+                    error_html = format_html("<b>Error on row {}:</b><br>{}", str(row_id)[:8], form.errors)
                     messages.error(request, error_html)
                     _cache_attempt(request, selected_model_name, row_id, row_data)
                     return False
@@ -228,20 +260,36 @@ def _cache_attempt(request, selected_model_name, row_id, row_data):
     request.session['cached_update_attempt'][selected_model_name][str(row_id)] = row_data
     request.session.modified = True 
 
-def get_management_context(request:HttpRequest, selected_model: Type[models.Model], selected_model_name, 
-                           add_new=False, row_filter = None, distinct = False, readonly_fields=None) -> dict[str, Any]:
+
+def get_management_context(request:HttpRequest, selected_model: Type[models.Model],
+                           selected_model_name, add_new=False, row_filter=None,
+                           distinct=False, readonly_fields=None, hidden_fields=['id', 'is_active', 'is_superuser'],
+                           modal_id_field=None) -> dict[str, Any]:
     """
     Construct display data for selected model for management view table.
     Additionally handles row sorting logic.
     """
+    PAGE_SIZE = 12
+    LABEL_OVERRIDES = {
+    'is_staff': 'Staff',
+    'is_superuser': 'Admin',
+    }
     # Construct headeres for selected mdoels
     fields = selected_model._meta.fields
-    headers = [field.name for field in selected_model._meta.fields]
-    if 'id' in headers:
-        headers.remove('id')
-        final_headers = ['id'] + headers
-    else:
-        final_headers = headers
+    
+    # Get all headers, excluding any fields in hidden_fields (defaults to hiding id).
+    _hidden = hidden_fields if hidden_fields is not None else {'id'}
+    visible_fields = [field for field in fields if field.name not in _hidden]
+    priority = MODEL_FIELD_PRIORITY.get(selected_model_name, [])
+    if priority:
+        visible_fields.sort(key=lambda f: priority.index(f.name) if f.name in priority else len(priority))
+    final_headers = [field.name for field in visible_fields]
+    header_labels = [field.verbose_name.title() for field in visible_fields]
+
+    header_labels = [
+        LABEL_OVERRIDES.get(field.name, field.verbose_name.title())
+        for field in visible_fields
+    ]
 
     # Extract all records from model
     # Apply record filter for lower permissions if applicable (i.e., Producer)
@@ -251,17 +299,30 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
         records = records.distinct()
     print(f"[get_management_context] Found {len(records)} records")
 
-    # Sorting logic  
+    # Sorting logic
     # Extract direction and header to sort by
-    sort_field = request.GET.get('sortby')
-    sort_direction = request.GET.get('direction', 'ascending')
-    
-    # Reorder records based on direction and field
+    default_sort = {'Order': ('order_date', 'descending')}.get(selected_model_name, (None, 'ascending'))
+    sort_field = request.GET.get('sortby', default_sort[0])
+    sort_direction = request.GET.get('direction', default_sort[1])
     if sort_field:
         if sort_direction == 'descending':
             records = records.order_by(f'-{sort_field}')
         else:
             records = records.order_by(sort_field)
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        from django.db.models import Q as DQ
+        search_filter = DQ()
+        for field in visible_fields:
+            if isinstance(field, (models.CharField, models.TextField)):
+                search_filter |= DQ(**{f'{field.name}__icontains': q})
+        if search_filter:
+            records = records.filter(search_filter)
+
+    paginator = Paginator(records, PAGE_SIZE)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+    records = page_obj
 
     # Fetch FKs for drop-down selection fields
     foreign_key_options = {}
@@ -315,9 +376,9 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
             
             row_cells.append(cell_data)
 
-        # For Product row, set colour class based onm stock threshold status
+        # For ProductBatch row, set colour class based on stock threshold status
         row_class = ''
-        if selected_model_name == 'Product':
+        if selected_model_name == 'ProductBatch':
             stock = getattr(record, 'stock', None)
             threshold = getattr(record, 'stock_alert_threshold', None)
             if stock is not None and threshold is not None:
@@ -326,15 +387,15 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
                 elif stock <= threshold:
                     row_class = 'table-warning'
 
-        rows.append({'id': record.pk, 'cells': row_cells, 'row_class': row_class})
+        modal_id = str(getattr(record, modal_id_field)) if modal_id_field else str(record.pk)
+        rows.append({'id': record.pk, 'modal_id': modal_id, 'cells': row_cells, 'row_class': row_class})
 
     # If new row button selected, add draft row
     if add_new:
         draft_data = create_draft_entry(request, final_headers, selected_model, cached_update_attempt.get('draft', {}), readonly_fields)
-        # rows.insert(0, draft_data) add to top for visibility?
-        rows.append(draft_data)
+        rows.insert(0, draft_data)
 
-    return {'headers': final_headers, 'rows': rows, 'current_sort': sort_field, 'current_dir': sort_direction}
+    return {'headers': final_headers, 'header_labels': header_labels, 'rows': rows, 'current_sort': sort_field, 'current_direction': sort_direction, 'page_obj': page_obj, 'q': q}
     
 def format_for_display(field, raw_value):
     """
@@ -354,7 +415,9 @@ def format_for_display(field, raw_value):
         return raw_value.strftime('%Y-%m-%d')
 
     elif field.name == 'password':
-        display_value = raw_value[20:29] + "..."  
+        # Skip past the fixed Argon2 params prefix to show the unique salt portion
+        salt_start = raw_value.rfind('$', 0, -1) + 1  # second-to-last '$' separates params from salt
+        display_value = raw_value[salt_start:salt_start + 10] + "..."
     else:
         display_value = raw_value
 
@@ -362,24 +425,13 @@ def format_for_display(field, raw_value):
         
 
 def get_low_stock_products(user):
-    """
-    Get all product records for given User where stock is >= defined threshold. 
-    User for alerts and notifications. 
-    """
-    return Product.objects.filter(
-        producer=user,
-        stock__lte=models.F('stock_alert_threshold')
-    )
+    """Returns Products whose total in-date stock is at or below their alert threshold."""
+    return [p for p in Product.objects.filter(producer=user) if p.stock <= p.stock_alert_threshold]
 
 def get_pending_orders(user):
-    """
-    Get all pending orders for given producers.
-    User for alerts and notifications. 
-    """
-    return  Order.objects.filter(
-        orderproduct__product__producer=user,
-        order_status='PENDING'
-    ).distinct()
+    """Returns pending ProducerOrders for the given producer/superuser."""
+    from core.models import ProducerOrder
+    return ProducerOrder.objects.filter(producer=user, order_status='PENDING')
     
 def get_next_occurrence(order: Order) -> date | None:
     """Calculate the next delivery date based on recurrence type."""
@@ -415,8 +467,7 @@ def get_recurring_orders_context(user):
     today = timezone.now().date()
     orders = Order.objects.filter(
         customer=user,
-        recurring=True,
-    ).prefetch_related('orderproduct_set__product')
+    ).exclude(recurrence_type='None').prefetch_related('orderproduct_set__batch__product')
 
     result = []
     for order in orders:

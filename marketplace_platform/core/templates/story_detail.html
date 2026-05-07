@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'community.css' %}">
+
+<div style="max-width:720px; margin:0 auto; padding: 32px 0 48px;">
+
+    <a href="{% url 'community' %}" style="color:#1a7a4a; font-size:0.85rem; text-decoration:none;">← Back to Community Hub</a>
+
+    <div style="margin-top:20px;">
+        {% if story.image %}
+        <img src="{{ story.image.url }}" alt="Farm story"
+             style="width:100%; max-height:340px; object-fit:cover; border-radius:10px; margin-bottom:20px;">
+        {% endif %}
+
+        <div style="margin-bottom:8px;">
+            <a href="{% url 'producer_profile_public' story.user.id %}"
+               style="font-size:0.78rem; color:#888; text-decoration:none;">
+                by {{ story.user.organisation_name|default:story.user.full_name|default:story.user.email }}
+            </a>
+            <span style="font-size:0.78rem; color:#aaa; margin-left:10px;">{{ story.date_posted|date:"d F Y" }}</span>
+        </div>
+
+        <div style="background:white; border:1.5px solid #e0e0e0; border-radius:10px; padding:20px 24px; margin-top:16px;">
+            <div style="font-size:0.95rem; color:#333; line-height:1.8; white-space:pre-line;">{{ story.content }}</div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+            {% if request.user == story.user %}
+            <div style="display:flex; gap:10px; align-items:center;">
+                <a href="{% url 'edit_story' story.id %}" class="ch-btn-outline">Edit story</a>
+                <form method="POST" action="{% url 'delete_story' story.id %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="ch-btn-outline" style="color:#dc3545; border-color:#dc3545;"
+                            onclick="return confirm('Delete this story?')">Delete</button>
+                </form>
+            </div>
+            {% else %}
+            <div></div>
+            {% endif %}
+
+            {% if request.user.is_authenticated and request.user != story.user %}
+            <form method="POST" action="{% url 'report_content' %}" style="margin:0;">
+                {% csrf_token %}
+                <input type="hidden" name="content_type" value="story">
+                <input type="hidden" name="content_id" value="{{ story.id }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" style="background:none; border:none; color:#aaa; font-size:0.78rem; cursor:pointer; padding:0;"
+                        onclick="return confirm('Report this story as inappropriate?')">⚑ Report</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
