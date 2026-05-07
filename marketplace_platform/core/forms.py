@@ -1,8 +1,8 @@
-from datetime import timedelta
+from datetime import timedelta, date
 from django.utils import timezone
-
 from django import forms
-from .models import Product, User, Review
+from django.contrib.auth.forms import PasswordChangeForm
+from .models import Complaint, Product, ProductBatch, User, Review, Recipe, StoryPost
 
 PASSWORD_STRENGTH_ERROR = "Password must be at least 8 characters and include 1 lowercase and 1 uppercase letter."
 
@@ -69,7 +69,49 @@ class SignupForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+class ProfileEditForm(forms.ModelForm):
+    # Fields shown per category — all are optional, purely display/contact info
+    CATEGORY_FIELDS = {
+        'Customer':        ['full_name', 'phone', 'address', 'postcode', 'profile_image'],
+        'Producer':        ['full_name', 'phone', 'address', 'postcode', 'organisation_name', 'organic_description', 'profile_image'],
+        'Restaurant':      ['full_name', 'phone', 'address', 'postcode', 'organisation_name', 'profile_image'],
+        'Community group': ['full_name', 'phone', 'address', 'postcode', 'organisation_name', 'charity_status', 'profile_image'],
+    }
 
+    class Meta:
+        model = User
+        fields = [
+            "full_name", "phone", "address", "postcode",
+            "organisation_name", "organic_description", "charity_status", "profile_image",
+        ]
+        widgets = {
+            "full_name":           forms.TextInput(attrs={"class": "form-control"}),
+            "phone":               forms.TextInput(attrs={"class": "form-control"}),
+            "address":             forms.TextInput(attrs={"class": "form-control"}),
+            "postcode":            forms.TextInput(attrs={"class": "form-control"}),
+            "organisation_name":   forms.TextInput(attrs={"class": "form-control"}),
+            "organic_description": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+            "charity_status":      forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Registered charity, Educational institution…"}),
+            "profile_image":       forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        category = kwargs.pop('category', None)
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.required = False
+        allowed = self.CATEGORY_FIELDS.get(category)
+        if allowed:
+            for field in list(self.fields):
+                if field not in allowed:
+                    del self.fields[field]
+        org_labels = {
+            'Producer':        'Farm / Producer name',
+            'Restaurant':      'Restaurant name',
+            'Community group': 'Organisation name',
+        }
+        if 'organisation_name' in self.fields and category in org_labels:
+            self.fields['organisation_name'].label = org_labels[category]
 
 class LoginForm(forms.Form):
     email = forms.EmailField(
@@ -80,23 +122,31 @@ class LoginForm(forms.Form):
         widget=forms.PasswordInput(
             attrs={'class': 'form-control', 'placeholder': 'Password'})
     )
+    remember_me = forms.BooleanField(
+        required=False, 
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
 class CheckoutForm(forms.Form):
-    
-    delivery_date = forms.DateTimeField(
-        widget=forms.DateTimeInput(attrs={
-            'type': 'datetime-local', 
+
+    delivery_address = forms.CharField(
+        max_length=256,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Street address'})
+    )
+    delivery_postcode = forms.CharField(
+        max_length=20,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. SW1A 1AA'})
+    )
+    delivery_date = forms.DateField(
+        widget=forms.DateInput(attrs={
+            'type': 'date',
             'class': 'form-control'
         })
     )
 
     def clean_delivery_date(self):
         delivery_date = self.cleaned_data.get('delivery_date')
-        
-        # Check if delivery_date is not None (in case of empty input)
-        if delivery_date:
-            # Check if it's at least 48 hours away
-            if delivery_date < timezone.now() + timedelta(hours=48):
-                raise forms.ValidationError("Delivery must be at least 48 hours from now.")
+        if delivery_date and delivery_date < date.today() + timedelta(days=2):
+            raise forms.ValidationError("Delivery must be at least 48 hours from now.")
         return delivery_date
     
 class ProductForm(forms.ModelForm):
@@ -105,7 +155,7 @@ class ProductForm(forms.ModelForm):
         fields = [
             'name', 'category', 'description', 'price',
             'unit', 'availability', 'seasonStart', 'seasonEnd',
-            'best_before', 'stock', 'stock_alert_threshold',
+            'best_before', 'food_miles', 'stock', 'stock_alert_threshold',
             'allergens', 'organic', 'surplus', 'discount_percentage',
             'discount_expiry', 'discount_note', 'image', 'image_url'
         ]
@@ -125,3 +175,50 @@ class ReviewForm(forms.ModelForm):
             "anonymous": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
         labels = {"anonymous": "Post anonymously"}
+
+
+class ProductBatchForm(forms.ModelForm):
+    class Meta:
+        model = ProductBatch
+        fields = [
+            'quality_class', 'stock', 'stock_alert_threshold', 'image',
+            'best_before', 'surplus', 'discount_percentage',
+            'discount_expiry', 'discount_note',
+            'seasonStart', 'seasonEnd',
+        ]
+
+
+class RecipeForm(forms.ModelForm):
+    class Meta:
+        model = Recipe
+        fields = ['title', 'description', 'instructions', 'season', 'image', 'storage_guidance']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Recipe title'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Short description'}),
+            'instructions': forms.Textarea(attrs={'class': 'form-control', 'rows': 6, 'placeholder': 'Step-by-step cooking instructions'}),
+            'season': forms.Select(attrs={'class': 'form-select'}),
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'storage_guidance': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'e.g. Store carrots in a cool dark place for up to 2 weeks…'}),
+        }
+
+
+class StoryPostForm(forms.ModelForm):
+    class Meta:
+        model = StoryPost
+        fields = ['content', 'image']
+        widgets = {
+            'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Share your farm story, harvest update, or news…'}),
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+
+class ComplaintForm(forms.ModelForm):
+    class Meta:
+        model = Complaint
+        fields = ['name', 'email', 'category', 'description']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Your full name'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'your@email.com'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Please describe your complaint in detail…'}),
+        }

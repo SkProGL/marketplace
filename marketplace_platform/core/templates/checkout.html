@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+
 <div class="container mt-5 d-flex justify-content-center">
     <div class="widget-account-form-card" style="width: 100%; padding: 3rem; align-items: flex-start;">
         <h2 style="color: var(--main-color); margin-bottom: 1.5rem;">Secure Checkout</h2>
@@ -14,31 +15,57 @@
                     <div class="card mb-3 shadow-sm">
                         <div class="card-body">
 
-                            {% for item in cart_items %}
-                                <div class="mb-3 border-bottom pb-2">
-                                    <h6 class="text-muted mb-0" style="font-size: 0.85rem;">
-                                        Producer: {{ item.product.producer.organisation_name|default:"Local Farm" }}
-                                    </h6>
-                                    <p class="mb-0"><strong>{{ item.product.name }}</strong></p>
-                                    <p class="mb-0 text-muted">
-                                        Qty: {{ item.quantity }} @ £{{ item.product.price }} each
-                                    </p>
+                            {% for group in cart_by_producer %}
+                                <div class="mb-3">
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                                        <span style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#198754;">
+                                            {{ group.producer.organisation_name|default:group.producer }}
+                                        </span>
+                                        <div style="flex:1;height:1px;background:#e0e0e0;"></div>
+                                    </div>
+                                    {% for item in group.items %}
+                                        <div class="mb-2 pb-2 {% if not forloop.last %}border-bottom{% endif %}" style="padding-left:8px;">
+                                            <p class="mb-0"><strong>{{ item.product.name }}</strong></p>
+                                            <p class="mb-0 text-muted" style="font-size:0.88rem;">
+                                                Qty: {{ item.quantity }} {{ item.product.product.unit }} &nbsp;·&nbsp; £{{ item.product.price }}/{{ item.product.product.unit }}
+                                            </p>
+                                        </div>
+                                    {% endfor %}
+                                    <div style="padding-left:8px;margin-top:6px;font-size:0.82rem;color:#888;">
+                                        Network commission (5%): £{{ group.commission|floatformat:2 }}
+                                    </div>
                                 </div>
                             {% endfor %}
 
-                            <p class="h5 text-success mt-3">Total: £{{ total_price|floatformat:2 }} (including 5% service fee)</p>
+                            <hr style="margin:12px 0;">
+                            <div style="font-size:0.82rem;color:#888;margin-bottom:8px;">
+                                Total network commission: £{{ total_commission|floatformat:2 }} <i class="bi bi-info-circle"></i>
+                            </div>
+                            <p class="h5 text-success mb-0">Total: £{{ total_price|floatformat:2 }}</p>
                         </div>
                     </div>
 
                     <h5 class="mt-4">2. Delivery Details</h5>
                     <div class="mb-3">
-                        <label class="form-label">Delivery Address (Pre-filled)</label>
-                        <textarea class="form-control" readonly rows="2" disabled>{{ user_address }}&#10;{{ user_postcode }}</textarea>
+                        <label class="form-label">Street Address</label>
+                        <input type="text" name="delivery_address" class="form-control"
+                               value="{{ user_address }}" placeholder="Street address" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Postcode</label>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="text" name="delivery_postcode" id="postcodeInput" class="form-control"
+                                   value="{{ user_postcode }}" placeholder="e.g. SW1A 1AA"
+                                   style="max-width:160px;text-transform:uppercase;" required>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="lookupPostcode()">Check</button>
+                            <span id="postcodeStatus" style="font-size:0.82rem;"></span>
+                        </div>
+                        <div id="postcodeArea" style="font-size:0.8rem;color:#555;margin-top:4px;"></div>
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label">Select Delivery Date</label>
-                        <input type="datetime-local" name="delivery_date" class="form-control" min="{{ min_delivery_date }}" required>
+                        <input type="date" name="delivery_date" class="form-control" min="{{ min_delivery_date }}" required>
                         {% if form.delivery_date.errors %}
                             <div class="text-danger mt-2 small">{{ form.delivery_date.errors|join:", " }}</div>
                         {% endif %}
@@ -60,7 +87,7 @@
 			{% include "components/widget-card.html" %}
                     <div class="mt-4 p-3 bg-light rounded border border-secondary-subtle">
                       <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" id="recurringToggle" name="recurring" value="true">
+                        <input class="form-check-input" type="checkbox" id="recurringToggle">
                         <label class="form-check-label" for="recurringToggle">Make this a recurring order</label>
                       </div>
                       <div id="recurringOptions" style="display: none;">
@@ -78,10 +105,57 @@
     </div>
 </div>
 <script>
+  const recurringToggle = document.getElementById('recurringToggle');
+  const recurringOptions = document.getElementById('recurringOptions');
 
-  document.getElementById('recurringToggle').addEventListener('change', function() {
-    document.getElementById('recurringOptions').style.display = this.checked ? 'block' : 'none';
+  function syncRecurring() {
+    const on = recurringToggle.checked;
+    recurringOptions.style.display = on ? 'block' : 'none';
+    recurringOptions.querySelectorAll('select').forEach(s => s.disabled = !on);
+  }
+
+  recurringToggle.addEventListener('change', syncRecurring);
+  syncRecurring();
+
+  const postcodeInput = document.getElementById('postcodeInput');
+  postcodeInput.addEventListener('input', () => {
+    document.getElementById('postcodeStatus').textContent = '';
+    document.getElementById('postcodeArea').textContent = '';
   });
+  postcodeInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); lookupPostcode(); }
+  });
+
+  function lookupPostcode() {
+    const pc = postcodeInput.value.trim().replace(/\s+/g, '');
+    if (!pc) return;
+    const status = document.getElementById('postcodeStatus');
+    const area   = document.getElementById('postcodeArea');
+    status.textContent = 'Checking…';
+    status.style.color = '#888';
+    area.textContent = '';
+
+    fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(pc)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === 200) {
+          const r = data.result;
+          status.textContent = '✓ Valid';
+          status.style.color = '#198754';
+          area.textContent = [r.admin_district, r.admin_ward, r.region].filter(Boolean).join(', ');
+          postcodeInput.value = r.postcode;
+        } else {
+          status.textContent = '✗ Postcode not found';
+          status.style.color = '#dc3545';
+        }
+      })
+      .catch(() => {
+        status.textContent = 'Could not verify';
+        status.style.color = '#888';
+      });
+  }
+
+  if (postcodeInput.value.trim()) lookupPostcode();
 </script>
 <style>
 
@@ -98,7 +172,7 @@
   font-weight: 600;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.103);
+  box-shadow: var(--shadow);
   position: relative;
   overflow: hidden;
   transition-duration: .3s;
@@ -138,3 +212,4 @@
 }
 </style>
 {% endblock %}
+

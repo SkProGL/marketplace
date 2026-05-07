@@ -27,9 +27,11 @@
 			<span>Full name</span>
 		      </div>
 
-		      <div class="widget-account-form-inputBox1">
-			<input type="email" name="email" value="{{ form.email.value|default_if_none:'' }}" required="required" />
-			<span class="widget-account-form-user">Email</span>
+		      <div class="widget-account-form-inputBox">
+			<input type="text" name="email" value="{{ form.email.value|default_if_none:'' }}" required="required" />
+
+			<!-- <span class="widget-account-form-user">Email</span> -->
+			<span >Email</span>
 		      </div>
 
 		      <div class="widget-account-form-inputBox">
@@ -74,8 +76,6 @@
 
 	      </div>
         </div>
-
-
 
 	<!-- From Uiverse.io by boryanakrasteva --> 
 	<div class="widget-sign-checkbox-wrapper" tabindex="0">

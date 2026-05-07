@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'inventory_upload.css' %}">
+
+<div class="form">
+  <h2>Add batch to existing product</h2>
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <input type="hidden" name="stock_alert_threshold" value="0">
+    <input type="hidden" name="discount_percentage" value="0">
+    <input type="hidden" name="best_before" value="2026-12-31">
+
+    <label>Product</label>
+    <select name="product_id" required>
+      <option value="" disabled selected>Select a product…</option>
+      {% for product in products %}
+        <option value="{{ product.id }}">{{ product.name }} ({{ product.category }})</option>
+      {% empty %}
+        <option disabled>No products yet — add a new product first</option>
+      {% endfor %}
+    </select>
+
+    <label>Price / Stock</label>
+    <div class="row price-row">
+      <input type="number" step="0.01" name="price" placeholder="Price £" required />
+      <input type="number" name="stock" min="1" value="1" placeholder="Stock" required />
+    </div>
+
+    <label>Quality Class</label>
+    <div class="toggles">
+      <input type="radio" name="quality_class" id="qc-A" value="A" checked />
+      <label for="qc-A">A — Premium</label>
+      <input type="radio" name="quality_class" id="qc-B" value="B" />
+      <label for="qc-B">B — Standard</label>
+      <input type="radio" name="quality_class" id="qc-C" value="C" />
+      <label for="qc-C">C — Economy</label>
+      <input type="radio" name="quality_class" id="qc-D" value="D" />
+      <label for="qc-D">D — Basic</label>
+      <input type="radio" name="quality_class" id="qc-S" value="Discounted" />
+      <label for="qc-S">Surplus / Discount</label>
+    </div>
+
+    <label>Options</label>
+    <div class="toggles">
+      <input type="checkbox" name="surplus" id="surplus" />
+      <label for="surplus">Surplus</label>
+    </div>
+
+    <div class="row season-months-row" id="season-months">
+      <div style="flex:1">
+        <label>Season Start</label>
+        <select name="seasonStart" id="seasonStart" class="season-select">
+          {% for value, display in months %}
+            <option value="{{ value }}">{{ display }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="flex:1">
+        <label>Season End</label>
+        <select name="seasonEnd" id="seasonEnd" class="season-select">
+          {% for value, display in months %}
+            <option value="{{ value }}" {% if forloop.last %}selected{% endif %}>{{ display }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <label>Image</label>
+    <label class="upload">
+      <input type="file" name="image" />
+      <span class="upload-label">Select image</span>
+    </label>
+
+    <button type="submit">Add Batch</button>
+  </form>
+</div>
+
+<script>
+  document.querySelector('input[type="file"]').addEventListener('change', function() {
+    const span = this.closest('label.upload').querySelector('.upload-label');
+    span.textContent = this.files && this.files[0] ? this.files[0].name : 'Select image';
+  });
+
+  const startSelect = document.getElementById('seasonStart');
+  const endSelect = document.getElementById('seasonEnd');
+
+  function updateEndOptions() {
+    const startIdx = startSelect.selectedIndex;
+    Array.from(endSelect.options).forEach((opt, i) => {
+      opt.disabled = i < startIdx;
+    });
+    if (endSelect.selectedIndex < startIdx) {
+      endSelect.selectedIndex = startIdx;
+    }
+  }
+
+  startSelect.addEventListener('change', updateEndOptions);
+  updateEndOptions();
+</script>
+{% endblock %}

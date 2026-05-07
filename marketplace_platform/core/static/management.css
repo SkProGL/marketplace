@@ -3,49 +3,270 @@
   --primary-focus-glow: rgba(185, 248, 165, 0.25);
 }
 
-.table-sm td {
-  padding: 0;
-  margin: 0;
-  padding: 0.1em;
-  border: none;
+/* For the random grey block above buttons */
+.table-sm > :not(caption) > * > * {
+  --bs-table-bg: white;
 }
+
+.table-sm td {
+  padding: 0; /* The !important overrides Bootstrap's specific table padding */
+  margin: 0;
+  border: none;
+  vertical-align: middle; /* Keeps the inputs perfectly centered if heights vary slightly */
+}
+
+/* Replace your existing .table-sm .form-select padding override with this: */
+/* 2. Strip Bootstrap's minimum height constraints from the inputs */
 
 .table-sm .form-control,
 .table-sm .form-select {
   margin: 0;
   display: block;
-  width: -webkit-fill-available;
+  width: 100%; /* Force the input to fill the cell */
+  min-width: 4ch;
+  max-width: none; /* Remove the 300px cap for these wide columns */
+  field-sizing: content; /* Disable content-sizing so width: 100% works */
+  resize: none;
+}
+.table-sm th {
+  white-space: nowrap;
+}
+/* Remove the grey stripe overlay for low-stock rows so the color pops */
+.table-striped > tbody > tr.table-warning > td,
+.table-striped > tbody > tr.table-warning > th {
+  --bs-table-accent-bg: transparent;
+  background-color: #fff3cd !important; /* Standard Bootstrap warning yellow */
 }
 
+.table-striped > tbody > tr.table-danger > td,
+.table-striped > tbody > tr.table-danger > th {
+  --bs-table-accent-bg: transparent;
+  background-color: #f8d7da !important; /* Standard Bootstrap danger red */
+}
+
+#search-input {
+  box-shadow: none;
+}
+
+#search-input:focus,
+#search-input:hover,
 .table-sm .form-control:focus,
 .table-sm .form-control:hover,
 .table-sm .form-select:focus,
-.table-sm .form-select:hover {
+.table-sm .form-select:hover,
+#passwordModal .form-control:focus,
+#passwordModal .form-control:hover {
   color: var(--primary-bg-color);
   border-color: var(--primary-bg-color);
   background-color: rgb(239, 247, 239);
   border-radius: 0.2em;
-  box-shadow: 0 0 0 0.2rem var(--primary-focus-glow);
+  box-shadow: var(--shadow);
+}
+
+.custom-success-check:checked {
+  background-color: var(--primary-bg-color) !important;
+  border-color: var(--primary-bg-color) !important;
+}
+
+.custom-success-check:focus {
+  border-color: var(--primary-bg-color) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+.management-btns .input-group:has(#search-input:focus) .input-group-text,
+.management-btns .input-group:has(#search-input:hover) .input-group-text {
+  border-color: var(--primary-bg-color);
+  background-color: rgb(239, 247, 239);
+}
+
+.table-sm .status-advance-btn {
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition:
+    filter 0.15s,
+    box-shadow 0.15s;
+}
+.table-sm .status-advance-btn:hover {
+  filter: brightness(1.15);
+  box-shadow: var(--shadow);
+}
+
+/* Non-clickable pills are visually flatter */
+.status-pill:not(.status-advance-btn) {
+  opacity: 0.75;
 }
 
 .table-sm input[type="date"] {
   padding-right: 0;
 }
 
-.management-topbar {
-    margin-bottom: 2.5rem;
-}
 .management-btns {
   display: inline-flex;
   gap: 1rem;
-  margin-top: 2.5rem;
+  margin-top: 1rem;
 }
 
-.management-btns button,
-.management-btns a {
-  width: 50%;
+.management-btns > * {
+  flex: 1;
+}
+
+/* Search bar matches button height and border style */
+.management-btns .input-group .input-group-text,
+.management-btns .input-group .form-control {
+  border-color: var(--bs-border-color);
+  border-radius: 0;
+}
+.management-btns .input-group .input-group-text {
+  border-radius: var(--bs-border-radius) 0 0 var(--bs-border-radius);
+}
+.management-btns .input-group .form-control {
+  border-radius: 0 var(--bs-border-radius) var(--bs-border-radius) 0;
 }
 
 .management-btns :only-child {
-    width: 100%;
+  flex: 1;
 }
+
+tr[data-dirty="true"] td {
+  background-color: rgba(59, 243, 182, 0.116) !important;
+}
+
+tr[data-dirty="true"] td:first-child {
+  border-left: 3px solid #00f050;
+}
+
+.delete-btn {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  position: sticky;
+  right: 0;
+}
+
+tr:hover .delete-btn {
+  opacity: 1;
+}
+
+tbody tr[data-row-id]:hover td {
+  background-color: rgba(25, 135, 84, 0.2) !important;
+}
+
+/* To avoid jiggle */
+tbody tr[data-row-id] td:first-child {
+  border-left: 3px solid transparent;
+}
+tbody tr[data-row-id]:hover td:first-child {
+  border-left: 3px solid #198754;
+}
+
+tr.order-summary-row {
+  cursor: pointer;
+}
+
+/* Strip the "form" styling from the inputs on order rows */
+
+tr.order-summary-row input,
+tr.order-summary-row select {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+tr.order-summary-row input,
+tr.order-summary-row select,
+tr.order-summary-row .status-pill {
+  pointer-events: none; /* Clicks pass right through to the <tr> */
+}
+
+/* Order status pills — shared by table cells and history timeline */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  margin: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.status-pill.status-pill-sm {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.4rem;
+}
+
+/* 1. Define the colors exactly once */
+:root {
+  --status-pending: #ffc107;
+  --status-confirmed: #fd7e14;
+  --status-ready: #198754;
+  --status-delivered: #0a3622;
+  --status-cancelled: #dc3545;
+}
+
+/* 2. Your existing pills, now powered by the variables */
+.status-pill-pending {
+  background-color: var(--status-pending);
+  color: #000;
+  border: 1px solid #000;
+}
+.status-pill-confirmed {
+  background-color: var(--status-confirmed);
+  color: #fff;
+  border: 1px solid #000;
+}
+.status-pill-ready {
+  background-color: var(--status-ready);
+  color: #fff;
+  border: 1px solid #000;
+}
+.status-pill-delivered {
+  background-color: var(--status-delivered);
+  color: #fff;
+  border: 1px solid #000;
+}
+.status-pill-cancelled {
+  background-color: var(--status-cancelled);
+  color: #fff;
+  border: 1px solid #000;
+}
+
+/* 3. Custom utilities for the Progress Bar & Labels */
+.bg-pending {
+  background-color: var(--status-pending) !important;
+}
+.bg-confirmed {
+  background-color: var(--status-confirmed) !important;
+}
+.bg-ready {
+  background-color: var(--status-ready) !important;
+}
+.bg-delivered {
+  background-color: var(--status-delivered) !important;
+}
+.bg-cancelled {
+  background-color: var(--status-cancelled) !important;
+}
+
+.text-pending {
+  color: var(--status-pending) !important;
+}
+.text-confirmed {
+  color: var(--status-confirmed) !important;
+}
+.text-ready {
+  color: var(--status-ready) !important;
+}
+.text-delivered {
+  color: var(--status-delivered) !important;
+}
+.text-cancelled {
+  color: var(--status-cancelled) !important;
+}
+
+@keyframes row-flash {
+  0% {
+    background: #d1fae5;
+  }
+  100% {
+    background: transparent;
+  }
+}
+
