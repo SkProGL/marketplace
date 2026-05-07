@@ -328,8 +328,34 @@ def checkout(request):
                         recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
                     )
 
-            messages.success(request, "Order placed successfully!")
-            return redirect('loading')
+                    # One ProducerOrder per producer, then assign each item to its slice
+                    producer_orders = {}
+                    for item in cart_items:
+                        batch = item['product']
+                        producer = batch.product.producer
+                        if producer.id not in producer_orders:
+                            producer_orders[producer.id] = ProducerOrder.objects.create(
+                                order=new_order,
+                                producer=producer,
+                                order_status='PENDING',
+                                delivery_date=form.cleaned_data['delivery_date'],
+                            )
+                        OrderProduct.objects.create(
+                            order=new_order,
+                            producer_order=producer_orders[producer.id],
+                            batch=batch,
+                            numPurchased=item['quantity'],
+                            price_at_purchase=batch.price,
+                        )
+                        ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - item['quantity'])
+
+                    request.session['cart'] = {}
+                    messages.success(request, "Order placed successfully!")
+                    return redirect('loading')
+
+            except ValueError as e:
+                for msg in e.args[0]:
+                    messages.error(request, msg)
     else:
         form = CheckoutForm()
 
