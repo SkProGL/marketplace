@@ -49,16 +49,39 @@
       <input type="checkbox" id="discount" name="discounted" value="1"
              {% if discounted %}checked{% endif %}>
       <label for="discount">Discounted %</label>
+
+      <input type="checkbox" id="organic" name="organic" value="1"
+             {% if organic %}checked{% endif %}>
+      <label for="organic">Organic</label>
     </div>
 
     {% include "components/widget-food-miles.html" %}
     {% include "components/widget-tree.html" %}
     {#% include "components/widget-offer.html" %#}
+
+    <div class="allergen-filter-wrap">
+      <button type="button" class="allergen-filter-toggle" id="allergenToggle" onclick="toggleAllergenPanel()">
+        Avoid allergens
+        {% if exclude_allergens %}<span class="allergen-active-count">{{ exclude_allergens|length }}</span>{% endif %}
+        <span id="allergenArrow" style="margin-left:auto;transition:transform 0.2s;">▾</span>
+      </button>
+      <div id="allergenPanel" style="display:none;">
+        <p class="allergen-filter-hint">Products containing the selected allergens will be hidden.</p>
+        <div class="filters">
+          {% for allergen in allergen_list %}
+            <input type="checkbox" name="exclude_allergen" value="{{ allergen }}"
+                   id="exc-{{ allergen }}"
+                   {% if allergen in exclude_allergens %}checked{% endif %}>
+            <label for="exc-{{ allergen }}" class="allergen-label">{{ allergen }}</label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
     <br/>
   </div>
 </form>
 <div class="home-results">
-  <b>Found {{ items|length }} matches</b>
+  <b>Found {{ total_count }} matches</b>
   <p id="search-suggestion" {% if not suggestion %}style="display:none"{% endif %}>
     Did you mean: <a id="suggestion-link" href="{% if suggestion %}?q={{ suggestion }}{% endif %}">{{ suggestion }}</a>?
   </p>
@@ -109,7 +132,27 @@
 </div>
   {% endfor %}
 </div>
+
+<div id="homePagination" style="display:flex;justify-content:center;align-items:center;gap:8px;margin:24px 0;">
+  {% if page_obj.has_previous %}
+    <button class="page-btn" onclick="goToPage({{ page_obj.previous_page_number }})">← Prev</button>
+  {% endif %}
+  <span style="font-size:0.9rem;color:#666;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+    <button class="page-btn" onclick="goToPage({{ page_obj.next_page_number }})">Next →</button>
+  {% endif %}
+</div>
+
 <!-- Product detail modal -->
+<div id="cartConfirm" style="display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:28px 28px 22px;width:300px;text-align:center;position:relative;">
+    <img id="cartConfirmImg" src="" alt="" style="width:100px;height:100px;object-fit:cover;border-radius:10px;margin-bottom:14px;">
+    <div style="color:#198754;font-size:1.1rem;font-weight:600;margin-bottom:6px;">Successfully added to cart!</div>
+    <div id="cartConfirmQty" style="color:#555;font-size:0.9rem;margin-bottom:20px;"></div>
+    <button id="cartConfirmClose" style="width:100%;padding:9px;background:#198754;color:#fff;border:none;border-radius:8px;font-size:0.95rem;cursor:pointer;">OK</button>
+  </div>
+</div>
+
 <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-xl">
     <div class="modal-content">
@@ -151,15 +194,17 @@
             <p class="mt-2 mb-1"><strong>Description</strong></p>
             <p id="modalDescription" class="text-muted small"></p>
 
-            <div id="modalAllergenRow" class="mt-1" style="display:none">
-              <strong>Allergens:</strong> <span id="modalAllergens" class="text-danger small"></span>
+            <div id="modalAllergenRow" class="mt-1">
+              <strong>Allergens:</strong>
+              <span id="modalAllergens" class="text-danger small"></span>
+              <span id="modalNoAllergens" class="text-success small" style="display:none;">No common allergens</span>
             </div>
 
             <!-- Shown only after a class is selected -->
             <div id="modalBatchInfo" style="visibility:hidden">
               <hr class="my-2">
               <p class="mb-1"><strong>Price:</strong> <span id="modalPrice"></span></p>
-              <p class="mb-1"><strong>Best before:</strong> <span id="modalBestBefore"></span></p>
+              <span id="modalBestBefore" style="display:none;"></span>
               <span id="modalSurplusBadge" class="badge bg-warning text-dark" style="display:none">Surplus</span>
               <div id="modalDiscountRow" class="mb-1 text-danger" style="display:none">
                 <strong>Discount:</strong> <span id="modalDiscount"></span>% off
@@ -188,6 +233,7 @@
             <small id="modalRating" style="color:#888;display:none;">⭐ <span id="modalRatingValue"></span>/5 (<span id="modalReviewCount"></span> reviews)</small>
           </div>
           <div id="modalReviewsList"></div>
+          <div id="reviewPagination"></div>
         </div>
       </div>
     </div>
@@ -215,6 +261,7 @@
   An email will be sent to <strong id="notifyEmail"></strong> once the item is back in stock!
 </div>
 
+
 {{ cart_items|json_script:"cart-state-data" }}
 {{ batch_data|json_script:"batch-data" }}
 {{ review_data|json_script:"review-data" }}
@@ -223,6 +270,8 @@
   let batchData = JSON.parse(document.getElementById('batch-data').textContent);
   let reviewData = JSON.parse(document.getElementById('review-data').textContent);
   const userEmail = '{{ request.user.email }}';
+  const userCategory = '{{ request.user.category }}';
+  const isBulkBuyer = (userCategory === 'Restaurant' || userCategory === 'Community');
 
 function selectBatch(batch) {
     // Batch-specific section
@@ -250,6 +299,7 @@ function selectBatch(batch) {
     currentBatchId = batch.id;
     currentItemPrice = parseFloat(batch.price);
     currentBatchStock = batch.stock;
+    currentBatchMaxQty = (!isBulkBuyer && batch.max_order_qty) ? batch.max_order_qty : null;
     currentBatchUnit = batch.unit || '';
     localQty = cartState[currentBatchId] || 0;
     updateModalCartUI();
@@ -266,7 +316,7 @@ function selectBatch(batch) {
     document.getElementById('modalProducer').textContent    = d.producer;
     document.getElementById('modalDescription').textContent = d.description;
     document.getElementById('modalCategory').textContent    = d.category;
-    const isOrganic = d.organic === 'True';
+    const isOrganic = d.organic === 'True' || d.organic === 'true' || d.organic === true;
     const ratingEl = document.getElementById('modalRating');
     if (d.avgRating) {
       document.getElementById('modalRatingValue').textContent = d.avgRating;
@@ -280,13 +330,10 @@ function selectBatch(batch) {
     document.getElementById('certProducerName').textContent = d.producer || '';
     document.getElementById('certText').textContent = d.organicInfo || 'No certification details provided yet.';
 
-    const allergenRow = document.getElementById('modalAllergenRow');
-    if (d.allergens) {
-      allergenRow.style.display = '';
-      document.getElementById('modalAllergens').textContent = d.allergens;
-    } else {
-      allergenRow.style.display = 'none';
-    }
+    const hasAllergens = d.allergens && d.allergens.toString().trim().length > 0;
+    document.getElementById('modalAllergens').textContent = hasAllergens ? d.allergens : '';
+    document.getElementById('modalAllergens').style.display = hasAllergens ? '' : 'none';
+    document.getElementById('modalNoAllergens').style.display = hasAllergens ? 'none' : '';
 
     const batches = batchData[productId] || [];
     const totalStock = batches.reduce((sum, b) => sum + b.stock, 0);
@@ -309,7 +356,8 @@ function selectBatch(batch) {
 
     // Product image: prefer Class A batch image
     const classA = batches.find(b => b.quality_class === 'A');
-    document.getElementById('modalImage').src = (classA && classA.image) || (first && first.image) || '/static/test.jpg';
+    const firstBatch = batches[0];
+    document.getElementById('modalImage').src = (classA && classA.image) || (firstBatch && firstBatch.image) || '/static/test.jpg';
 
     // Reset to pre-selection state
     document.getElementById('modalBatchInfo').style.visibility = 'hidden';
@@ -319,34 +367,43 @@ function selectBatch(batch) {
     currentBatchStock = 0;
     localQty = 0;
 
+    // Group batches by quality_class, merging stock and taking earliest best_before
+    const classOrder = ['A', 'B', 'C', 'D', 'Discounted'];
+    const grouped = {};
+    batches.forEach(b => {
+      const key = b.quality_class;
+      if (!grouped[key]) {
+        grouped[key] = { ...b };
+      } else {
+        grouped[key].stock += b.stock;
+        if (b.best_before < grouped[key].best_before) {
+          // Adopt the earlier batch as primary (FIFO)
+          const combinedStock = grouped[key].stock;
+          grouped[key] = { ...b, stock: combinedStock };
+        }
+      }
+    });
+    const mergedBatches = classOrder.filter(k => grouped[k]).map(k => grouped[k]);
+
     // Render class dropdown options
     const classSelect = document.getElementById('modalClassSelect');
+    const labels = { A: 'Premium', B: 'Standard', C: 'Economy', D: 'Basic', Discounted: 'Surplus / Discount' };
     classSelect.innerHTML = '<option value="" disabled selected>Select class…</option>' +
-      batches.map((b, i) => {
-        const labels = { A: 'Premium', B: 'Standard', C: 'Economy', D: 'Basic', Discounted: 'Surplus / Discount' };
-        return `<option value="${i}">Class ${b.quality_class} — ${labels[b.quality_class] || b.quality_class}</option>`;
-      }).join('');
+      mergedBatches.map((b, i) =>
+        `<option value="${i}">Class ${b.quality_class} — ${labels[b.quality_class] || b.quality_class}</option>`
+      ).join('');
 
     classSelect.onchange = function() {
-      selectBatch(batches[parseInt(this.value)]);
+      selectBatch(mergedBatches[parseInt(this.value)]);
     };
 
     // Render reviews
-    const reviews = reviewData[productId] || [];
+    currentReviews = reviewData[productId] || [];
+    reviewPage = 1;
     const reviewsSection = document.getElementById('modalReviewsSection');
-    const reviewsList = document.getElementById('modalReviewsList');
-    if (reviews.length > 0) {
+    if (currentReviews.length > 0) {
       reviewsSection.style.display = '';
-      reviewsList.innerHTML = reviews.map(r => `
-        <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #f0f0f0;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-            <span style="color:#f5a623;font-size:1rem;">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
-            <strong style="font-size:0.9rem;">${r.title}</strong>
-            <span style="font-size:0.75rem;color:#888;margin-left:auto;">${r.author} · ${r.date}</span>
-          </div>
-          <p style="font-size:0.85rem;color:#555;margin:0;">${r.content}</p>
-        </div>
-      `).join('');
+      renderReviews();
     } else {
       reviewsSection.style.display = 'none';
     }
@@ -398,16 +455,29 @@ function selectBatch(batch) {
     const allergens = raw.split(',').map(a => a.trim()).filter(Boolean);
     const imageDiv = card.querySelector('.image');
     if (!imageDiv) return;
-    allergens.forEach((allergen, i) => {
+    const MAX_VISIBLE = 4;
+    let slotIndex = 0;
+    allergens.forEach((allergen) => {
+      if (slotIndex >= MAX_VISIBLE) return;
       const key = getAllergenKey(allergen);
       if (!key) return;
       const badge = document.createElement('div');
       badge.className = 'allergen-badge';
       badge.title = allergen;
-      badge.style.cssText = `position:absolute;bottom:8px;left:${8 + i * 26}px;width:22px;height:22px;background:white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:${10 + i};`;
+      badge.style.cssText = `position:absolute;bottom:8px;left:${8 + slotIndex * 26}px;width:22px;height:22px;background:white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:${10 + slotIndex};`;
       badge.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ALLERGEN_SVGS[key]}</svg>`;
       imageDiv.appendChild(badge);
+      slotIndex++;
     });
+    const extra = allergens.filter(a => getAllergenKey(a)).length - slotIndex;
+    if (extra > 0) {
+      const more = document.createElement('div');
+      more.className = 'allergen-badge';
+      more.title = allergens.slice(MAX_VISIBLE).join(', ');
+      more.style.cssText = `position:absolute;bottom:8px;left:${8 + slotIndex * 26}px;width:22px;height:22px;background:#444;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:${10 + slotIndex};color:white;font-size:9px;font-weight:700;`;
+      more.textContent = `+${extra}`;
+      imageDiv.appendChild(more);
+    }
   }
 </script>
 
@@ -417,6 +487,7 @@ function selectBatch(batch) {
   let currentBatchId = null;
   let currentItemPrice = 0;
   let currentBatchStock = 0;
+  let currentBatchMaxQty = null;
   let currentBatchUnit = '';
   let currentProductId = null;
   let localQty = 0;  // pending qty, not yet committed to server
@@ -436,15 +507,38 @@ function selectBatch(batch) {
   function updateModalCartUI() {
     const stepper = document.getElementById('modalCartStepper');
     const addBtn  = document.getElementById('modalAddBtn');
+    const effectiveCap = currentBatchMaxQty !== null
+      ? Math.min(currentBatchStock, currentBatchMaxQty)
+      : currentBatchStock;
     document.getElementById('modalQty').textContent = localQty;
     document.getElementById('modalCartTotal').textContent = localQty > 0
       ? '£' + (localQty * currentItemPrice).toFixed(2) + ', ' + localQty + currentBatchUnit : '';
     stepper.style.display = localQty > 0 ? 'flex' : 'none';
     addBtn.textContent    = localQty > 0 ? 'Add to cart' : 'Add';
-    document.getElementById('modalIncBtn').disabled = localQty >= currentBatchStock;
-    document.getElementById('modalNotifyBtn').style.display =
-      (localQty > 0 && localQty >= currentBatchStock) ? '' : 'none';
+    document.getElementById('modalIncBtn').disabled = localQty >= effectiveCap;
+    const atCap = localQty > 0 && localQty >= effectiveCap;
+    document.getElementById('modalNotifyBtn').style.display = (atCap && localQty >= currentBatchStock) ? '' : 'none';
+    // Show cap hint for non-bulk customers
+    let capHint = document.getElementById('modalMaxQtyHint');
+    if (!capHint) {
+      capHint = document.createElement('p');
+      capHint.id = 'modalMaxQtyHint';
+      capHint.style.cssText = 'font-size:0.78rem;color:#888;margin:4px 0 0;';
+      document.getElementById('modalIncBtn').parentElement.after(capHint);
+    }
+    capHint.textContent = (currentBatchMaxQty !== null && atCap)
+      ? `Max ${currentBatchMaxQty} per order for standard customers.` : '';
   }
+
+  function showCartConfirm(name, qty, imgSrc) {
+    bootstrap.Modal.getInstance(document.getElementById('productModal'))?.hide();
+    document.getElementById('cartConfirmImg').src = imgSrc || '';
+    document.getElementById('cartConfirmQty').textContent = `Quantity: ${qty}`;
+    document.getElementById('cartConfirm').style.display = 'flex';
+  }
+  document.getElementById('cartConfirmClose').addEventListener('click', () => {
+    document.getElementById('cartConfirm').style.display = 'none';
+  });
 
   // Commits localQty to the server and updates navbar/badge
   function commitCart() {
@@ -468,6 +562,11 @@ function selectBatch(batch) {
       updateCardCartBadge(currentProductId);
       updateDrawerIfOpen(data);
       updateNavbarCart(data.total_items, data.total_price);
+      showCartConfirm(
+        document.getElementById('modalName').textContent.trim(),
+        data.quantity,
+        document.getElementById('modalImage').src
+      );
     });
   }
 
@@ -495,11 +594,26 @@ function selectBatch(batch) {
     }
   });
   document.getElementById('modalIncBtn').addEventListener('click', () => {
-    if (localQty < currentBatchStock) { localQty++; updateModalCartUI(); }
+    const effectiveCap = currentBatchMaxQty !== null
+      ? Math.min(currentBatchStock, currentBatchMaxQty) : currentBatchStock;
+    if (localQty < effectiveCap) { localQty++; updateModalCartUI(); }
   });
   document.getElementById('modalDecBtn').addEventListener('click', () => {
     if (localQty > 1) { localQty--; updateModalCartUI(); }
   });
+
+  function updateCardDiscountBadge(card) {
+    const batches = batchData[card.dataset.productId] || [];
+    const discounted = batches.filter(b => b.surplus && parseFloat(b.discount) > 0);
+    card.querySelectorAll('.card-corner-ribbon').forEach(el => el.remove());
+    if (discounted.length > 0) {
+      const maxDiscount = Math.max(...discounted.map(b => parseFloat(b.discount)));
+      const ribbon = document.createElement('div');
+      ribbon.className = 'card-corner-ribbon';
+      ribbon.textContent = `${maxDiscount}% OFF`;
+      card.querySelector('.image').appendChild(ribbon);
+    }
+  }
 
   function attachCardClickHandlers() {
     document.querySelectorAll('.widget-card-grid .card').forEach(card => {
@@ -508,6 +622,7 @@ function selectBatch(batch) {
       });
       updateCardCartBadge(card.dataset.productId);
       renderAllergenBadges(card);
+      updateCardDiscountBadge(card);
     });
   }
   attachCardClickHandlers();
@@ -523,12 +638,24 @@ function selectBatch(batch) {
 
   searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => fetchResults(), 500);
+    searchTimer = setTimeout(() => fetchResults(true), 500);
   });
 
   document.querySelectorAll('.filters input[type="checkbox"]').forEach(cb => {
-    cb.addEventListener('change', () => fetchResults());
+    cb.addEventListener('change', () => fetchResults(true));
   });
+
+  function toggleAllergenPanel() {
+    const panel = document.getElementById('allergenPanel');
+    const arrow = document.getElementById('allergenArrow');
+    const open = panel.style.display === 'none';
+    panel.style.display = open ? '' : 'none';
+    arrow.style.transform = open ? 'rotate(180deg)' : '';
+  }
+  // Auto-open panel if allergens are already active (e.g. page load with params)
+  if (document.querySelectorAll('input[name="exclude_allergen"]:checked').length > 0) {
+    toggleAllergenPanel();
+  }
 
   const offerBtn = document.querySelector('.widget-offer-btn');
   if (offerBtn) {
@@ -539,9 +666,19 @@ function selectBatch(batch) {
     });
   }
 
-  function fetchResults() {
+  let currentPage = {{ page_obj.number }};
+
+  function goToPage(page) {
+    currentPage = page;
+    fetchResults();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function fetchResults(resetPage = false) {
+    if (resetPage) currentPage = 1;
     const form = searchInput.closest('form');
     const params = new URLSearchParams(new FormData(form));
+    params.set('page', currentPage);
 
     fetch(`?${params.toString()}`, {
       headers: { 'x-requested-with': 'XMLHttpRequest' }
@@ -602,8 +739,66 @@ function selectBatch(batch) {
         </div>
       `).join('');
       attachCardClickHandlers();
+
+      // Update pagination controls
+      const pag = document.getElementById('homePagination');
+      pag.innerHTML = '';
+      if (data.has_prev) {
+        const btn = document.createElement('button');
+        btn.className = 'page-btn'; btn.textContent = '← Prev';
+        btn.onclick = () => goToPage(data.page - 1);
+        pag.appendChild(btn);
+      }
+      if (data.total_pages > 1) {
+        const info = document.createElement('span');
+        info.style.cssText = 'font-size:0.9rem;color:#666;';
+        info.textContent = `Page ${data.page} of ${data.total_pages}`;
+        pag.appendChild(info);
+      }
+      if (data.has_next) {
+        const btn = document.createElement('button');
+        btn.className = 'page-btn'; btn.textContent = 'Next →';
+        btn.onclick = () => goToPage(data.page + 1);
+        pag.appendChild(btn);
+      }
     });
   }
+
+  // ── Review pagination ──────────────────────────────────────────────────────
+  const REVIEWS_PER_PAGE = 3;
+  let reviewPage = 1;
+  let currentReviews = [];
+
+  function renderReviews() {
+    const start = (reviewPage - 1) * REVIEWS_PER_PAGE;
+    const slice = currentReviews.slice(start, start + REVIEWS_PER_PAGE);
+    const list = document.getElementById('modalReviewsList');
+    list.innerHTML = slice.map(r => `
+      <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #f0f0f0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span style="color:#f5a623;font-size:1rem;">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span>
+          <strong style="font-size:0.9rem;">${r.title}</strong>
+          <span style="font-size:0.75rem;color:#888;margin-left:auto;">${r.author} · ${r.date}</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;margin:0;">${r.content}</p>
+      </div>`).join('');
+
+    const totalPages = Math.ceil(currentReviews.length / REVIEWS_PER_PAGE);
+    let pagHtml = '';
+    if (totalPages > 1) {
+      pagHtml = `<div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:8px;">
+        <button class="page-btn" onclick="changeReviewPage(-1)" ${reviewPage === 1 ? 'disabled' : ''}>← Prev</button>
+        <span style="font-size:0.82rem;color:#888;">${reviewPage} / ${totalPages}</span>
+        <button class="page-btn" onclick="changeReviewPage(1)" ${reviewPage === totalPages ? 'disabled' : ''}>Next →</button>
+      </div>`;
+    }
+    document.getElementById('reviewPagination').innerHTML = pagHtml;
+  }
+
+  function changeReviewPage(dir) {
+    const totalPages = Math.ceil(currentReviews.length / REVIEWS_PER_PAGE);
+    reviewPage = Math.max(1, Math.min(totalPages, reviewPage + dir));
+    renderReviews();
+  }
 </script>
-<script src="{% static 'cart.js' %}"></script>
 {% endblock %}

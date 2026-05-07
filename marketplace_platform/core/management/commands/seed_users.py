@@ -16,6 +16,6 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         for users in SEED_USERS:
             user, created = User.objects.get_or_create(email=users['email'], defaults={'category': users['category']})
-            user.set_password('password123')
+            user.set_password('Password123')
             user.save()
             self.stdout.write(f"[core/management/commands/seed_users.py] Created: {users['email']}")

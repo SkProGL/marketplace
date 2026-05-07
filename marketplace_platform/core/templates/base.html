@@ -55,7 +55,7 @@
                         {% if navbar_alerts %}{% for alert in navbar_alerts %}
                         <li><a class="dropdown-item d-flex gap-2 align-items-start py-2" href="{{ alert.link_url }}">
                                 <i class="bi bi-{{ alert.icon }} text-{{ alert.colour }} mt-1"></i>
-                                <div style="font-size:.85rem; overflow-wrap: break-word; white-space: normal">{{ alert.message }}<br><small class="text-success">{{ alert.link_label }} →</small></div>
+                                <div style="font-size:.85rem; overflow-wrap: break-word; white-space: normal">{{ alert.message }}{% if alert.message_status %}<br><span class="text-muted" style="font-size:.8rem">{{ alert.message_status }}</span>{% endif %}{% if alert.note %}<br><span class="text-muted" style="font-size:.8rem">"{{ alert.note }}"</span>{% endif %}<br><small class="text-success">{{ alert.link_label }} →</small></div>
                             </a></li>
                         {% endfor %}{% else %}
                         <li><p class="text-center text-muted py-3 mb-0" style="font-size:.85rem">No alerts right now</p></li>
@@ -90,8 +90,9 @@
                     <div class="base-btn-group" id="base-manage">
                         <a href="{% url 'management' %}" title="View stored data" class="position-relative">
                             {% include 'includes/icons/icon_manage.html' %} Manage
-                            {% if navbar_total_alert_count %}
-                            <span class="position-absolute start-100 translate-middle badge rounded-pill bg-success text-white " >{{ navbar_total_alert_count }}</span>
+                            {% if stock_alert.total %}
+                            
+                            <span class="position-absolute start-100 translate-middle badge rounded-pill bg-danger text-white">{{ stock_alert.total }}</span>
                             {% endif %}
                         </a>
                     </div>
@@ -106,7 +107,9 @@
                     <!-- ORDERS -->
                     <div class="base-btn-group" id="base-order-history">
                         <a href="{% url 'orders' %}" title="Order history">
-                            {% include 'includes/icons/icon_orders.html' %} Orders</a>
+                            {% include 'includes/icons/icon_orders.html' %} Orders
+                        </a>
+  
                     </div>
                     
                     <!-- CART -->
@@ -154,6 +157,7 @@
         {% endblock %}
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'cart.js' %}"></script>
 
     <!-- To cause modal windows to respect base template (nav bar, etc.) -->
     {% block modals %}{% endblock %}

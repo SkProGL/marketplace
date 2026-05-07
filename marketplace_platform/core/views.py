@@ -1,19 +1,27 @@
 import json
 import os
 import difflib
-from django.db.models import Q, Sum, Subquery, OuterRef, Prefetch, Avg, Count
+from collections import defaultdict
+from django.db.models import Q, Sum, Subquery, OuterRef, Prefetch, Avg, Count, F
 from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, update_session_auth_hash
 from django.http import Http404, HttpResponse, JsonResponse
+from django.core.paginator import Paginator
 from django.conf import settings
+<<<<<<< HEAD
 from django.contrib.auth.forms import PasswordChangeForm
 from .models import User, Product, ProductBatch, Order, OrderProduct, Review, OrderStatusHistory
 from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm
+=======
+from .models import User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory
+from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm
+>>>>>>> 6a93a25a55738dd8d39c0e9e30115c0f8154f114
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
@@ -56,9 +64,20 @@ def update_cart_ajax(request, product_id):
         cart = request.session.get('cart', {})
         pid = str(product_id)
 
-        cart[pid] = cart.get(pid, 0) + delta
-        if cart[pid] <= 0:
-            del cart[pid]
+        new_qty = cart.get(pid, 0) + delta
+        if new_qty <= 0:
+            cart.pop(pid, None)
+        else:
+            # Enforce max_order_qty cap for standard customers
+            is_bulk_buyer = getattr(request.user, 'category', None) in ('Restaurant', 'Community')
+            if not is_bulk_buyer:
+                try:
+                    batch = ProductBatch.objects.get(pk=product_id)
+                    if batch.max_order_qty is not None:
+                        new_qty = min(new_qty, batch.max_order_qty)
+                except ProductBatch.DoesNotExist:
+                    pass
+            cart[pid] = new_qty
 
         request.session['cart'] = cart
         request.session.modified = True
@@ -95,11 +114,12 @@ def cart_contents(request):
     cart_items_data = []
     total_price = 0
     if cart:
-        batches = ProductBatch.objects.select_related('product').filter(id__in=cart.keys())
+        batches = ProductBatch.objects.select_related('product__producer').filter(id__in=cart.keys())
         for batch in batches:
             qty = cart.get(str(batch.id), 0)
             subtotal = float(batch.price) * qty
             total_price += subtotal
+            producer = batch.product.producer
             cart_items_data.append({
                 'id': str(batch.id),
                 'name': batch.name,
@@ -107,6 +127,8 @@ def cart_contents(request):
                 'quantity': qty,
                 'subtotal': round(subtotal, 2),
                 'image': batch.image.url if batch.image else None,
+                'producer': getattr(producer, 'organisation_name', None) or str(producer),
+                'producer_id': str(producer.id),
             })
     return JsonResponse({
         'total_items': sum(cart.values()),
@@ -259,9 +281,15 @@ def checkout(request):
     cart_items = []
 
     for pid, qty in cart.items():
-        batch = get_object_or_404(ProductBatch, id=pid)
+        batch = get_object_or_404(ProductBatch.objects.select_related('product__producer'), id=pid)
         total_price += batch.price * qty
         cart_items.append({'product': batch, 'quantity': qty})
+
+    groups = defaultdict(list)
+    for item in cart_items:
+        producer = item['product'].product.producer
+        groups[producer].append(item)
+    cart_by_producer = [{'producer': p, 'items': items} for p, items in groups.items()]
 
     min_delivery_date = (timezone.now() + timedelta(hours=48)
                          ).strftime('%Y-%m-%dT%H:%M')
@@ -273,36 +301,71 @@ def checkout(request):
         if form.is_valid():
             recurrence_type = request.POST.get('recurrence_type', 'None')
             recurrence_day = request.POST.get('recurrence_day', None)
-            new_order = Order.objects.create(
-                customer=request.user,
-                total_price=round(total_price, 2),
-                delivery_date=form.cleaned_data['delivery_date'],
-                order_status='PENDING',
-                recurrence_type=recurrence_type,
-                recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
-            )
+            try:
+                with transaction.atomic():
+                    # Lock all batch rows for the duration of this transaction
+                    batch_ids = [str(item['product'].pk) for item in cart_items]
+                    locked = {
+                        str(b.pk): b
+                        for b in ProductBatch.objects.select_for_update().filter(pk__in=batch_ids)
+                    }
 
-            # 3. Loop through the memory to link ALL items to this order
-            for item in cart_items:
-                batch = item['product']
-                OrderProduct.objects.create(
-                    order=new_order,
-                    batch=batch,
-                    numPurchased=item['quantity'],
-                    price_at_purchase=batch.price,
-                )
+                    # Validate stock before touching anything
+                    short = []
+                    for item in cart_items:
+                        b = locked[str(item['product'].pk)]
+                        if b.stock < item['quantity']:
+                            short.append(
+                                f"{item['product'].name}: only {b.stock} available, "
+                                f"you requested {item['quantity']}"
+                            )
+                    if short:
+                        raise ValueError(short)
 
-            # Clear the memory now that the order is placed!
-            request.session['cart'] = {}
+                    new_order = Order.objects.create(
+                        customer=request.user,
+                        total_price=round(total_price, 2),
+                        delivery_date=form.cleaned_data['delivery_date'],
+                        order_status='PENDING',
+                        recurrence_type=recurrence_type,
+                        recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
+                    )
 
-            messages.success(request, "Order placed successfully!")
-            return redirect('orders')
+                    # One ProducerOrder per producer, then assign each item to its slice
+                    producer_orders = {}
+                    for item in cart_items:
+                        batch = item['product']
+                        producer = batch.product.producer
+                        if producer.id not in producer_orders:
+                            producer_orders[producer.id] = ProducerOrder.objects.create(
+                                order=new_order,
+                                producer=producer,
+                                order_status='PENDING',
+                                delivery_date=form.cleaned_data['delivery_date'],
+                            )
+                        OrderProduct.objects.create(
+                            order=new_order,
+                            producer_order=producer_orders[producer.id],
+                            batch=batch,
+                            numPurchased=item['quantity'],
+                            price_at_purchase=batch.price,
+                        )
+                        ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - item['quantity'])
+
+                    request.session['cart'] = {}
+                    messages.success(request, "Order placed successfully!")
+                    return redirect('orders')
+
+            except ValueError as e:
+                for msg in e.args[0]:
+                    messages.error(request, msg)
     else:
         form = CheckoutForm()
 
     return render(request, 'checkout.html', {
         'form': form,
-        'cart_items': cart_items,  # Pass the list to HTML so you can show what they are buying
+        'cart_items': cart_items,
+        'cart_by_producer': cart_by_producer,
         'total_price': total_price,
         'min_delivery_date': min_delivery_date,
         'user_address': request.user.address,
@@ -349,10 +412,17 @@ def home_view(request):
     if request.GET.get('discounted'):
         items = items.filter(batches__surplus=True).distinct()
 
+    if request.GET.get('organic'):
+        items = items.filter(organic=True)
+
     if request.GET.get('in_season'):
         items = items.filter(
             batches__availability__in=['Available', 'Available All Year']
         ).distinct()
+
+    exclude_allergens = request.GET.getlist('exclude_allergen')
+    for allergen in exclude_allergens:
+        items = items.exclude(allergens__contains=[allergen])
 
     suggestion = None
     if q and not items.exists():
@@ -361,7 +431,11 @@ def home_view(request):
         if matches:
             suggestion = matches[0]
 
-    items_list = list(items)
+    total_count = items.count()
+    paginator = Paginator(items, 12)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    items_list = list(page_obj)
 
     def _batch_dict(b, unit=''):
         return {
@@ -377,6 +451,7 @@ def home_view(request):
             'availability': b.availability,
             'seasonStart': b.seasonStart,
             'seasonEnd': b.seasonEnd,
+            'max_order_qty': b.max_order_qty,
         }
 
     batch_data = {
@@ -401,7 +476,7 @@ def home_view(request):
         pid = str(r.product_id)
         if pid not in review_data:
             review_data[pid] = []
-        if len(review_data[pid]) < 5:
+        if True:
             review_data[pid].append({
                 'rating': r.rating,
                 'title': r.title,
@@ -426,8 +501,22 @@ def home_view(request):
             'avg_rating': round(item.avg_rating, 1) if item.avg_rating else None,
             'review_count': item.review_count,
         } for item in items_list]
-        return JsonResponse({'items': data, 'count': len(data), 'suggestion': suggestion, 'batch_data': batch_data, 'review_data': review_data})
+        return JsonResponse({
+            'items': data,
+            'count': total_count,
+            'suggestion': suggestion,
+            'batch_data': batch_data,
+            'review_data': review_data,
+            'page': page_obj.number,
+            'total_pages': paginator.num_pages,
+            'has_next': page_obj.has_next(),
+            'has_prev': page_obj.has_previous(),
+        })
 
+    allergen_list = [
+        'Celery', 'Gluten', 'Crustaceans', 'Eggs', 'Fish', 'Lupin', 'Milk',
+        'Molluscs', 'Mustard', 'Nuts', 'Peanuts', 'Sesame', 'Soya', 'Sulphites',
+    ]
     return render(request, 'home.html', {
         'items': items_list,
         'batch_data': batch_data,
@@ -437,9 +526,14 @@ def home_view(request):
         'selected_categories': categories,
         'in_stock': request.GET.get('in_stock'),
         'discounted': request.GET.get('discounted'),
+        'organic': request.GET.get('organic'),
         'in_season': request.GET.get('in_season'),
+        'exclude_allergens': exclude_allergens,
+        'allergen_list': allergen_list,
         'search_query': q,
         'suggestion': suggestion,
+        'page_obj': page_obj,
+        'total_count': total_count,
     })
 
     
@@ -473,10 +567,8 @@ def clear_cart(request):
 @login_required
 def clear_notifications(request):
     if request.method == 'POST':
-        keys = request.POST.getlist('keys')
-        dismissed = set(request.session.get('dismissed_notifications', []))
-        dismissed.update(keys)
-        request.session['dismissed_notifications'] = list(dismissed)
+        request.user.notifications_cleared_at = timezone.now()
+        request.user.save(update_fields=['notifications_cleared_at'])
     return redirect(request.META.get('HTTP_REFERER', 'home'))
 
 
@@ -517,8 +609,7 @@ def upload_item(request):
 
         if form_type == 'new_product':
             active_tab = 'new'
-            allergens_raw = request.POST.get('allergens', '').strip()
-            allergens = [a.strip() for a in allergens_raw.split(',') if a.strip()]
+            allergens = request.POST.getlist('allergens')
 
             product, created = Product.objects.get_or_create(
                 name=request.POST.get('name', '').strip(),
@@ -543,6 +634,10 @@ def upload_item(request):
                     best_before=date.today() + timedelta(days=365),
                     image=image,
                 )
+            if created:
+                messages.success(request, f'"{product.name}" was created successfully!')
+            else:
+                messages.warning(request, f'A product named "{product.name}" already exists.')
             return redirect('inventory_upload')
 
         elif form_type == 'new_batch':
@@ -572,13 +667,20 @@ def upload_item(request):
                 discount_percentage=discount_pct,
                 discount_note=request.POST.get('discount_note', ''),
                 image=request.FILES.get('image'),
+                max_order_qty=int(request.POST['max_order_qty']) if request.POST.get('max_order_qty') else None,
+                surplus_discount_percentage=Decimal(request.POST.get('surplus_discount_percentage') or '20'),
             )
             return redirect('home')
 
+    allergen_list = [
+        'Celery', 'Gluten', 'Crustaceans', 'Eggs', 'Fish', 'Lupin', 'Milk',
+        'Molluscs', 'Mustard', 'Nuts', 'Peanuts', 'Sesame', 'Soya', 'Sulphites',
+    ]
     return render(request, 'inventory_upload.html', {
         'months': Product.Months.choices,
         'products': products,
         'active_tab': active_tab,
+        'allergen_list': allergen_list,
     })
 
 
@@ -751,31 +853,39 @@ def management_view(request: HttpResponse):
     row_filter = {}
     distinct = False
     readonly_fields = set()
+    modal_id_field = None
     if selected_model_name:
-        # Producer specific handling
-        if not is_superuser and user_category == 'Producer' :
-            # Get producer account specific rows for selected model
-            row_filter = {
-                'Product':   {'producer': request.user},
-                'Order':     {'orderproduct__batch__product__producer': request.user},
-                'StoryPost': {'user': request.user},
-                'Recipe':    {'user': request.user},
-            }.get(selected_model_name, {})
-            distinct = selected_model_name == 'Order' # Only need one product
-            # Specify Order as read-only, excludiong order_status for Producers
-            if selected_model_name == 'Order':
-                order_model = app_config.get_model('Order')
-                readonly_fields = {field.name for field in 
-                                   order_model._meta.fields if field.name != 'order_status'}
-            # Remove id selection fields for producer
-            elif selected_model_name in ('Product', 'StoryPost', 'Recipe'): 
-                owner_field = 'producer' if selected_model_name == 'Product' else 'user'
-                readonly_fields = {owner_field}
+        # For the Order model, show one ProducerOrder row per producer slice
+        # so each producer's status is independent and admins see per-producer rows
+        if selected_model_name == 'Order':
+            selected_model = app_config.get_model('ProducerOrder')
+            if is_superuser:
+                row_filter = {}
+                readonly_fields = {'order', 'producer'}
+            else:
+                row_filter = {'producer': request.user}
+                readonly_fields = {'order', 'producer'}
+            modal_id_field = 'order_id'
+            selected_data = get_management_context(
+                request, selected_model, 'ProducerOrder',
+                add_new=False, row_filter=row_filter, distinct=False,
+                readonly_fields=readonly_fields, modal_id_field=modal_id_field)
+        else:
+            # Producer specific handling for non-Order models
+            if not is_superuser and user_category == 'Producer':
+                row_filter = {
+                    'Product':   {'producer': request.user},
+                    'StoryPost': {'user': request.user},
+                    'Recipe':    {'user': request.user},
+                }.get(selected_model_name, {})
+                if selected_model_name in ('Product', 'StoryPost', 'Recipe'):
+                    owner_field = 'producer' if selected_model_name == 'Product' else 'user'
+                    readonly_fields = {owner_field}
 
-        selected_model = app_config.get_model(selected_model_name)
-        selected_data = get_management_context(
-            request, selected_model, selected_model_name,
-            add_new, row_filter, distinct, readonly_fields)
+            selected_model = app_config.get_model(selected_model_name)
+            selected_data = get_management_context(
+                request, selected_model, selected_model_name,
+                add_new, row_filter, distinct, readonly_fields)
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render(request, 'includes/management/management_table_fragment.html', {
@@ -799,21 +909,36 @@ def community(request):
 @login_required
 def get_order_summary_json(request, order_id):
     """
-    For expanded Order view in management panel.
-    Extract order_id from URL parameter as defined in urls.
-    Return Json data contained comprehensive order details.
+    Returns order summary data for the management modal.
+    Producers see only their ProducerOrder slice; superusers see all items combined.
     """
     try:
-        # Use select_related to fetch all related fk models for speed
         order = Order.objects.select_related('customer').get(pk=order_id)
+        is_producer = not request.user.is_superuser and getattr(request.user, 'category', None) == 'Producer'
 
-        # Get products attached to this order for receipt
-        items = order.orderproduct_set.all().select_related('batch__product')
+        # Resolve which ProducerOrder(s) to draw from
+        if is_producer:
+            po = order.producer_orders.get(producer=request.user)
+            status = po.order_status
+            advance_url = f"/management/order/{po.id}/advance/" if status in ('PENDING', 'CONFIRMED') else None
+            next_status = {'PENDING': 'CONFIRMED', 'CONFIRMED': 'READY'}.get(status)
+            items = list(po.items.select_related('batch__product__producer'))
+            history_qs = po.status_history.all()
+        else:
+            status = order.order_status
+            # For superusers, advance is per-ProducerOrder — find the first advanceable one
+            first_po = order.producer_orders.filter(order_status__in=('PENDING', 'CONFIRMED')).first()
+            advance_url = f"/management/order/{first_po.id}/advance/" if first_po else None
+            next_status = {'PENDING': 'CONFIRMED', 'CONFIRMED': 'READY'}.get(first_po.order_status) if first_po else None
+            items = list(order.orderproduct_set.select_related('batch__product__producer'))
+            history_qs = OrderStatusHistory.objects.filter(
+                producer_order__order=order
+            ).select_related('changed_by').order_by('changed_at')
 
         receipt_data = []
         for item in items:
             stock_now = item.batch.stock
-            receipt_data.append({
+            entry = {
                 'name': item.batch.product.name,
                 'quality_class': item.batch.get_quality_class_display(),
                 'best_before': item.batch.best_before.strftime('%Y-%m-%d') if item.batch.best_before else '',
@@ -823,11 +948,17 @@ def get_order_summary_json(request, order_id):
                 'total': f"{item.numPurchased * item.batch.price:.2f}",
                 'stock_now': stock_now,
                 'stock_after': stock_now - item.numPurchased,
-            })
+            }
+            if not is_producer:
+                p = item.batch.product.producer
+                entry['producer'] = p.organisation_name or p.full_name or p.email
+            receipt_data.append(entry)
+
+        visible_total = sum(item.numPurchased * item.batch.price for item in items)
         data = {
-            'status': order.order_status,
-            'advance_url': f"/management/order/{order_id}/advance/" if order.order_status in ('PENDING', 'CONFIRMED') else None,
-            'next_status': {'PENDING': 'CONFIRMED', 'CONFIRMED': 'READY'}.get(order.order_status),
+            'status': status,
+            'advance_url': advance_url,
+            'next_status': next_status,
             'customer_name': order.customer.full_name or order.customer.email,
             'customer_type': order.customer.category,
             'email': order.customer.email,
@@ -838,63 +969,66 @@ def get_order_summary_json(request, order_id):
             'delivery_date': order.delivery_date.strftime('%Y-%m-%d') if order.delivery_date else '',
             'recurrence': f"{order.get_recurrence_day_display()} ({order.recurrence_type})" if order.recurrence_type != 'None' else '',
             'total_price': f"{order.total_price:.2f}",
-            'receipt': receipt_data
+            'visible_total': f"{visible_total:.2f}",
+            'show_producer_col': not is_producer,
+            'receipt': receipt_data,
+            'status_history': [
+                {
+                    'from': h.from_status,
+                    'to': h.to_status,
+                    'by': h.changed_by.email if h.changed_by else '—',
+                    'at': h.changed_at.strftime('%d %b %Y %H:%M'),
+                    'note': h.note,
+                }
+                for h in history_qs
+            ],
         }
-        data['status_history'] = [
-            {
-                'from': h.from_status,
-                'to': h.to_status,
-                'by': h.changed_by.email if h.changed_by else '—',
-                'at': h.changed_at.strftime('%d %b %Y %H:%M'),
-                'note': h.note,
-            }
-            for h in order.status_history.all()
-        ]
         return JsonResponse(data)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=404)
 
 
 def auto_update_order_statuses():
-    """Auto-update orders when their delivery date has passed."""
+    """Auto-update ProducerOrders when delivery date has passed, then sync parent Order."""
     now = timezone.now()
 
-    # READY => DELIVERED
-    ready_due = Order.objects.filter(order_status='READY', delivery_date__lte=now)
-    histories = [
-        OrderStatusHistory(order=o, from_status='READY', to_status='DELIVERED',
+    ready_due = ProducerOrder.objects.filter(order_status='READY', delivery_date__lte=now).select_related('order')
+    OrderStatusHistory.objects.bulk_create([
+        OrderStatusHistory(producer_order=po, from_status='READY', to_status='DELIVERED',
                            changed_by=None, note='Auto-delivered: delivery date reached.')
-        for o in ready_due
-    ]
-    OrderStatusHistory.objects.bulk_create(histories)
+        for po in ready_due
+    ])
+    affected_orders = set(po.order_id for po in ready_due)
     ready_due.update(order_status='DELIVERED')
 
-    # PENDING => CANCELLED (producer never acknowledged)
-    unacknowledged = Order.objects.filter(order_status='PENDING', delivery_date__lte=now)
-    histories = [
-        OrderStatusHistory(order=o, from_status='PENDING', to_status='CANCELLED',
-                           changed_by=None, note='Auto-cancelled: delivery date passed without acknowledgement.')
-        for o in unacknowledged
-    ]
-    OrderStatusHistory.objects.bulk_create(histories)
+    unacknowledged = ProducerOrder.objects.filter(
+        order_status__in=('PENDING', 'CONFIRMED'), delivery_date__lte=now
+    ).select_related('order')
+    OrderStatusHistory.objects.bulk_create([
+        OrderStatusHistory(producer_order=po, from_status=po.order_status, to_status='CANCELLED',
+                           changed_by=None, note='Auto-cancelled: delivery date passed without fulfilment.')
+        for po in unacknowledged
+    ])
+    affected_orders |= set(po.order_id for po in unacknowledged)
     unacknowledged.update(order_status='CANCELLED')
+
+    for order in Order.objects.filter(id__in=affected_orders):
+        order.sync_status()
 
 
 @management_access_required
-def advance_order_status(request, order_id):
+def advance_order_status(request, producer_order_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     try:
-        order = Order.objects.get(pk=order_id)
-    except Order.DoesNotExist:
-        return JsonResponse({'error': 'Order not found'}, status=404)
+        po = ProducerOrder.objects.select_related('order', 'producer').get(pk=producer_order_id)
+    except ProducerOrder.DoesNotExist:
+        return JsonResponse({'error': 'ProducerOrder not found'}, status=404)
 
-    # Producer can only advance orders that contain their products
-    if not request.user.is_superuser and getattr(request.user, 'category', None) == 'Producer':
-        if not order.products.filter(product__producer=request.user).exists():
-            return JsonResponse({'error': 'Access denied'}, status=403)
+    if not request.user.is_superuser and po.producer != request.user:
+        return JsonResponse({'error': 'Access denied'}, status=403)
 
-    current = order.order_status
+    current = po.order_status
     try:
         next_status = STATUS_SEQUENCE[STATUS_SEQUENCE.index(current) + 1]
     except (ValueError, IndexError):
@@ -902,15 +1036,16 @@ def advance_order_status(request, order_id):
 
     note = request.POST.get('note', '').strip()
     OrderStatusHistory.objects.create(
-        order=order,
+        producer_order=po,
         from_status=current,
         to_status=next_status,
         changed_by=request.user,
         note=note,
     )
-    order.order_status = next_status
-    order.save(update_fields=['order_status'])
-    messages.success(request, f"Order {str(order_id)[:8]} advanced to {next_status.title()}.")
+    po.order_status = next_status
+    po.save(update_fields=['order_status'])
+    po.order.sync_status()
+    messages.success(request, f"Order {str(producer_order_id)[:8]} advanced to {next_status.title()}.")
     return redirect(request.META.get('HTTP_REFERER', 'management'))
 
 
