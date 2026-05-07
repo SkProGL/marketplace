@@ -6,11 +6,12 @@ from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login
+from django.contrib.auth.forms import PasswordChangeForm
 from django.http import Http404, HttpResponse, JsonResponse
 from django.core.paginator import Paginator
 from django.conf import settings
 from .models import User, Product, ProductBatch, Order, OrderProduct, Review, OrderStatusHistory
-from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm
+from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from django.contrib.auth.decorators import login_required
