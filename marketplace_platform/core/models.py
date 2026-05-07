@@ -588,3 +588,27 @@ class OrderStatusHistory(models.Model):
 
     class Meta:
         ordering = ['changed_at']
+
+
+class Complaint(models.Model):
+    class Category(models.TextChoices):
+        FOOD_SAFETY = "Food Safety"
+        QUALITY = "Quality Issue"
+        DELIVERY = "Delivery Problem"
+        BILLING = "Billing/Payment"
+        OTHER = "Other"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    submitted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    name = models.CharField(max_length=128)
+    email = models.EmailField()
+    category = models.CharField(max_length=30, choices=Category.choices, default=Category.OTHER)
+    description = models.TextField()
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    resolved = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-submitted_at']
+
+    def __str__(self):
+        return f"Complaint #{str(self.id)[:8]} — {self.category} ({self.submitted_at.strftime('%d-%m-%Y')})"

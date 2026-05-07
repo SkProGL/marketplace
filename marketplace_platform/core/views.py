@@ -7,12 +7,13 @@ from django.apps import apps
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, update_session_auth_hash
+from django.core.mail import send_mail
 from django.http import Http404, HttpResponse, JsonResponse
 from django.core.paginator import Paginator
 from django.conf import settings
 from django.contrib.auth.forms import PasswordChangeForm
-from .models import User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe
-from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
+from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe
+from core.forms import ComplaintForm, LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm, ProfileEditForm, RecipeForm, StoryPostForm
 from core.permissions import MANAGE_MODEL_ACCESS, get_all_models, management_access_required
 from core.utils import get_management_context, get_recurring_orders_context, handle_management_post
 from django.contrib.auth.decorators import login_required
@@ -728,27 +729,32 @@ def signup_view(request):
     if request.method == "POST":
         form = SignupForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            remember_me = form.cleaned_data.get('remember_me')
-            print("SIGNUP SUCCESS")
+            category = form.cleaned_data.get('category')
 
-            print(f"\033[42m\033[30msignup success\033[0m")
-            print("Created user:", {
-                "id": str(user.id),
-                "username": getattr(user, "username", ""),
-                "full_name": user.full_name,
-                "email": user.email,
-                "phone": user.phone,
-                "address": user.address,
-                "postcode": user.postcode,
-                "category": user.category,
-                "organisation_name": user.organisation_name,
-            })
+            if category == User.Category.PRODUCER:
+                details = (
+                    f"Name: {form.cleaned_data.get('full_name')}\n"
+                    f"Email: {form.cleaned_data.get('email')}\n"
+                    f"Organisation: {form.cleaned_data.get('organization_name', '')}\n"
+                    f"Phone: {form.cleaned_data.get('phone', '')}\n"
+                    f"Address: {form.cleaned_data.get('address', '')}, {form.cleaned_data.get('postcode', '')}"
+                )
+                send_mail(
+                    subject="New Producer Application",
+                    message=f"A new producer has applied for an account:\n\n{details}",
+                    from_email=settings.ADMIN_EMAIL,
+                    recipient_list=[settings.ADMIN_EMAIL],
+                    fail_silently=True,
+                )
+                messages.success(
+                    request,
+                    "Thank you for applying as a producer! Your application is under review — we'll be in touch by email shortly."
+                )
+                return redirect("home")
+
+            user = form.save()
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            if not remember_me:
-                request.session.set_expiry(0)
-            else:
-                request.session.set_expiry(1209600)  # 2 weeks
+            request.session.set_expiry(0)
             messages.success(request, "Account created successfully.")
             return redirect("home")
 
@@ -1065,6 +1071,12 @@ def delete_story(request, story_id):
 
 
 @login_required
+def story_detail(request, story_id):
+    story = get_object_or_404(StoryPost, id=story_id)
+    return render(request, 'story_detail.html', {'story': story})
+
+
+@login_required
 def toggle_favourite_recipe(request, recipe_id):
     recipe = get_object_or_404(Recipe, id=recipe_id)
     fav, created = FavouriteRecipe.objects.get_or_create(user=request.user, recipe=recipe)
@@ -1313,6 +1325,24 @@ def edit_profile(request):
 def terms_view(request):
     """Display the terms and conditions / cookie policy page."""
     return render(request, 'terms.html')
+
+
+def submit_complaint(request):
+    if request.method == 'POST':
+        form = ComplaintForm(request.POST)
+        if form.is_valid():
+            complaint = form.save(commit=False)
+            if request.user.is_authenticated:
+                complaint.submitted_by = request.user
+            complaint.save()
+            messages.success(request, "Your complaint has been submitted. Our compliance team will review it shortly.")
+            return redirect('home')
+    else:
+        initial = {}
+        if request.user.is_authenticated:
+            initial = {'name': request.user.full_name or '', 'email': request.user.email}
+        form = ComplaintForm(initial=initial)
+    return render(request, 'complaint_form.html', {'form': form})
 
 
 @login_required

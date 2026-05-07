@@ -198,3 +198,6 @@ AXES_COOLOFF_TIME = 1  # 1 hour
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_URL = '/login/'
 
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'admin@marketplace.com')
+

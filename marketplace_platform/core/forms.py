@@ -2,7 +2,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django import forms
 from django.contrib.auth.forms import PasswordChangeForm
-from .models import Product, ProductBatch, User, Review, Recipe, StoryPost
+from .models import Complaint, Product, ProductBatch, User, Review, Recipe, StoryPost
 
 PASSWORD_STRENGTH_ERROR = "Password must be at least 8 characters and include 1 lowercase and 1 uppercase letter."
 
@@ -13,10 +13,6 @@ class SignupForm(forms.ModelForm):
     organization_name = forms.CharField(required=False)
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'})
-    )
-    remember_me = forms.BooleanField(
-        required=False, 
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
     accept_policy = forms.BooleanField(
         required=True,
@@ -189,4 +185,16 @@ class StoryPostForm(forms.ModelForm):
         widgets = {
             'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Share your farm story, harvest update, or news…'}),
             'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+
+class ComplaintForm(forms.ModelForm):
+    class Meta:
+        model = Complaint
+        fields = ['name', 'email', 'category', 'description']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Your full name'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'your@email.com'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Please describe your complaint in detail…'}),
         }

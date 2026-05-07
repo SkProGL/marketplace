@@ -123,16 +123,17 @@
                 <div class="ch-producer">{{ story.user.organisation_name|default:story.user.full_name|default:story.user.email }}</div>
                 <div class="ch-date">{{ story.date_posted|date:"d F Y" }}</div>
                 <p class="ch-desc">{{ story.content|truncatechars:200 }}</p>
-                {% if request.user == story.user %}
                 <div class="ch-card-footer">
-                    <a href="{% url 'edit_story' story.id %}" class="ch-save-btn">Edit</a>
+                    <a href="{% url 'story_detail' story.id %}" class="ch-save-btn">Read full story →</a>
+                    {% if request.user == story.user %}
+                    <a href="{% url 'edit_story' story.id %}" class="ch-save-btn" style="margin-left:8px;">Edit</a>
                     <form method="POST" action="{% url 'delete_story' story.id %}" style="display:inline;">
                         {% csrf_token %}
                         <button type="submit" class="ch-save-btn" style="border-color:#e74c3c;color:#e74c3c;"
                                 onclick="return confirm('Delete this story?')">Delete</button>
                     </form>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
         </div>
         {% endfor %}
