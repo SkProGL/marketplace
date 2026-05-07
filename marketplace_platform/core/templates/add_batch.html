@@ -11,7 +11,12 @@
 
     <input type="hidden" name="stock_alert_threshold" value="0">
     <input type="hidden" name="discount_percentage" value="0">
-    <input type="hidden" name="best_before" value="2026-12-31">
+
+    <label for="best_before">Best Before</label>
+    <input type="date" id="best_before" name="best_before" required>
+    {% if batch_form.best_before.errors %}
+    <p style="color:#dc3545;font-size:0.85rem;margin:4px 0 0;">{{ batch_form.best_before.errors|join:", " }}</p>
+    {% endif %}
 
     <label>Product</label>
     <select name="product_id" required>
@@ -79,6 +84,18 @@
 </div>
 
 <script>
+  (function() {
+    const min = new Date();
+    min.setTime(min.getTime() + 72 * 60 * 60 * 1000);
+    const y = min.getFullYear();
+    const m = String(min.getMonth() + 1).padStart(2, '0');
+    const d = String(min.getDate()).padStart(2, '0');
+    const minDate = `${y}-${m}-${d}`;
+    const picker = document.getElementById('best_before');
+    picker.min = minDate;
+    if (!picker.value || picker.value < minDate) picker.value = minDate;
+  })();
+
   document.querySelector('input[type="file"]').addEventListener('change', function() {
     const span = this.closest('label.upload').querySelector('.upload-label');
     span.textContent = this.files && this.files[0] ? this.files[0].name : 'Select image';

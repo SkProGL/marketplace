@@ -167,7 +167,10 @@ function drawerUpdateCart(productId, delta, btn) {
     },
     body: JSON.stringify({ delta: delta }),
   })
-    .then((r) => r.json())
+    .then((r) => {
+      if (r.redirected || r.status === 403) { window.location.href = "/login/"; return null; }
+      return r.json();
+    })
     .then((data) => {
       updateNavbarCart(data.total_items, data.total_price);
 

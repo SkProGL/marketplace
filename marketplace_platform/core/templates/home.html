@@ -404,6 +404,12 @@
       selectBatch(mergedBatches[parseInt(this.value)]);
     };
 
+    const bestIdx = mergedBatches.findIndex(b => b.stock > 0);
+    if (bestIdx !== -1) {
+      classSelect.value = bestIdx;
+      selectBatch(mergedBatches[bestIdx]);
+    }
+
     currentReviews = reviewData[productId] || [];
     reviewPage = 1;
     document.getElementById('modalReviewsSection').style.display = '';
