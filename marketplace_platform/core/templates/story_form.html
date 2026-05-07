@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'community.css' %}">
+
+<div class="ch-header">
+    <h1>{{ action }} Farm Story</h1>
+    <p>Share seasonal updates, harvest news, and behind-the-scenes moments</p>
+</div>
+
+<div class="ch-form-container">
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="ch-form-row">
+            <label class="form-label fw-semibold">Your story</label>
+            {{ form.content }}
+            {% if form.content.errors %}<div class="text-danger small mt-1">{{ form.content.errors }}</div>{% endif %}
+        </div>
+
+        <div class="ch-form-row">
+            <label class="form-label fw-semibold">Photo (optional)</label>
+            {{ form.image }}
+        </div>
+
+        <div class="ch-form-actions">
+            <button type="submit" class="ch-btn-primary">Publish story</button>
+            <a href="{% url 'community' %}" class="ch-btn-outline">Cancel</a>
+            {% if story %}
+            <form method="POST" action="{% url 'delete_story' story.id %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this story?')">Delete</button>
+            </form>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,6 +1,8 @@
 
 from core.utils import get_low_stock_products, get_pending_orders
-from .models import OrderStatusHistory, ProductBatch, ProducerOrder
+from .models import OrderProduct, OrderStatusHistory, ProductBatch, ProducerOrder
+
+
 def navbar_alerts(request):
     """
     Navigation bar notification bell.
@@ -70,6 +72,29 @@ def navbar_alerts(request):
                 "note": h.note or "",
                 "link_url": '/orders/',
                 "link_label": "View your orders",
+            })
+
+        # TC19: notify customers when products they've previously bought are on surplus/discount
+        purchased_product_ids = (OrderProduct.objects
+                                 .filter(order__customer=request.user)
+                                 .values_list('batch__product_id', flat=True)
+                                 .distinct())
+        surplus_filter = {'product__in': purchased_product_ids, 'surplus': True, 'stock__gt': 0}
+        if cleared_at:
+            surplus_filter['created_at__gt'] = cleared_at
+        surplus_batches = (ProductBatch.objects
+                           .filter(**surplus_filter)
+                           .select_related('product__producer')[:3])
+        for batch in surplus_batches:
+            discount = int(batch.effective_discount)
+            alerts.append({
+                "key": f"surplus_{batch.id}",
+                "icon": "tag-fill",
+                "colour": "warning",
+                "message": f"{batch.product.name} is on discount!",
+                "message_status": f"{discount}% off - {batch.product.producer.organisation_name or batch.product.producer.email}",
+                "link_url": '/',
+                "link_label": "Shop now",
             })
     visible = alerts[-LIMIT:]
     return {"navbar_alerts": visible, "navbar_alert_count": len(visible), "navbar_total_alert_count": len(alerts)}

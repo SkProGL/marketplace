@@ -266,12 +266,16 @@ class ProductBatch(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     # --- Convenience properties so templates can use batch.name, batch.producer etc. ---
+    _CLASS_DISCOUNTS = {'A': Decimal('0'), 'B': Decimal('15'), 'C': Decimal('30'), 'D': Decimal('45'), 'Discounted': Decimal('50')}
+
+    @property
+    def effective_discount(self):
+        return self.discount_percentage or self._CLASS_DISCOUNTS.get(self.quality_class, Decimal('0'))
+
     @property
     def price(self):
-        from decimal import Decimal
         base = self.product.price
-        class_discounts = {'A': Decimal('0'), 'B': Decimal('15'), 'C': Decimal('30'), 'D': Decimal('45'), 'Discounted': Decimal('50')}
-        discount = self.discount_percentage if self.discount_percentage else class_discounts.get(self.quality_class, Decimal('0'))
+        discount = self.effective_discount
         if discount:
             return (base * (1 - discount / Decimal('100'))).quantize(Decimal('0.01'))
         return base
@@ -476,6 +480,7 @@ class StoryPost(models.Model):
     content = models.TextField()
     image = models.ImageField(upload_to='item_images/', blank=True)
     date_posted = models.DateTimeField(auto_now_add=True)
+    is_flagged = models.BooleanField(default=False)
 
     class Meta:
         verbose_name_plural = "Stories"
@@ -500,6 +505,11 @@ class Recipe(models.Model):
         max_length=20, choices=Season.choices, default=Season.SPRING)
     ingredients = models.ManyToManyField(
         "Product", through="RecipeIngredients")
+    storage_guidance = models.TextField(blank=True)
+    is_flagged = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.title
 
 
 class RecipeIngredients(models.Model):
@@ -511,6 +521,16 @@ class RecipeIngredients(models.Model):
     class Meta:
         unique_together = ("recipe", "product")
         verbose_name_plural = "Recipe Ingredients"
+
+
+class FavouriteRecipe(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favourite_recipes')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='favourited_by')
+    saved_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'recipe')
 
 
 class Review(models.Model):
@@ -574,3 +594,27 @@ class OrderStatusHistory(models.Model):
 
     class Meta:
         ordering = ['changed_at']
+
+
+class Complaint(models.Model):
+    class Category(models.TextChoices):
+        FOOD_SAFETY = "Food Safety"
+        QUALITY = "Quality Issue"
+        DELIVERY = "Delivery Problem"
+        BILLING = "Billing/Payment"
+        OTHER = "Other"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    submitted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    name = models.CharField(max_length=128)
+    email = models.EmailField()
+    category = models.CharField(max_length=30, choices=Category.choices, default=Category.OTHER)
+    description = models.TextField()
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    resolved = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-submitted_at']
+
+    def __str__(self):
+        return f"Complaint #{str(self.id)[:8]} — {self.category} ({self.submitted_at.strftime('%d-%m-%Y')})"

@@ -237,6 +237,12 @@
           <div id="modalReviewsList"></div>
           <div id="reviewPagination"></div>
         </div>
+
+        <!-- Recipe suggestions section -->
+        <div id="modalRecipesSection" style="display:none;margin-top:1.5rem;border-top:1px solid #dee2e6;padding-top:1rem;">
+          <h6 class="fw-bold mb-2" style="color:#1a7a4a;">Recipe suggestions</h6>
+          <div id="modalRecipesList" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -267,10 +273,12 @@
 {{ cart_items|json_script:"cart-state-data" }}
 {{ batch_data|json_script:"batch-data" }}
 {{ review_data|json_script:"review-data" }}
+{{ recipe_suggestions|json_script:"recipe-suggestions-data" }}
 
 <script>
   let batchData = JSON.parse(document.getElementById('batch-data').textContent);
   let reviewData = JSON.parse(document.getElementById('review-data').textContent);
+  const recipeSuggestionsData = JSON.parse(document.getElementById('recipe-suggestions-data').textContent);
   const userEmail = '{{ request.user.email }}';
   const userCategory = '{{ request.user.category }}';
   const isBulkBuyer = (userCategory === 'Restaurant' || userCategory === 'Community');
@@ -411,6 +419,25 @@ function selectBatch(batch) {
         '<p style="color:#888;font-size:0.88rem;">No reviews yet.</p>';
       document.getElementById('reviewPagination').innerHTML = '';
     }
+
+    // Render recipe suggestions
+    const recipes = recipeSuggestionsData[productId] || [];
+    const recipesSection = document.getElementById('modalRecipesSection');
+    const recipesList = document.getElementById('modalRecipesList');
+    if (recipes.length > 0) {
+      recipesSection.style.display = '';
+      const seasonColour = { Spring: '#2e7d32', Summer: '#f57f17', Autumn: '#bf360c', Winter: '#283593' };
+      recipesList.innerHTML = recipes.map(r => `
+        <a href="/community/recipe/${r.id}/"
+           style="display:inline-flex;flex-direction:column;gap:2px;padding:8px 12px;border:1.5px solid #c8e6c9;border-radius:8px;text-decoration:none;background:#f9fdf9;min-width:130px;">
+          <span style="font-size:0.8rem;font-weight:600;color:#1a7a4a;">${r.title}</span>
+          <span style="font-size:0.72rem;color:${seasonColour[r.season] || '#666'};">${r.season}</span>
+          <span style="font-size:0.7rem;color:#888;">${r.producer}</span>
+        </a>
+      `).join('');
+    } else {
+      recipesSection.style.display = 'none';
+    }
   });
 </script>
 
@@ -514,6 +541,7 @@ function selectBatch(batch) {
     const effectiveCap = currentBatchMaxQty !== null
       ? Math.min(currentBatchStock, currentBatchMaxQty)
       : currentBatchStock;
+  
     document.getElementById('modalQty').textContent = localQty;
     document.getElementById('modalCartTotal').textContent = localQty > 0
       ? '£' + (localQty * currentItemPrice).toFixed(2) + ', ' + localQty + currentBatchUnit : '';

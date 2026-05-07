@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'community.css' %}">
+
+<div style="max-width:720px; margin:0 auto; padding: 32px 0 48px;">
+
+    <a href="{% url 'community' %}" style="color:#1a7a4a; font-size:0.85rem; text-decoration:none;">← Back to Community Hub</a>
+
+    <div style="margin-top:20px;">
+        {% if recipe.image %}
+        <img src="{{ recipe.image.url }}" alt="{{ recipe.title }}"
+             style="width:100%; max-height:340px; object-fit:cover; border-radius:10px; margin-bottom:20px;">
+        {% endif %}
+
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+            <span class="ch-season-tag ch-season-{{ recipe.season|lower }}">{{ recipe.season }}</span>
+            <a href="{% url 'producer_profile_public' recipe.user.id %}" style="font-size:0.78rem; color:#888; text-decoration:none;">by {{ recipe.user.organisation_name|default:recipe.user.full_name|default:recipe.user.email }}</a>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:10px;">
+            <h1 style="font-size:1.6rem; font-weight:700; margin:0;">{{ recipe.title }}</h1>
+            {% if request.user.is_authenticated %}
+            <form method="POST" action="{% url 'toggle_favourite_recipe' recipe.id %}" style="margin:0; flex-shrink:0;">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit"
+                    style="display:inline-flex; align-items:center; gap:5px; padding:6px 14px; border-radius:999px; font-size:0.82rem; font-weight:600; cursor:pointer; transition:all 0.15s;
+                    {% if is_favourite %}background:#fde8e8; border:1.5px solid #dc3545; color:#dc3545;{% else %}background:#f5f5f5; border:1.5px solid #ccc; color:#555;{% endif %}">
+                    {% if is_favourite %}♥ Saved{% else %}♡ Save recipe{% endif %}
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        <p style="color:#555; line-height:1.6; margin-bottom:24px;">{{ recipe.description }}</p>
+
+        {% if ingredients %}
+        <div style="background:#f9fafb; border:1.5px solid #e0e0e0; border-radius:10px; padding:18px 20px; margin-bottom:28px;">
+            <h3 style="font-size:0.95rem; font-weight:700; margin-bottom:12px; color:#1a7a4a;">Ingredients</h3>
+            <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px;">
+                {% for ing in ingredients %}
+                <li style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem;">
+                    <span>{{ ing.product.name }}</span>
+                    <span style="color:#888; font-size:0.82rem;">{{ ing.quantity }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            <div style="margin-top:16px; padding-top:14px; border-top:1px solid #e0e0e0; display:flex; flex-wrap:wrap; gap:8px;">
+                {% for ing in ingredients %}
+                <a href="{% url 'home' %}?q={{ ing.product.name }}"
+                   style="padding:5px 12px; background:#1a7a4a; color:white; border-radius:20px; font-size:0.78rem; text-decoration:none;">
+                    Buy {{ ing.product.name }} →
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div style="background:white; border:1.5px solid #e0e0e0; border-radius:10px; padding:18px 20px; margin-bottom:20px;">
+            <h3 style="font-size:0.95rem; font-weight:700; margin-bottom:14px; color:#1a7a4a;">Instructions</h3>
+            <div style="font-size:0.9rem; color:#444; line-height:1.8; white-space:pre-line;">{{ recipe.instructions }}</div>
+        </div>
+
+        {% if recipe.storage_guidance %}
+        <div style="background:#f0faf4; border:1.5px solid #b7dfc9; border-radius:10px; padding:18px 20px; margin-bottom:20px;">
+            <h3 style="font-size:0.95rem; font-weight:700; margin-bottom:10px; color:#1a7a4a;">Storage guidance</h3>
+            <p style="font-size:0.9rem; color:#444; line-height:1.6; margin:0; white-space:pre-line;">{{ recipe.storage_guidance }}</p>
+        </div>
+        {% endif %}
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+            {% if request.user == recipe.user %}
+            <div style="display:flex; gap:10px; align-items:center;">
+                <a href="{% url 'edit_recipe' recipe.id %}" class="ch-btn-outline">Edit recipe</a>
+                <form method="POST" action="{% url 'delete_recipe' recipe.id %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="ch-btn-outline" style="color:#dc3545; border-color:#dc3545;" onclick="return confirm('Delete this recipe?')">Delete</button>
+                </form>
+            </div>
+            {% else %}
+            <div></div>
+            {% endif %}
+
+            {% if request.user.is_authenticated and request.user != recipe.user %}
+            <form method="POST" action="{% url 'report_content' %}" style="margin:0;">
+                {% csrf_token %}
+                <input type="hidden" name="content_type" value="recipe">
+                <input type="hidden" name="content_id" value="{{ recipe.id }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" style="background:none; border:none; color:#aaa; font-size:0.78rem; cursor:pointer; padding:0;"
+                    onclick="return confirm('Report this recipe as inappropriate?')">⚑ Report</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
