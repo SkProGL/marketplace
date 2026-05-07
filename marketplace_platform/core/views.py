@@ -1,5 +1,4 @@
 import json
-import os
 import difflib
 from collections import defaultdict
 from django.db.models import Q, Sum, Subquery, OuterRef, Prefetch, Avg, Count, F
@@ -9,7 +8,6 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, update_session_auth_hash
 from django.core.mail import send_mail
 from django.http import Http404, HttpResponse, JsonResponse
-from django.core.paginator import Paginator
 from django.conf import settings
 from django.contrib.auth.forms import PasswordChangeForm
 from .models import Complaint, User, Product, ProductBatch, Order, ProducerOrder, OrderProduct, Review, OrderStatusHistory, Recipe, RecipeIngredients, StoryPost, FavouriteRecipe
@@ -264,6 +262,10 @@ def reorder(request, order_id):
     return redirect('checkout')
 
 @login_required
+def loading(request):
+    return render(request, 'loading.html')
+
+@login_required
 def checkout(request):
     cart = request.session.get('cart', {})
 
@@ -285,12 +287,21 @@ def checkout(request):
     for item in cart_items:
         producer = item['product'].product.producer
         groups[producer].append(item)
-    cart_by_producer = [{'producer': p, 'items': items} for p, items in groups.items()]
 
-    min_delivery_date = (timezone.now() + timedelta(hours=48)
-                         ).strftime('%Y-%m-%dT%H:%M')
-    checkout_fee = total_price * Decimal('0.05')
-    total_price += checkout_fee
+    cart_by_producer = []
+    total_commission = Decimal('0')
+    for producer, items in groups.items():
+        subtotal = sum(item['product'].price * item['quantity'] for item in items)
+        commission = (subtotal * Decimal('0.05')).quantize(Decimal('0.01'))
+        cart_by_producer.append({
+            'producer': producer,
+            'items': items,
+            'subtotal': subtotal,
+            'commission': commission,
+        })
+        total_commission += commission
+
+    min_delivery_date = (timezone.now().date() + timedelta(days=2)).strftime('%Y-%m-%d')
 
     if request.method == "POST":
         form = CheckoutForm(request.POST)
@@ -321,7 +332,11 @@ def checkout(request):
                     new_order = Order.objects.create(
                         customer=request.user,
                         total_price=round(total_price, 2),
-                        delivery_date=form.cleaned_data['delivery_date'],
+                        delivery_date=timezone.make_aware(
+                            timezone.datetime.combine(form.cleaned_data['delivery_date'], timezone.datetime.min.time())
+                        ),
+                        delivery_address=form.cleaned_data['delivery_address'],
+                        delivery_postcode=form.cleaned_data['delivery_postcode'],
                         order_status='PENDING',
                         recurrence_type=recurrence_type,
                         recurrence_day=int(recurrence_day) if recurrence_day and recurrence_type != 'None' else None,
@@ -349,8 +364,7 @@ def checkout(request):
                         ProductBatch.objects.filter(pk=batch.pk).update(stock=F('stock') - item['quantity'])
 
                     request.session['cart'] = {}
-                    messages.success(request, "Order placed successfully!")
-                    return redirect('orders')
+                    return redirect('order_confirmation', order_id=new_order.id)
 
             except ValueError as e:
                 for msg in e.args[0]:
@@ -362,10 +376,41 @@ def checkout(request):
         'form': form,
         'cart_items': cart_items,
         'cart_by_producer': cart_by_producer,
+        'total_commission': total_commission,
         'total_price': total_price,
         'min_delivery_date': min_delivery_date,
         'user_address': request.user.address,
         'user_postcode': request.user.postcode
+    })
+
+
+@login_required
+def order_confirmation(request, order_id):
+    order = get_object_or_404(Order, id=order_id, customer=request.user)
+    items = order.orderproduct_set.select_related('batch__product__producer').all()
+
+    groups = defaultdict(list)
+    for op in items:
+        producer = op.batch.product.producer
+        groups[producer].append(op)
+
+    cart_by_producer = []
+    total_commission = Decimal('0')
+    for producer, ops in groups.items():
+        subtotal = sum(op.price_at_purchase * op.numPurchased for op in ops)
+        commission = (subtotal * Decimal('0.05')).quantize(Decimal('0.01'))
+        total_commission += commission
+        cart_by_producer.append({
+            'producer': producer,
+            'items': ops,
+            'subtotal': subtotal,
+            'commission': commission,
+        })
+
+    return render(request, 'order_confirmation.html', {
+        'order': order,
+        'cart_by_producer': cart_by_producer,
+        'total_commission': total_commission,
     })
 
 
@@ -626,6 +671,10 @@ def upload_item(request):
             active_tab = 'new'
             allergens = request.POST.getlist('allergens')
 
+            all_year = 'all_year' in request.POST
+            season_start = request.POST.get('season_start', 'January')
+            season_end = request.POST.get('season_end', 'December')
+
             product, created = Product.objects.get_or_create(
                 name=request.POST.get('name', '').strip(),
                 defaults={
@@ -637,6 +686,9 @@ def upload_item(request):
                     'stock_alert_threshold': 0,
                     'allergens': allergens,
                     'organic': 'organic' in request.POST,
+                    'all_year': all_year,
+                    'seasonStart': season_start,
+                    'seasonEnd': season_end,
                 }
             )
             image = request.FILES.get('image')
@@ -648,6 +700,8 @@ def upload_item(request):
                     stock=1,
                     best_before=date.today() + timedelta(days=365),
                     image=image,
+                    seasonStart=season_start,
+                    seasonEnd=season_end,
                 )
             if created:
                 messages.success(request, f'"{product.name}" was created successfully!')
@@ -1314,6 +1368,37 @@ def edit_profile(request):
 
     else:
         profile_form = ProfileEditForm(instance=request.user)
+        password_form = PasswordChangeForm(request.user)
+
+    return render(request, "edit_profile.html", {
+        "profile_form": profile_form,
+        "password_form": password_form,
+    })
+
+
+
+@login_required
+def edit_profile(request):
+    category = getattr(request.user, 'category', None)
+    if request.method == "POST":
+        profile_form = ProfileEditForm(request.POST, request.FILES, instance=request.user, category=category)
+        password_form = PasswordChangeForm(request.user, request.POST)
+
+        if "update_profile" in request.POST:
+            if profile_form.is_valid():
+                profile_form.save()
+                messages.success(request, "Profile updated successfully.")
+                return redirect("profile")
+
+        elif "change_password" in request.POST:
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, "Password changed successfully.")
+                return redirect("profile")
+
+    else:
+        profile_form = ProfileEditForm(instance=request.user, category=category)
         password_form = PasswordChangeForm(request.user)
 
     return render(request, "edit_profile.html", {

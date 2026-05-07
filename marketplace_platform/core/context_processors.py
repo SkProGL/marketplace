@@ -1,6 +1,8 @@
 
 from core.utils import get_low_stock_products, get_pending_orders
 from .models import OrderProduct, OrderStatusHistory, ProductBatch, ProducerOrder
+
+
 def navbar_alerts(request):
     """
     Navigation bar notification bell.

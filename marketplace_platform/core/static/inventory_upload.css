@@ -1,3 +1,5 @@
+@import 'globals.css';
+
 :root {
   --font: system-ui;
 
@@ -21,7 +23,7 @@
   --padding-button: 12px;
   --padding-card: 28px;
 
-  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-card: var(--shadow);
 
   --gap-row: 6px;
   --gap-toggle: 8px;

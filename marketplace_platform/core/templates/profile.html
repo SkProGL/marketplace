@@ -35,6 +35,8 @@
   color: var(--green);
   flex-shrink: 0;
   border: 3px solid var(--green);
+  overflow: hidden;
+  padding: 0;
 }
 .profile-header-info h1 {
   font-size: 1.5rem;
@@ -118,7 +120,12 @@
 <div class="profile-wrapper">
   <div class="profile-header">
     <div class="profile-avatar">
-      {{ user.full_name|default:user.email|first|upper }}
+      {% if user.profile_image %}
+        <img src="{{ user.profile_image.url }}" alt="Profile photo"
+             style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+      {% else %}
+        {{ user.full_name|default:user.email|first|upper }}
+      {% endif %}
     </div>
     <div class="profile-header-info">
       <h1>{{ user.full_name|default:"No name set" }}</h1>
@@ -130,13 +137,18 @@
       {% else %}
         <span class="profile-badge badge-{{ user.category|cut:' ' }}">{{ user.category }}</span>
       {% endif %}
+            <a href="{% url 'edit_profile' %}" class="btn btn-sm btn-outline-dark m-2">
+        Edit Profile
+    </a>
     </div>
   </div>
   {% if user.is_superuser %}
   <div class="profile-superuser-note">
     <i class="bi bi-shield-lock-fill"></i>
     You have full admin access. Manage the platform via the
-    <a href="/admin/" style="color:inherit;font-weight:700;">Django Admin panel</a>.
+    <a href="/admin/" style="color:inherit;font-weight:700;">Django Admin panel</a>
+    or
+    <a href="/management/" style="color:inherit;font-weight:700;">BRFN Admin panel</a>.
   </div>
   {% endif %}
   <div class="profile-card">
@@ -158,6 +170,23 @@
         <label>Account type</label>
         <p>{% if user.is_superuser %}Superuser / Admin{% else %}{{ user.category }}{% endif %}</p>
       </div>
+      {% if not user.is_superuser and user.category != 'Customer' %}
+      <div class="profile-field">
+        <label>
+          {% if user.category == 'Producer' %}Farm / Producer name
+          {% elif user.category == 'Restaurant' %}Restaurant name
+          {% else %}Organisation name
+          {% endif %}
+        </label>
+        <p {% if not user.organisation_name %}class="empty"{% endif %}>{{ user.organisation_name|default:"Not set" }}</p>
+      </div>
+      {% endif %}
+      {% if user.category == 'Community group' %}
+      <div class="profile-field">
+        <label>Charity / Education status</label>
+        <p {% if not user.charity_status %}class="empty"{% endif %}>{{ user.charity_status|default:"Not set" }}</p>
+      </div>
+      {% endif %}
     </div>
   </div>
   <div class="profile-card">

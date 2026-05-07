@@ -1,3 +1,5 @@
+@import 'globals.css';
+
 .ch-header { padding: 32px 0 16px; }
 .ch-header h1 { font-size: 1.8rem; font-weight: 600; margin-bottom: 4px; }
 .ch-header p { color: #888; font-size: 0.9rem; }
