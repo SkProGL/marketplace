@@ -7,6 +7,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login
 from django.http import Http404, HttpResponse, JsonResponse
+from django.core.paginator import Paginator
 from django.conf import settings
 from .models import User, Product, ProductBatch, Order, OrderProduct, Review, OrderStatusHistory
 from core.forms import LoginForm, ProductForm, ProductBatchForm, SignupForm, CheckoutForm, ReviewForm
