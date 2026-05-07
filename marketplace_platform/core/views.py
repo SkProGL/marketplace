@@ -1658,3 +1658,86 @@ def delete_review(request, review_id):
         review.delete()
         messages.success(request, "Review deleted.")
     return redirect("orders")
+
+
+@login_required
+def finance_view(request):
+    user = request.user
+    is_admin = user.is_superuser or user.category == 'Admin'
+    
+    # Date filtering
+    date_from = request.GET.get('from')
+    date_to = request.GET.get('to')
+    
+    # Default to last 30 days for finance
+    if not date_from:
+        date_from = (timezone.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+    if not date_to:
+        date_to = timezone.now().strftime('%Y-%m-%d')
+        
+    date_from_dt = datetime_type.strptime(date_from, '%Y-%m-%d')
+    date_to_dt = datetime_type.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+    
+    payments = Payment.objects.select_related('producer', 'order').filter(
+        created_at__gte=date_from_dt,
+        created_at__lt=date_to_dt
+    ).order_by('-created_at')
+    
+    if not is_admin:
+        payments = payments.filter(producer=user)
+        
+    # Generate CSV if requested
+    if request.GET.get('format') == 'csv':
+        import csv
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="finance_report_{date_from}_{date_to}.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Date', 'Order ID', 'Producer', 'Order Total', 'Commission (5%)', 'Net Payment (95%)', 'Status'])
+        
+        for p in payments:
+            order_total = p.order.total_price
+            commission = (order_total * Decimal('0.05')).quantize(Decimal('0.01'))
+            net = (order_total * Decimal('0.95')).quantize(Decimal('0.01'))
+            writer.writerow([
+                p.created_at.strftime('%Y-%m-%d'),
+                str(p.order.id)[:8],
+                p.producer.organisation_name or p.producer.email,
+                order_total,
+                commission,
+                net,
+                p.status
+            ])
+        return response
+
+    # Prepare data for template
+    report_data = []
+    total_network_commission = Decimal('0')
+    total_producer_payout = Decimal('0')
+    
+    for p in payments:
+        order_total = p.order.total_price
+        commission = (order_total * Decimal('0.05')).quantize(Decimal('0.01'))
+        net = (order_total * Decimal('0.95')).quantize(Decimal('0.01'))
+        total_network_commission += commission
+        total_producer_payout += net
+        
+        report_data.append({
+            'date': p.created_at,
+            'order_id': str(p.order.id),
+            'producer': p.producer.organisation_name or p.producer.email,
+            'order_total': order_total,
+            'commission': commission,
+            'producer_payment': net,
+            'status': p.status,
+        })
+        
+    context = {
+        'report_data': report_data,
+        'total_network_commission': total_network_commission,
+        'total_producer_payout': total_producer_payout,
+        'date_from': date_from,
+        'date_to': date_to,
+        'is_admin': is_admin,
+    }
+    
+    return render(request, 'finance.html', context)
