@@ -132,9 +132,9 @@ class LoginForm(forms.Form):
     )
 class CheckoutForm(forms.Form):
     
-    delivery_date = forms.DateTimeField(
-        widget=forms.DateTimeInput(attrs={
-            'type': 'datetime-local', 
+    delivery_date = forms.DateField(
+        widget=forms.DateInput(attrs={
+            'type': 'date', 
             'class': 'form-control'
         })
     )
@@ -144,8 +144,8 @@ class CheckoutForm(forms.Form):
         
         # Check if delivery_date is not None (in case of empty input)
         if delivery_date:
-            # Check if it's at least 48 hours away
-            if delivery_date < timezone.now() + timedelta(hours=48):
+            # Check if it's at least 48 hours away (2 days)
+            if delivery_date < (timezone.now() + timedelta(hours=48)).date():
                 raise forms.ValidationError("Delivery must be at least 48 hours from now.")
         return delivery_date
     

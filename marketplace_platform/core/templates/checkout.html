@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+
 <div class="container mt-5 d-flex justify-content-center">
     <div class="widget-account-form-card" style="width: 100%; padding: 3rem; align-items: flex-start;">
         <h2 style="color: var(--main-color); margin-bottom: 1.5rem;">Secure Checkout</h2>
@@ -39,13 +40,13 @@
 
                     <h5 class="mt-4">2. Delivery Details</h5>
                     <div class="mb-3">
-                        <label class="form-label">Delivery Address (Pre-filled)</label>
-                        <textarea class="form-control" readonly rows="2" disabled>{{ user_address }}&#10;{{ user_postcode }}</textarea>
+                        <label class="form-label">Delivery Address</label>
+                        <textarea class="form-control" rows="2">{{ user_address }}&#10;{{ user_postcode }}</textarea>
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label">Select Delivery Date</label>
-                        <input type="datetime-local" name="delivery_date" class="form-control" min="{{ min_delivery_date }}" required>
+                        <input type="date" name="delivery_date" class="form-control" min="{{ min_delivery_date }}" required>
                         {% if form.delivery_date.errors %}
                             <div class="text-danger mt-2 small">{{ form.delivery_date.errors|join:", " }}</div>
                         {% endif %}
@@ -112,7 +113,7 @@
   font-weight: 600;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.103);
+  box-shadow: var(--shadow);
   position: relative;
   overflow: hidden;
   transition-duration: .3s;
@@ -152,3 +153,4 @@
 }
 </style>
 {% endblock %}
+

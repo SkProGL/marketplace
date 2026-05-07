@@ -261,6 +261,10 @@ def reorder(request, order_id):
     return redirect('checkout')
 
 @login_required
+def loading(request):
+    return render(request, 'loading.html')
+
+@login_required
 def checkout(request):
     cart = request.session.get('cart', {})
 
@@ -285,7 +289,7 @@ def checkout(request):
     cart_by_producer = [{'producer': p, 'items': items} for p, items in groups.items()]
 
     min_delivery_date = (timezone.now() + timedelta(hours=48)
-                         ).strftime('%Y-%m-%dT%H:%M')
+                         ).strftime('%Y-%m-%d')
     checkout_fee = total_price * Decimal('0.05')
     total_price += checkout_fee
 
@@ -347,7 +351,7 @@ def checkout(request):
 
                     request.session['cart'] = {}
                     messages.success(request, "Order placed successfully!")
-                    return redirect('orders')
+                    return redirect('loading')
 
             except ValueError as e:
                 for msg in e.args[0]:
