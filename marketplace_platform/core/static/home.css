@@ -339,3 +339,96 @@ img {
   line-height: 16px;
   pointer-events: none;
 }
+
+.allergen-filter-wrap {
+  margin-top: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.allergen-filter-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f8f8f8;
+  border: none;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.allergen-filter-toggle:hover {
+  background: #f0f0f0;
+}
+
+.allergen-active-count {
+  background: #dc3545;
+  color: white;
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.allergen-filter-hint {
+  font-size: 0.78rem;
+  color: #888;
+  margin: 8px 12px 4px;
+}
+
+#allergenPanel .filters {
+  padding: 6px 12px 10px;
+}
+
+#allergenPanel .filters label.allergen-label {
+  background: #fff3f3;
+  border-color: #f5c6cb;
+  color: #842029;
+}
+
+#allergenPanel .filters input[type="checkbox"]:checked + label.allergen-label {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: white;
+}
+
+.card-corner-ribbon {
+  position: absolute;
+  top: 12px;
+  right: -30px;
+  width: 120px;
+  background: linear-gradient(135deg, #a71d2a, #dc3545);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+  padding: 5px 0;
+  transform: rotate(45deg);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+
+.page-btn {
+  padding: 6px 14px;
+  border: 1px solid #198754;
+  background: white;
+  color: #198754;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s;
+}
+.page-btn:hover:not(:disabled) {
+  background: #198754;
+  color: white;
+}
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

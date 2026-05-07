@@ -40,8 +40,8 @@
         <tbody>
             {% for row in selected_data.rows %}
             <!-- Set draft row to green for emphasis -->
-<tr data-row-id="{{ row.id }}" class="{% if row.id == 'draft' %} table-success {% elif row.row_class %}{{ row.row_class }}{% endif %}{% if selected_model_name == 'Order' and row.id != 'draft' and not user.is_superuser %} order-summary-row js-load-order-summary{% endif %}"
-    {% if selected_model_name == 'Order' and row.id != 'draft' %}order-row-id="{{ row.id }}"{% endif %}>                {% if selected_model_name == "Order" %}
+<tr data-row-id="{{ row.id }}" class="{% if row.id == 'draft' %} table-success {% elif row.row_class %}{{ row.row_class }}{% endif %}{% if selected_model_name == 'Order' and row.id != 'draft' %} order-summary-row js-load-order-summary{% endif %}"
+    {% if selected_model_name == 'Order' and row.id != 'draft' %}order-row-id="{{ row.modal_id|default:row.id }}"{% endif %}>                {% if selected_model_name == "Order" %}
                 <td></td>
                 {% endif %}
                 {% for cell in row.cells %}
@@ -89,7 +89,7 @@
                     {% with status=cell.value %}
                     {% if status == 'PENDING' or status == 'CONFIRMED' %}
                     <div class="status-pill status-advance-btn d-flex justify-content-between align-items-center status-pill-{{ status|lower }} js-load-order-summary"
-                        style="cursor:pointer;" order-row-id="{{ row.id }}">
+                        style="cursor:pointer;" order-row-id="{{ row.modal_id|default:row.id }}">
                         <span>{{ status }}</span><i class="bi bi-arrow-right ms-2"></i>
                     </div>
                     {% elif status == 'READY' %}

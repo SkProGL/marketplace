@@ -204,6 +204,29 @@ body {
   font-size: 0.85rem;
 }
 
+.cart-producer-group {
+  margin-bottom: 4px;
+}
+
+.cart-producer-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #198754;
+  padding: 8px 1.5rem 4px;
+}
+
+.cart-producer-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e0e0e0;
+}
+
 .cart-drawer-footer {
   padding: 1rem 1.5rem;
   border-top: 1px solid #eee;
@@ -282,7 +305,7 @@ body {
 }
 
 .modal {
-  top: 10%;
+  top: 6%;
 }
 
 .navbar {

@@ -35,8 +35,10 @@
 .oh-item-price { font-weight: 500; }
 .oh-instructions { font-size: 0.8rem; color: #888; margin-top: 8px; }
 .oh-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #f5f5f5; }
-.oh-btn-outline { padding: 7px 16px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.82rem; text-decoration: none; color: #333; }
-.oh-btn-primary { padding: 7px 16px; background: #333; color: white; border-radius: 6px; font-size: 0.82rem; text-decoration: none; }
+.oh-btn-outline { padding: 7px 16px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.82rem; text-decoration: none; color: #333; transition: border-color .15s, background .15s, color .15s; cursor: pointer; }
+.oh-btn-outline:hover { border-color: #333; background: #333; color: #fff; }
+.oh-btn-primary { padding: 7px 16px; background: #333; color: white; border-radius: 6px; font-size: 0.82rem; text-decoration: none; border: 1.5px solid #333; transition: background .15s, color .15s; cursor: pointer; }
+.oh-btn-primary:hover { background: #555; border-color: #555; }
 .oh-empty { padding: 32px; text-align: center; color: #888; }
 .oh-ai-card { background: #f0f4e8; border: 1.5px solid #c8d9b8; border-radius: 10px; padding: 20px;}/* position: sticky; top: 24px; }*/
 .oh-ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
