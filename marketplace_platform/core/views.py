@@ -260,6 +260,10 @@ def reorder(request, order_id):
     return redirect('checkout')
 
 @login_required
+def loading(request):
+    return render(request, 'loading.html')
+
+@login_required
 def checkout(request):
     cart = request.session.get('cart', {})
 

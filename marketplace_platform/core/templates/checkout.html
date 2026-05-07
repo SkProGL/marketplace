@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+
 <div class="container mt-5 d-flex justify-content-center">
     <div class="widget-account-form-card" style="width: 100%; padding: 3rem; align-items: flex-start;">
         <h2 style="color: var(--main-color); margin-bottom: 1.5rem;">Secure Checkout</h2>
@@ -171,7 +172,7 @@
   font-weight: 600;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.103);
+  box-shadow: var(--shadow);
   position: relative;
   overflow: hidden;
   transition-duration: .3s;
@@ -211,3 +212,4 @@
 }
 </style>
 {% endblock %}
+
