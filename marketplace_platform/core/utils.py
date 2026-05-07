@@ -386,6 +386,14 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
                     row_class = 'table-danger'
                 elif stock <= threshold:
                     row_class = 'table-warning'
+        elif selected_model_name == 'Product':
+            month_names = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December",
+            ]
+            next_month_name = month_names[timezone.now().month % 12]
+            if not getattr(record, 'all_year', True) and getattr(record, 'seasonStart', None) == next_month_name:
+                row_class = 'table-info'
 
         modal_id = str(getattr(record, modal_id_field)) if modal_id_field else str(record.pk)
         rows.append({'id': record.pk, 'modal_id': modal_id, 'cells': row_cells, 'row_class': row_class})
@@ -432,6 +440,15 @@ def get_pending_orders(user):
     """Returns pending ProducerOrders for the given producer/superuser."""
     from core.models import ProducerOrder
     return ProducerOrder.objects.filter(producer=user, order_status='PENDING')
+
+def get_seasonal_coming_soon_products(user):
+    """Returns a producer's products whose season begins next calendar month."""
+    month_names = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    ]
+    next_month_name = month_names[timezone.now().month % 12]  # wraps Dec → Jan
+    return Product.objects.filter(producer=user, all_year=False, seasonStart=next_month_name)
     
 def get_next_occurrence(order: Order) -> date | None:
     """Calculate the next delivery date based on recurrence type."""
