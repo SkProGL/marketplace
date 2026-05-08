@@ -3,6 +3,7 @@
   --secondary-color: #00ac7c;
 }
 .container {
+  margin-top: 4rem;
   justify-content: center;
   display: flex;
   justify-content: center;

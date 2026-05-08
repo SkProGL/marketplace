@@ -85,7 +85,8 @@
          data-avg-rating="{{ item.avg_rating|default:'' }}"
          data-review-count="{{ item.review_count }}"
          data-product-id="{{ item.id }}"
-         data-food-miles="{{ item.food_miles|default:'' }}">
+         data-food-miles="{{ item.food_miles|default:'' }}"
+         data-image="{% if item.image %}{{ item.image.url }}{% endif %}">
       <div class="image">
         {% if item.in_stock_batches.0.image %}
           <img src="{{ item.in_stock_batches.0.thumbnail.url }}" 
@@ -93,8 +94,8 @@
                alt="{{ item.name }}" 
                loading="lazy" 
                class="product-image">
-        {% elif item.primary_image %}
-          <img src="{{ item.thumbnail.url }}" data-src="/media/{{ item.primary_image }}" alt="{{ item.name }}" loading="lazy" class="product-image">
+        {% elif item.image %}
+          <img src="{{ item.thumbnail.url }}" data-src="{{ item.image.url }}" alt="{{ item.name }}" loading="lazy" class="product-image">
         {% else %}
           <img src="{% static 'test.jpg' %}" alt="{{ item.name }}" loading="lazy">
         {% endif %}
@@ -304,7 +305,7 @@
     } else {
       discRow.style.display = 'none';
     }
-    if (batch.image) document.getElementById('modalImage').src = batch.image;
+    document.getElementById('modalImage').src = batch.image || currentProductFallbackImage || '/static/test.jpg';
     document.getElementById('modalBatchInfo').style.visibility = 'visible';
     currentBatchId     = batch.id;
     currentItemPrice   = parseFloat(batch.price);
@@ -320,6 +321,7 @@
     const d         = card.dataset;
     const productId = d.productId;
     currentProductId = productId;
+    currentProductFallbackImage = d.image || null;
 
     document.getElementById('modalName').textContent        = d.name;
     document.getElementById('modalProducer').textContent    = d.producer;
@@ -366,7 +368,7 @@
 
     const classA     = batches.find(b => b.quality_class === 'A');
     const firstBatch = batches[0];
-    document.getElementById('modalImage').src = (classA && classA.image) || (firstBatch && firstBatch.image) || '/static/test.jpg';
+    document.getElementById('modalImage').src = (classA && classA.image) || (firstBatch && firstBatch.image) || d.image || '/static/test.jpg';
 
     document.getElementById('modalBatchInfo').style.visibility = 'hidden';
     document.getElementById('modalCartStepper').style.display  = 'none';
@@ -534,6 +536,7 @@
   let currentBatchMaxQty = null;
   let currentBatchUnit   = '';
   let currentProductId   = null;
+  let currentProductFallbackImage = null;
   let localQty = 0;
 
   function updateCardCartBadge(productId) {
@@ -779,7 +782,8 @@
              data-avg-rating="${item.avg_rating || ''}"
              data-review-count="${item.review_count || 0}"
              data-product-id="${item.id}"
-             data-food-miles="${item.food_miles || ''}">
+             data-food-miles="${item.food_miles || ''}"
+             data-image="${item.image || ''}">
           <div class="image">
             ${item.thumbnail
               ? `<img src="${item.thumbnail}" data-src="${item.image}" alt="${item.name}" loading="lazy" class="product-image">`
