@@ -70,14 +70,14 @@ function updateCart(productId, delta, btn) {
 }
 
 function updateNavbarCart(totalItems, totalPrice) {
-  const bubble = document.querySelector(".cart-bubble span");
-  const parent = document.querySelector("#base-cart");
-  if (bubble && parseFloat(totalPrice) === 0) {
-    parent.classList.remove("empty");
-    bubble.innerText = "";
-  } else {
-    parent.classList.add("empty");
-    bubble.innerText = "£" + parseFloat(totalPrice).toFixed(2);
+  const launcher = document.getElementById("cart-launcher");
+  if (launcher) {
+    const formattedPrice = "£" + parseFloat(totalPrice).toFixed(2);
+    launcher.childNodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent.includes("£")) {
+        node.textContent = " " + formattedPrice;
+      }
+    });
   }
 }
 function openCart() {
@@ -196,7 +196,7 @@ function drawerUpdateCart(productId, delta, btn) {
         }
       }
 
-      // Fetch full cart contents so producer names are preserved in the drawer
+      // Fetch full cart contents so producer names and food miles are preserved in the drawer
       return fetch("/cart/contents/").then((r) => r.json()).then(renderDrawer);
     });
 }
