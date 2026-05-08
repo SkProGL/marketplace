@@ -111,9 +111,11 @@
         </div>
     </nav>
     
+    {% if user.is_authenticated %}
     <button id="cart-launcher" class="cart-launcher" onclick="openCart()">
         {% include 'includes/icons/icon_cart.html' %} &nbsp;&nbsp;£{{cart_total_price|default:"0.00"}}
     </button>
+    {% endif %}
 
     {% if messages %}
     <div id="toast-container">

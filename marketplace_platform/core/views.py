@@ -113,6 +113,8 @@ def cart_contents(request):
     total_price = 0
     if cart:
         batches = ProductBatch.objects.select_related('product__producer').filter(id__in=cart.keys())
+    else:
+        batches = []
     for batch in batches:
         qty = cart.get(str(batch.id), 0)
         subtotal = float(batch.price) * qty
