@@ -626,7 +626,11 @@ def home_view(request):
             total_price += float(batch.price) * qty
 
     min_best_before = date_type.today() + timedelta(days=2)
-    in_stock_batches_qs = ProductBatch.objects.filter(stock__gt=0, best_before__gt=min_best_before).order_by('quality_class')
+    in_stock_batches_qs = ProductBatch.objects.filter(
+        stock__gt=0,
+        best_before__gt=min_best_before,
+        availability__in=['Available', 'Available All Year'],
+    ).order_by('quality_class')
 
     class_a_image = ProductBatch.objects.filter(
         product=OuterRef('pk'), quality_class='A'
@@ -664,11 +668,6 @@ def home_view(request):
     if request.GET.get('organic'):
         items = items.filter(organic=True)
 
-    if request.GET.get('in_season'):
-        items = items.filter(
-            batches__availability__in=['Available', 'Available All Year']
-        ).distinct()
-
     exclude_allergens = request.GET.getlist('exclude_allergen')
     for allergen in exclude_allergens:
         items = items.exclude(allergens__contains=[allergen])
@@ -704,7 +703,7 @@ def home_view(request):
 
     items = filtered_items
     suggestion = None
-    if q and not items.exists():
+    if q and not items:
         all_names = list(Product.objects.values_list('name', flat=True))
         matches = difflib.get_close_matches(q, all_names, n=1, cutoff=0.6)
         if matches:
@@ -823,10 +822,8 @@ def home_view(request):
         'cart_items': cart,
         'cart_total_price': round(total_price, 2),
         'selected_categories': categories,
-        'in_stock': request.GET.get('in_stock'),
         'discounted': request.GET.get('discounted'),
         'organic': request.GET.get('organic'),
-        'in_season': request.GET.get('in_season'),
         'exclude_allergens': exclude_allergens,
         'allergen_list': allergen_list,
         'search_query': q,
