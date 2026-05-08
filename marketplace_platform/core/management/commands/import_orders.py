@@ -53,8 +53,8 @@ class Command(BaseCommand):
             limit = 20
             # for row in reader:
             for (i, row) in enumerate(reader):
-                # if i>=limit:
-                #     break
+                if i>=limit:
+                    break
                 try:
                     indexes = row["product_ids"].replace('"', "").split(",")
                     batches_for_order = [
