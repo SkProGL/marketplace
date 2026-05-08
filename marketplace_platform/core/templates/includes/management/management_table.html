@@ -11,7 +11,7 @@
                 {% if selected_data.rows %}
                 {% for header in selected_data.headers %}
                 <!-- Ascending/descending sorting-->
-                <th class="bg-transparent" data-col-name="{{ header }}">
+                <th class="bg-transparent">
                     <!-- Pass the current model, header and current sort method. Selecting the header flips the direction. -->
                     <a href="?model={{ selected_model_name }}&sortby={{ header }}&direction={% if selected_data.current_sort == header and selected_data.current_direction == 'ascending' %}descending{% else %}ascending{% endif %}{% if selected_data.q %}&q={{ selected_data.q }}{% endif %}"
                         class="text-decoration-none text-black d-flex align-items-end gap-1">
@@ -45,7 +45,7 @@
                 <td></td>
                 {% endif %}
                 {% for cell in row.cells %}
-                <td data-col-name="{{ cell.name }}">
+                <td>
                     {% if cell.is_choice and selected_model_name == 'Order' and cell.name == 'order_status' and row.id != 'draft' %}
 
                     <!-- ORDER STATUS — visual pill only; advance action is in the info modal -->

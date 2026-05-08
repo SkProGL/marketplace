@@ -21,15 +21,6 @@
             {% csrf_token %}
             <!-- Primary card -->
             <div class="card shadow p-4 ">
-                <!-- Toggle Basic/Advanced View -->
-                <div class="d-flex justify-content-end mb-2">
-                    <div class="btn-group btn-group-sm" role="group">
-                        <input type="radio" class="btn-check" name="view-toggle" id="view-basic" autocomplete="off" checked>
-                        <label class="btn btn-outline-secondary" for="view-basic">Basic</label>
-                        <input type="radio" class="btn-check" name="view-toggle" id="view-advanced" autocomplete="off">
-                        <label class="btn btn-outline-secondary" for="view-advanced">Advanced</label>
-                    </div>
-                </div>
                 <!-- Model selection button group -->
                 <div class="flex-wrap gap-2 btn-group card-header  border-0 bg-transparent management-topbar"
                     role="group">
@@ -340,92 +331,5 @@ if (searchInput) {
     const _preQ = new URLSearchParams(location.search).get('q');
     if (_preQ) { searchInput.value = _preQ; filterRows(_preQ.toLowerCase()); }
 }
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const BASIC_TABLES = ["User", "Product", "ProductBatch", "Order", "Complaint", "Payment", "ProducerOrder", "Recipe", "StoryPost"];
-    const BASIC_COLUMNS = {
-        "User": ["email", "full_name", "category", "organisation_name", "phone"],
-        "Product": ["name", "category", "price", "producer", "all_year"],
-        "ProductBatch": ["product", "batch_number", "stock", "quality_class", "best_before"],
-        "Order": ["customer", "total_price", "order_date", "order_status", "delivery_date"],
-        "Complaint": ["submitted_by", "category", "description", "resolved", "submitted_at"],
-        "Payment": ["producer", "order", "amount", "status", "created_at"],
-        "ProducerOrder": ["order", "producer", "order_status", "delivery_date"],
-        "Recipe": ["title", "user", "season", "is_flagged"],
-        "StoryPost": ["title", "user", "date_posted", "is_flagged"],
-        "OrderProduct": ["order", "batch", "numPurchased", "price_at_purchase"],
-        "RecipeIngredients": ["recipe", "product", "quantity"],
-        "FavouriteRecipe": ["user", "recipe", "saved_at"],
-        "Review": ["user", "product", "rating", "date_posted", "anonymous"],
-        "OrderStatusHistory": ["order", "from_status", "to_status", "changed_by", "changed_at"]
-    };
-
-    const toggleBasic = document.getElementById("view-basic");
-    const toggleAdvanced = document.getElementById("view-advanced");
-    
-    function applyView() {
-        const isBasic = toggleBasic.checked;
-        localStorage.setItem("managementView", isBasic ? "basic" : "advanced");
-        
-        const currentModelParams = new URLSearchParams(window.location.search);
-        const activeModel = currentModelParams.get('model');
-
-        document.querySelectorAll('.management-topbar input[type="radio"]').forEach(radio => {
-            const label = document.querySelector(`label[for="${radio.id}"]`);
-            const match = radio.getAttribute("onchange")?.match(/model=([^']+)/);
-            if(match) {
-                const modelName = match[1];
-                if (isBasic && !BASIC_TABLES.includes(modelName)) {
-                    radio.style.display = "none";
-                    if(label) label.style.display = "none";
-                } else {
-                    radio.style.display = "";
-                    if(label) label.style.display = "";
-                }
-            }
-        });
-
-        if (activeModel) {
-            const allowedCols = BASIC_COLUMNS[activeModel] || [];
-            document.querySelectorAll('th[data-col-name], td[data-col-name]').forEach(cell => {
-                const colName = cell.getAttribute('data-col-name');
-                if (colName && isBasic && allowedCols.length > 0 && !allowedCols.includes(colName)) {
-                    cell.style.display = "none";
-                } else {
-                    cell.style.display = "";
-                }
-            });
-        }
-    }
-
-    const savedView = localStorage.getItem("managementView");
-    if (savedView === "advanced") {
-        if(toggleAdvanced) toggleAdvanced.checked = true;
-    } else {
-        if(toggleBasic) toggleBasic.checked = true;
-    }
-
-    if(toggleBasic) toggleBasic.addEventListener("change", applyView);
-    if(toggleAdvanced) toggleAdvanced.addEventListener("change", applyView);
-    
-    applyView();
-
-    const observer = new MutationObserver((mutations) => {
-        let shouldApply = false;
-        for (const mutation of mutations) {
-            if (mutation.addedNodes && mutation.addedNodes.length > 0) {
-                shouldApply = true;
-                break;
-            }
-        }
-        if (shouldApply) applyView();
-    });
-    const tableContainer = document.getElementById('management-table-container');
-    if (tableContainer) {
-        observer.observe(tableContainer, { childList: true, subtree: true });
-    }
-});
 </script>
 {% endblock %}
