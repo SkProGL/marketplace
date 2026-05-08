@@ -481,7 +481,7 @@ def apply_surplus_if_due(batch):
     if best_before <= timezone.now().date() + timedelta(days=days):
         batch.quality_class = 'Discounted'
         batch.surplus = True
-        batch.discount_percentage = batch.surplus_discount_percentage
+        batch.discount_percentage = max(batch.surplus_discount_percentage, Decimal('10'))
         batch.save(update_fields=['quality_class', 'surplus', 'discount_percentage'])
         return True
     return False
