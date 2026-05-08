@@ -9,7 +9,7 @@
   <p>Fresh from local producers &mdash; filter, search and add to your basket</p>
 </div>
 
-<form method="GET" action="">
+<form method="GET" action="" onsubmit="event.preventDefault();">
   <div class="form-control">
     <input class="input input-alt" placeholder="Search products&hellip;" type="text"
            name="q" value="{{ request.GET.q }}">
@@ -17,43 +17,55 @@
   </div>
 
   <div class="filters home-filter-row">
-    <span class="home-allergen-label" stlye="align-content:center">Include categories:</span>
-    <input type="checkbox" id="fruit" name="category" value="Fruit"
-           {% if "Fruit" in selected_categories %}checked{% endif %}>
-    <label for="fruit">Fruits</label>
-    <input type="checkbox" id="vegetable" name="category" value="Vegetable"
-           {% if "Vegetable" in selected_categories %}checked{% endif %}>
-    <label for="vegetable">Vegetables</label>
-    <input type="checkbox" id="dairy" name="category" value="Dairy"
-           {% if "Dairy" in selected_categories %}checked{% endif %}>
-    <label for="dairy">Dairy</label>
-    <input type="checkbox" id="bakery" name="category" value="Bakery"
-           {% if "Bakery" in selected_categories %}checked{% endif %}>
-    <label for="bakery">Bakery</label>
-    <input type="checkbox" id="preserve" name="category" value="Preserve"
-           {% if "Preserve" in selected_categories %}checked{% endif %}>
-    <label for="preserve">Preserve</label>
-    <span class="home-filter-divider"></span>
-
-    <input type="checkbox" id="discount" name="discounted" value="1"
-           {% if discounted %}checked{% endif %}>
-    <label for="discount">Discounted</label>
-    <input type="checkbox" id="organic" name="organic" value="1"
-           {% if organic %}checked{% endif %}>
-    <label for="organic">Organic</label>
-
-  </div>
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding-top:4px;border-top:1px solid #f0f0f0;">
-    <div class="filters" style="margin:0;flex:1;">
-      <span class="home-allergen-label" style="align-content:center">Exclude allergens:</span>
-      {% for allergen in allergen_list %}
-        <input type="checkbox" name="exclude_allergen" value="{{ allergen }}"
-               id="exc-{{ allergen }}"
-               {% if allergen in exclude_allergens %}checked{% endif %}>
-        <label for="exc-{{ allergen }}" class="allergen-label">{{ allergen }}</label>
-      {% endfor %}
+    <!-- Producer Search -->
+  <span>
+    <div class="position-relative me-3" style="width:200px;">
+        <input type="text" id="orgSearch" placeholder="&nbsp;Search by organisations..." class="form-control form-control-sm" onkeyup="filterOrgs()">
+        <div id="orgDropdown" class="dropdown-menu" style="display:none; max-height:200px; overflow-y:auto; z-index:1000;"></div>
     </div>
+    <input type="hidden" name="producer" id="selectedOrgId">
+    
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding-top:4px;border-top:1px solid #f0f0f0;">
+    <div class="allergen-filter-wrap" id="allergenFilterWrap">
+      <button type="button" class="allergen-filter-toggle" id="allergenToggle">
+        <i class="bi bi-funnel"></i> Exclude allergens
+        <span class="allergen-active-count" id="allergenCount" style="display:none;">0</span>
+      </button>
+      <div id="allergenPanel" style="display:none;">
+        <p class="allergen-filter-hint">Select items to hide from results:</p>
+        <div class="filters" style="margin:0;">
+          {% for allergen in allergen_list %}
+            <input type="checkbox" name="exclude_allergen" value="{{ allergen }}"
+                   id="exc-{{ allergen }}"
+                   {% if allergen in exclude_allergens %}checked{% endif %}>
+            <label for="exc-{{ allergen }}" class="allergen-label">{{ allergen }}</label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div style="flex:1"></div>
     {% include "components/widget-food-miles.html" %}
+</span>
+  </div>
+    <br>
+    <span class="home-allergen-label me-2">Categories:</span>
+    <input type="checkbox" id="fruit" name="category" value="Fruit" {% if "Fruit" in selected_categories %}checked{% endif %}>
+    <label for="fruit" class="me-2">Fruits</label>
+    <input type="checkbox" id="vegetable" name="category" value="Vegetable" {% if "Vegetable" in selected_categories %}checked{% endif %}>
+    <label for="vegetable" class="me-2">Vegetables</label>
+    <input type="checkbox" id="dairy" name="category" value="Dairy" {% if "Dairy" in selected_categories %}checked{% endif %}>
+    <label for="dairy" class="me-2">Dairy</label>
+    <input type="checkbox" id="bakery" name="category" value="Bakery" {% if "Bakery" in selected_categories %}checked{% endif %}>
+    <label for="bakery" class="me-2">Bakery</label>
+    <input type="checkbox" id="preserve" name="category" value="Preserve" {% if "Preserve" in selected_categories %}checked{% endif %}>
+    <label for="preserve" class="me-3">Preserve</label>
+    
+    <input type="checkbox" id="stock" name="in_stock" value="1" {% if in_stock %}checked{% endif %}>
+    <label for="stock" class="me-2">In Stock</label>
+    <input type="checkbox" id="discount" name="discounted" value="1" {% if discounted %}checked{% endif %}>
+    <label for="discount" class="me-2">Discounted</label>
+    <input type="checkbox" id="organic" name="organic" value="1" {% if organic %}checked{% endif %}>
+    <label for="organic" class="me-2">Organic</label>
   </div>
 </form>
 
@@ -78,7 +90,8 @@
          data-avg-rating="{{ item.avg_rating|default:'' }}"
          data-review-count="{{ item.review_count }}"
          data-product-id="{{ item.id }}"
-         data-food-miles="{{ item.food_miles|default:'' }}">
+         data-food-miles="{{ item.food_miles|default:'' }}"
+         data-image="{% if item.image %}{{ item.image.url }}{% endif %}">
       <div class="image">
         {% if item.in_stock_batches.0.image %}
           <img src="{{ item.in_stock_batches.0.thumbnail.url }}" 
@@ -86,8 +99,8 @@
                alt="{{ item.name }}" 
                loading="lazy" 
                class="product-image">
-        {% elif item.primary_image %}
-          <img src="{{ item.thumbnail.url }}" data-src="/media/{{ item.primary_image }}" alt="{{ item.name }}" loading="lazy" class="product-image">
+        {% elif item.image %}
+          <img src="{{ item.thumbnail.url }}" data-src="{{ item.image.url }}" alt="{{ item.name }}" loading="lazy" class="product-image">
         {% else %}
           <img src="{% static 'test.jpg' %}" alt="{{ item.name }}" loading="lazy">
         {% endif %}
@@ -101,7 +114,7 @@
           {% if item.producer.organisation_name %}
             <span class="card-producer">{{ item.producer.organisation_name }}</span>
           {% endif %}
-          <span class="price">{{ item.price_display }}</span>
+          {% if item.original_price_display %}<span class="price-original">{{ item.original_price_display }}</span>{% endif %}<span class="price">{{ item.price_display }}</span>
           {% if item.avg_rating %}
             <span class="card-rating">&#11088; {{ item.avg_rating }}/5 ({{ item.review_count }})</span>
           {% else %}
@@ -110,7 +123,7 @@
 	  <br>
         </div>
         <div class="card-btn-wrap">
-          <button type="button" class="add-to-cart-btn">Add</button>
+          <button type="button" class="add-to-cart-btn">Add </button>
           <span class="card-cart-badge"></span>
         </div>
       </div>
@@ -217,11 +230,14 @@
                 <button class="widget-stepper-btn" id="modalDecBtn">&#8722;</button>
                 <input type="number" class="stepper-qty" id="modalQty" value="1" min="0">
                 <button class="widget-stepper-btn" id="modalIncBtn">+</button>
-                <span id="modalCartTotal" class="pm-cart-total"></span>
-                <button id="modalRemoveBtn" class="widget-stepper-btn" title="Remove from cart" style="color:#dc3545;font-size:1rem;"><i class="bi bi-trash3"></i></button>
+
+                <button id="modalRemoveBtn" class="widget-stepper-btn" title="Remove from cart" style="color:#dc3545;font-size:1rem;">
+			<i class="bi bi-trash3"></i>
+		</button>
+                <div id="modalCartTotal" class="pm-cart-total"></div>
               </div>
               <div class="pm-add-row">
-                <button id="modalAddBtn" class="add-to-cart-btn pm-add-btn">Add</button>
+                <button id="modalAddBtn" class="add-to-cart-btn pm-add-btn">Add to cart</button>
                 <button id="modalNotifyBtn" class="pm-notify-btn" style="display:none">Notify me when available</button>
               </div>
             </div>
@@ -281,20 +297,28 @@
   const isBulkBuyer  = userCategory === 'Restaurant' || userCategory === 'Community';
 
   function selectBatch(batch) {
-    document.getElementById('modalPrice').textContent      = '£' + batch.price + (batch.unit ? '/' + batch.unit : '');
+    const unitSuffix = batch.unit ? '/' + batch.unit : '';
+    const discountedPrice = parseFloat(batch.price);
+    const basePrice = parseFloat(batch.base_price);
+    const priceEl = document.getElementById('modalPrice');
+    if (basePrice > discountedPrice) {
+      priceEl.innerHTML = `<span class="price-original">£${basePrice.toFixed(2)}${unitSuffix}</span> £${discountedPrice.toFixed(2)}${unitSuffix}`;
+    } else {
+      priceEl.textContent = '£' + discountedPrice.toFixed(2) + unitSuffix;
+    }
     document.getElementById('modalBestBefore').textContent = batch.best_before;
     document.getElementById('modalStockLabel').textContent = 'In stock:';
     document.getElementById('modalTotalStock').textContent = batch.stock;
     document.getElementById('modalStockUnit').textContent  = batch.unit || '';
     document.getElementById('modalSurplusBadge').style.display = batch.surplus ? '' : 'none';
     const discRow = document.getElementById('modalDiscountRow');
-    if (batch.quality_class === 'Discounted' && parseFloat(batch.discount) > 0) {
+    if (parseFloat(batch.discount) > 0) {
       discRow.style.display = '';
       document.getElementById('modalDiscount').textContent = batch.discount;
     } else {
       discRow.style.display = 'none';
     }
-    if (batch.image) document.getElementById('modalImage').src = batch.image;
+    document.getElementById('modalImage').src = batch.image || currentProductFallbackImage || '/static/test.jpg';
     document.getElementById('modalBatchInfo').style.visibility = 'visible';
     currentBatchId     = batch.id;
     currentItemPrice   = parseFloat(batch.price);
@@ -310,6 +334,7 @@
     const d         = card.dataset;
     const productId = d.productId;
     currentProductId = productId;
+    currentProductFallbackImage = d.image || null;
 
     document.getElementById('modalName').textContent        = d.name;
     document.getElementById('modalProducer').textContent    = d.producer;
@@ -356,7 +381,7 @@
 
     const classA     = batches.find(b => b.quality_class === 'A');
     const firstBatch = batches[0];
-    document.getElementById('modalImage').src = (classA && classA.image) || (firstBatch && firstBatch.image) || '/static/test.jpg';
+    document.getElementById('modalImage').src = (classA && classA.image) || (firstBatch && firstBatch.image) || d.image || '/static/test.jpg';
 
     document.getElementById('modalBatchInfo').style.visibility = 'hidden';
     document.getElementById('modalCartStepper').style.display  = 'none';
@@ -524,6 +549,7 @@
   let currentBatchMaxQty = null;
   let currentBatchUnit   = '';
   let currentProductId   = null;
+  let currentProductFallbackImage = null;
   let localQty = 0;
 
   function updateCardCartBadge(productId) {
@@ -548,7 +574,7 @@
     document.getElementById('modalCartTotal').textContent = localQty > 0
       ? '£' + (localQty * currentItemPrice).toFixed(2) + ', ' + localQty + currentBatchUnit : '';
     stepper.style.display = localQty > 0 ? 'flex' : 'none';
-    addBtn.textContent    = localQty > 0 ? 'Add to cart' : 'Add';
+    addBtn.textContent    = 'Add to cart';
     document.getElementById('modalIncBtn').disabled = localQty >= effectiveCap;
     const atCap = localQty > 0 && localQty >= effectiveCap;
     document.getElementById('modalNotifyBtn').style.display = (atCap && localQty >= currentBatchStock) ? '' : 'none';
@@ -563,19 +589,30 @@
       ? `Max ${currentBatchMaxQty} per order for standard customers.` : '';
   }
 
+  function dismissCartConfirm() {
+    const el = document.getElementById('cartConfirm');
+    el.classList.add('hiding');
+    el.addEventListener('animationend', () => {
+      el.style.display = 'none';
+      el.classList.remove('hiding');
+    }, { once: true });
+  }
   function showCartConfirm(name, qty, imgSrc) {
     bootstrap.Modal.getInstance(document.getElementById('productModal'))?.hide();
+    const el = document.getElementById('cartConfirm');
+    el.classList.remove('hiding');
     document.getElementById('cartConfirmImg').src = imgSrc || '';
     document.getElementById('cartConfirmQty').textContent = `Quantity: ${qty}`;
-    document.getElementById('cartConfirm').style.display = 'flex';
+    el.style.display = 'flex';
   }
-  document.getElementById('cartConfirmClose').addEventListener('click', () => {
-    document.getElementById('cartConfirm').style.display = 'none';
-  });
+  document.getElementById('cartConfirmClose').addEventListener('click', dismissCartConfirm);
 
   function commitCart() {
     const delta = localQty - (cartState[currentBatchId] || 0);
-    if (delta === 0) return;
+    if (delta === 0) {
+      // Surgical fix: Don't show popup if quantity hasn't actually changed
+      return;
+    }
     fetch(`/cart/update/${currentBatchId}/`, {
       method: 'POST',
       headers: {
@@ -616,28 +653,36 @@
       sel.click();
       return;
     }
+    
+    // Surgical fix: If first time adding, show stepper but don't commit/popup yet
     if (localQty === 0) {
       localQty = 1;
       updateModalCartUI();
-    } else {
-      commitCart();
+      return;
     }
+    
+    commitCart();
   });
   document.getElementById('modalIncBtn').addEventListener('click', () => {
     const effectiveCap = currentBatchMaxQty !== null
       ? Math.min(currentBatchStock, currentBatchMaxQty) : currentBatchStock;
-    if (localQty < effectiveCap) { localQty++; updateModalCartUI(); }
+    if (localQty < effectiveCap) { 
+      localQty++; 
+      updateModalCartUI(); 
+      // Surgical fix: Remove immediate commitCart() call from stepper buttons
+    }
   });
   document.getElementById('modalDecBtn').addEventListener('click', () => {
     if (localQty > 0) {
       localQty--;
       updateModalCartUI();
-      if (localQty === 0) commitCart();
+      // Surgical fix: Remove immediate commitCart() call from stepper buttons
     }
   });
   document.getElementById('modalRemoveBtn').addEventListener('click', () => {
     localQty = 0;
     updateModalCartUI();
+    // Keep immediate commit for explicit removal
     commitCart();
   });
   document.getElementById('modalQty').addEventListener('input', () => {
@@ -647,7 +692,7 @@
     if (!isNaN(raw)) {
       localQty = Math.max(0, Math.min(raw, effectiveCap));
       updateModalCartUI();
-      if (localQty === 0) commitCart();
+      // Surgical fix: Remove immediate commitCart() from input
     }
   });
 
@@ -692,13 +737,44 @@
   const searchInput = document.querySelector('input[name="q"]');
   let searchTimer;
 
+  const allergenToggle = document.getElementById('allergenToggle');
+  const allergenPanel = document.getElementById('allergenPanel');
+  const allergenCount = document.getElementById('allergenCount');
+  const allergenCheckboxes = document.querySelectorAll('input[name="exclude_allergen"]');
+
+  function updateAllergenCount() {
+    const checked = Array.from(allergenCheckboxes).filter(cb => cb.checked).length;
+    allergenCount.textContent = checked;
+    allergenCount.style.display = checked > 0 ? 'inline-block' : 'none';
+  }
+
+  allergenToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = allergenPanel.style.display === 'none';
+    allergenPanel.style.display = isHidden ? 'block' : 'none';
+    document.getElementById('allergenFilterWrap').classList.toggle('open', isHidden);
+  });
+
+  document.addEventListener('click', (e) => {
+    const wrap = document.getElementById('allergenFilterWrap');
+    if (wrap && !wrap.contains(e.target)) {
+      allergenPanel.style.display = 'none';
+      wrap.classList.remove('open');
+    }
+  });
+
+  updateAllergenCount();
+
   searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => fetchResults(true), 500);
+    searchTimer = setTimeout(() => fetchResults(true), 800);
   });
 
   document.querySelectorAll('.filters input[type="checkbox"]').forEach(cb => {
-    cb.addEventListener('change', () => fetchResults(true));
+    cb.addEventListener('change', () => {
+      if (cb.name === 'exclude_allergen') updateAllergenCount();
+      fetchResults(true);
+    });
   });
 
   const offerBtn = document.querySelector('.widget-offer-btn');
@@ -769,7 +845,8 @@
              data-avg-rating="${item.avg_rating || ''}"
              data-review-count="${item.review_count || 0}"
              data-product-id="${item.id}"
-             data-food-miles="${item.food_miles || ''}">
+             data-food-miles="${item.food_miles || ''}"
+             data-image="${item.image || ''}">
           <div class="image">
             ${item.thumbnail
               ? `<img src="${item.thumbnail}" data-src="${item.image}" alt="${item.name}" loading="lazy" class="product-image">`
@@ -849,6 +926,31 @@
       </div>`;
     }
     document.getElementById('reviewPagination').innerHTML = pagHtml;
+  }
+
+  function filterOrgs() {
+      const search = document.getElementById('orgSearch').value.toLowerCase();
+      const dropdown = document.getElementById('orgDropdown');
+      
+      if (search.length < 2) {
+          dropdown.style.display = 'none';
+          return;
+      }
+      
+      fetch(`/api/producers/?q=${search}`)
+      .then(r => r.json())
+      .then(data => {
+          if (!data.length) { dropdown.style.display = 'none'; return; }
+          dropdown.innerHTML = data.map(p => `<button type="button" class="dropdown-item" style="padding:6px 12px;" onclick="selectOrg('${p.id}', '${p.organisation_name}')">${p.organisation_name}</button>`).join('');
+          dropdown.style.display = 'block';
+      });
+  }
+
+  function selectOrg(id, name) {
+      document.getElementById('orgSearch').value = name;
+      document.getElementById('selectedOrgId').value = id;
+      document.getElementById('orgDropdown').style.display = 'none';
+      fetchResults(true);
   }
 
   function changeReviewPage(dir) {

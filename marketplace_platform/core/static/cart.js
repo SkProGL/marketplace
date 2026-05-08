@@ -28,6 +28,12 @@ function addToCart(productId, btn) {
                 <button class="widget-stepper-btn" onclick="updateCart('${productId}', 1, this)">+</button>
             </div>`;
       updateNavbarCart(data.total_items, data.total_price);
+      if (typeof showCartConfirm === "function") {
+        const card = btn.closest(".card");
+        const name = card ? card.dataset.name : "";
+        const image = card ? card.dataset.image : "";
+        showCartConfirm(name, data.quantity, image);
+      }
     });
 }
 
@@ -55,7 +61,7 @@ function updateCart(productId, delta, btn) {
       const widget = btn.closest(".cart-widget");
       if (data.quantity <= 0) {
         // Swap back to Add button
-        widget.innerHTML = `<button class="add-to-cart-btn" onclick="addToCart('${productId}', this)">Add</button>`;
+        widget.innerHTML = `<button class="add-to-cart-btn" onclick="addToCart('${productId}', this)">Add to cart</button>`;
       } else {
         widget.querySelector(".stepper-qty").innerText = data.quantity;
       }
@@ -64,14 +70,14 @@ function updateCart(productId, delta, btn) {
 }
 
 function updateNavbarCart(totalItems, totalPrice) {
-  const bubble = document.querySelector(".cart-bubble span");
-  const parent = document.querySelector("#base-cart");
-  if (bubble && parseFloat(totalPrice) === 0) {
-    parent.classList.remove("empty");
-    bubble.innerText = "";
-  } else {
-    parent.classList.add("empty");
-    bubble.innerText = "£" + parseFloat(totalPrice).toFixed(2);
+  const launcher = document.getElementById("cart-launcher");
+  if (launcher) {
+    const formattedPrice = "£" + parseFloat(totalPrice).toFixed(2);
+    launcher.childNodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent.includes("£")) {
+        node.textContent = " " + formattedPrice;
+      }
+    });
   }
 }
 function openCart() {
@@ -190,7 +196,7 @@ function drawerUpdateCart(productId, delta, btn) {
         }
       }
 
-      // Fetch full cart contents so producer names are preserved in the drawer
+      // Fetch full cart contents so producer names and food miles are preserved in the drawer
       return fetch("/cart/contents/").then((r) => r.json()).then(renderDrawer);
     });
 }
@@ -205,7 +211,7 @@ function syncCardWidget(productId, quantity) {
   );
   if (!card) return;
   if (quantity <= 0) {
-    card.innerHTML = `<button class="add-to-cart-btn" onclick="addToCart('${productId}', this)">Add</button>`;
+    card.innerHTML = `<button class="add-to-cart-btn" onclick="addToCart('${productId}', this)">Add to cart</button>`;
   } else {
     const qty = card.querySelector(".stepper-qty");
     if (qty) qty.innerText = quantity;

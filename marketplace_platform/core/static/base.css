@@ -1,8 +1,24 @@
 @import 'globals.css';
 
-/* Override Bootstrap shadow classes */
-.shadow, .shadow-sm, .shadow-lg {
-  box-shadow: var(--shadow) !important;
+/* Cart Launcher Button */
+.cart-launcher {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    background: #198754;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 15px 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+
+@media (min-width: 992px) {
+    .dropdown:hover .dropdown-menu {
+        display: block;
+    }
 }
 
 body {

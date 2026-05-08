@@ -293,9 +293,14 @@ class ProductBatch(models.Model):
     _CLASS_DISCOUNTS = {'A': Decimal('0'), 'B': Decimal('15'), 'C': Decimal(
         '30'), 'D': Decimal('45'), 'Discounted': Decimal('50')}
 
+    SURPLUS_MIN_DISCOUNT = Decimal('10')
+
     @property
     def effective_discount(self):
-        return self.discount_percentage or self._CLASS_DISCOUNTS.get(self.quality_class, Decimal('0'))
+        raw = self.discount_percentage or self._CLASS_DISCOUNTS.get(self.quality_class, Decimal('0'))
+        if self.surplus and raw < self.SURPLUS_MIN_DISCOUNT:
+            return self.SURPLUS_MIN_DISCOUNT
+        return raw
 
     @property
     def price(self):

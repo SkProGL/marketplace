@@ -8,15 +8,16 @@
     <form method="GET" class="row g-3 mb-4 align-items-end">
         <div class="col-auto">
             <label for="from" class="form-label">From</label>
-            <input type="date" class="form-control" name="from" id="from" value="{{ date_from }}">
+            <input type="date" class="form-control" name="from" id="from" value="{{ date_from|date:'Y-m-d' }}">
         </div>
         <div class="col-auto">
             <label for="to" class="form-label">To</label>
-            <input type="date" class="form-control" name="to" id="to" value="{{ date_to }}">
+            <input type="date" class="form-control" name="to" id="to" value="{{ date_to|date:'Y-m-d' }}">
         </div>
         <div class="col-auto">
             <button type="submit" class="btn btn-success">Filter</button>
-            <a href="?from={{ date_from }}&to={{ date_to }}&format=csv" class="btn btn-outline-secondary ms-2">Download CSV</a>
+            <a href="{% url 'finance' %}" class="btn btn-outline-danger ms-2">Reset</a>
+            <a href="?from={{ date_from|date:'Y-m-d' }}&to={{ date_to|date:'Y-m-d' }}&format=csv" class="btn btn-outline-secondary ms-2">Download CSV</a>
         </div>
     </form>
 
