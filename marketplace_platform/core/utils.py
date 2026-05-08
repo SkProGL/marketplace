@@ -325,6 +325,13 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
         else:
             records = records.order_by(sort_field)
 
+    RELATED_SEARCH_FIELDS = {
+        'ProductBatch': ['product__name', 'product__producer__organisation_name'],
+        'Order':        ['customer__email', 'customer__full_name', 'customer__organisation_name'],
+        'ProducerOrder':['order__customer__email', 'order__customer__full_name', 'producer__organisation_name'],
+        'Payment':      ['producer_order__order__customer__email', 'producer_order__producer__organisation_name'],
+        'Review':       ['product__name', 'customer__email'],
+    }
     q = request.GET.get('q', '').strip()
     if q:
         from django.db.models import Q as DQ
@@ -332,8 +339,10 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
         for field in visible_fields:
             if isinstance(field, (models.CharField, models.TextField)):
                 search_filter |= DQ(**{f'{field.name}__icontains': q})
+        for related_field in RELATED_SEARCH_FIELDS.get(selected_model_name, []):
+            search_filter |= DQ(**{f'{related_field}__icontains': q})
         if search_filter:
-            records = records.filter(search_filter)
+            records = records.filter(search_filter).distinct()
 
     paginator = Paginator(records, PAGE_SIZE)
     page_obj = paginator.get_page(request.GET.get('page', 1))
