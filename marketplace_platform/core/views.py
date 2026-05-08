@@ -1650,9 +1650,12 @@ def edit_profile(request):
 
         if "update_profile" in request.POST:
             if profile_form.is_valid():
+                old_postcode = request.user.postcode
+                new_postcode = profile_form.cleaned_data.get('postcode', old_postcode)
                 profile_form.save()
-                messages.success(request, "Profile updated successfully.")
-                return redirect("profile")
+                if new_postcode != old_postcode:
+                    request.session.update(food_mile_session_builder(request.user))
+
 
         elif "change_password" in request.POST:
             if password_form.is_valid():
