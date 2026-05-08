@@ -9,7 +9,7 @@
   <p>Fresh from local producers &mdash; filter, search, and add to your basket</p>
 </div>
 
-<form method="GET" action="">
+<form method="GET" action="" onsubmit="event.preventDefault();">
   <div class="form-control">
     <input class="input input-alt" placeholder="Search products&hellip;" type="text"
            name="q" value="{{ request.GET.q }}">
@@ -18,12 +18,35 @@
 
   <div class="filters home-filter-row">
     <!-- Producer Search -->
+  <span>
     <div class="position-relative me-3" style="width:200px;">
-        <input type="text" id="orgSearch" placeholder="Search organisations..." class="form-control form-control-sm" onkeyup="filterOrgs()">
+        <input type="text" id="orgSearch" placeholder="&nbsp;Search by organisations..." class="form-control form-control-sm" onkeyup="filterOrgs()">
         <div id="orgDropdown" class="dropdown-menu" style="display:none; max-height:200px; overflow-y:auto; z-index:1000;"></div>
     </div>
     <input type="hidden" name="producer" id="selectedOrgId">
     
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding-top:4px;border-top:1px solid #f0f0f0;">
+    <div class="allergen-filter-wrap" id="allergenFilterWrap">
+      <button type="button" class="allergen-filter-toggle" id="allergenToggle">
+        <i class="bi bi-funnel"></i> Exclude allergens
+        <span class="allergen-active-count" id="allergenCount" style="display:none;">0</span>
+      </button>
+      <div id="allergenPanel" style="display:none;">
+        <p class="allergen-filter-hint">Select items to hide from results:</p>
+        <div class="filters" style="margin:0;">
+          {% for allergen in allergen_list %}
+            <input type="checkbox" name="exclude_allergen" value="{{ allergen }}"
+                   id="exc-{{ allergen }}"
+                   {% if allergen in exclude_allergens %}checked{% endif %}>
+            <label for="exc-{{ allergen }}" class="allergen-label">{{ allergen }}</label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    {% include "components/widget-food-miles.html" %}
+</span>
+  </div>
     <br>
     <span class="home-allergen-label me-2">Categories:</span>
     <input type="checkbox" id="fruit" name="category" value="Fruit" {% if "Fruit" in selected_categories %}checked{% endif %}>
@@ -37,26 +60,12 @@
     <input type="checkbox" id="preserve" name="category" value="Preserve" {% if "Preserve" in selected_categories %}checked{% endif %}>
     <label for="preserve" class="me-3">Preserve</label>
     
-    <br>
-    <br>
     <input type="checkbox" id="stock" name="in_stock" value="1" {% if in_stock %}checked{% endif %}>
     <label for="stock" class="me-2">In Stock</label>
     <input type="checkbox" id="discount" name="discounted" value="1" {% if discounted %}checked{% endif %}>
     <label for="discount" class="me-2">Discounted</label>
     <input type="checkbox" id="organic" name="organic" value="1" {% if organic %}checked{% endif %}>
     <label for="organic" class="me-2">Organic</label>
-  </div>
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding-top:4px;border-top:1px solid #f0f0f0;">
-    <div class="filters" style="margin:0;flex:1;">
-      <span class="home-allergen-label" style="align-content:center">Exclude allergens:</span>
-      {% for allergen in allergen_list %}
-        <input type="checkbox" name="exclude_allergen" value="{{ allergen }}"
-               id="exc-{{ allergen }}"
-               {% if allergen in exclude_allergens %}checked{% endif %}>
-        <label for="exc-{{ allergen }}" class="allergen-label">{{ allergen }}</label>
-      {% endfor %}
-    </div>
-    {% include "components/widget-food-miles.html" %}
   </div>
 </form>
 
@@ -707,13 +716,44 @@
   const searchInput = document.querySelector('input[name="q"]');
   let searchTimer;
 
+  const allergenToggle = document.getElementById('allergenToggle');
+  const allergenPanel = document.getElementById('allergenPanel');
+  const allergenCount = document.getElementById('allergenCount');
+  const allergenCheckboxes = document.querySelectorAll('input[name="exclude_allergen"]');
+
+  function updateAllergenCount() {
+    const checked = Array.from(allergenCheckboxes).filter(cb => cb.checked).length;
+    allergenCount.textContent = checked;
+    allergenCount.style.display = checked > 0 ? 'inline-block' : 'none';
+  }
+
+  allergenToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = allergenPanel.style.display === 'none';
+    allergenPanel.style.display = isHidden ? 'block' : 'none';
+    document.getElementById('allergenFilterWrap').classList.toggle('open', isHidden);
+  });
+
+  document.addEventListener('click', (e) => {
+    const wrap = document.getElementById('allergenFilterWrap');
+    if (wrap && !wrap.contains(e.target)) {
+      allergenPanel.style.display = 'none';
+      wrap.classList.remove('open');
+    }
+  });
+
+  updateAllergenCount();
+
   searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => fetchResults(true), 500);
+    searchTimer = setTimeout(() => fetchResults(true), 800);
   });
 
   document.querySelectorAll('.filters input[type="checkbox"]').forEach(cb => {
-    cb.addEventListener('change', () => fetchResults(true));
+    cb.addEventListener('change', () => {
+      if (cb.name === 'exclude_allergen') updateAllergenCount();
+      fetchResults(true);
+    });
   });
 
   const offerBtn = document.querySelector('.widget-offer-btn');
@@ -803,7 +843,7 @@
                 : `<span class="card-rating card-rating--none">No reviews yet</span>`}
             </div>
             <div class="card-btn-wrap">
-              <button type="button" class="add-to-cart-btn">Add to cart</button>
+              <button type="button" class="add-to-cart-btn">Add</button>
               <span class="card-cart-badge"></span>
             </div>
           </div>
@@ -896,49 +936,5 @@
     reviewPage = Math.max(1, Math.min(totalPages, reviewPage + dir));
     renderReviews();
   }
-
-  function initMoreLessFilters() {
-    const filterGroups = [
-      { name: 'category', limit: 3 },
-      { name: 'exclude_allergen', limit: 3 }
-    ];
-
-    filterGroups.forEach(group => {
-      const inputs = document.querySelectorAll(`input[name="${group.name}"]`);
-      if (inputs.length <= group.limit) return;
-
-      const labels = Array.from(inputs).map(input => document.querySelector(`label[for="${input.id}"]`)).filter(l => l);
-      if (labels.length <= group.limit) return;
-
-      labels.forEach((label, index) => {
-        if (index >= group.limit) {
-          label.style.display = 'none';
-        }
-      });
-
-      const toggleBtn = document.createElement('button');
-      toggleBtn.type = 'button';
-      toggleBtn.className = 'page-btn';
-      toggleBtn.textContent = 'More';
-      
-      let expanded = false;
-      toggleBtn.onclick = (e) => {
-        e.preventDefault();
-        expanded = !expanded;
-        labels.forEach((label, index) => {
-          if (index >= group.limit) {
-            label.style.display = expanded ? 'inline-block' : 'none';
-          }
-        });
-        toggleBtn.textContent = expanded ? 'Less' : 'More';
-      };
-
-      const lastLabel = labels[labels.length - 1];
-      if (lastLabel) {
-        lastLabel.parentNode.insertBefore(toggleBtn, lastLabel.nextSibling);
-      }
-    });
-  }
-  initMoreLessFilters();
 </script>
 {% endblock %}

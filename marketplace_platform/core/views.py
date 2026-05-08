@@ -708,7 +708,7 @@ def home_view(request):
 
     items = filtered_items
     suggestion = None
-    if q and not items.exists():
+    if q and not items:
         all_names = list(Product.objects.values_list('name', flat=True))
         matches = difflib.get_close_matches(q, all_names, n=1, cutoff=0.6)
         if matches:
