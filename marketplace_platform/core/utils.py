@@ -607,6 +607,8 @@ def get_producer_food_miles(producer,customer_coords):
     key=producer.id
     if key not in producer_distance_cache:
         prod_lat, prod_lon = get_coordinates(producer.postcode)
+        if prod_lat is None or prod_lon is None:
+            return None
         producer_distance_cache[key] = (prod_lat, prod_lon)
 
     prod_lat, prod_lon = producer_distance_cache[key]

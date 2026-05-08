@@ -1,4 +1,4 @@
-<div class="fm-chip-wrap" id="fm-chip-wrap" data-min=" {{ min_miles|default:0 }}" data-max="{{ max_miles|default:50 }}">
+<div class="fm-chip-wrap" id="fm-chip-wrap" data-min=" {{ min_miles|default:0 }}" data-max="{{ max_miles|default:20 }}">
   <button type="button" class="fm-chip" id="fm-chip">
     <span id="fm-chip-label">Food miles: all</span>
     <span class="fm-chip-arrow" id="fm-chip-arrow">&#9662;</span>
@@ -8,17 +8,17 @@
       <div class="fm-track">
         <div class="fm-fill" id="fm-fill"></div>
       </div>
-      <input class="fm-range" id="fm-min-range" type="range" min="{{ min_miles|default:0 }}" max="{{ max_miles|default:50 }}" value="{{ min_miles|default:0 }}" step="1">
-      <input class="fm-range" id="fm-max-range" type="range" min="{{ min_miles|default:0 }}" max="{{ max_miles|default:50 }}" value="{{ max_miles|default:50 }}" step="1">
+      <input class="fm-range" id="fm-min-range" type="range" min="{{ min_miles|default:0 }}" max="{{ max_miles|default:20 }}" value="{{ min_miles|default:0 }}" step="1">
+      <input class="fm-range" id="fm-max-range" type="range" min="{{ min_miles|default:0 }}" max="{{ max_miles|default:20 }}" value="{{ max_miles|default:20 }}" step="1">
     </div>
     <div class="fm-popover-inputs">
       <div class="fm-input-box">
-        <input class="fm-number" id="fm-min-num" type="number" min="{{ min_miles|default:0 }}" max="{{ max_miles|default:50 }}" value="{{ min_miles|default:0 }}">
+        <input class="fm-number" id="fm-min-num" type="number" min="{{ min_miles|default:0 }}" max="{{ max_miles|default:20 }}" value="{{ min_miles|default:0 }}">
         <span class="fm-unit">mi</span>
       </div>
       <span class="fm-dash">&ndash;</span>
       <div class="fm-input-box">
-        <input class="fm-number" id="fm-max-num" type="number" min="{{ min_miles|default:0 }}" max="{{ max_miles|default:50 }}" value="{{ max_miles|default:50 }}">
+        <input class="fm-number" id="fm-max-num" type="number" min="{{ min_miles|default:0 }}" max="{{ max_miles|default:20 }}" value="{{ max_miles|default:20 }}">
         <span class="fm-unit">mi</span>
       </div>
     </div>
