@@ -52,13 +52,37 @@
 
 .filters {
   user-select: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 10px 0 4px;
+  /* display: flex; */
+  /* flex-wrap: wrap; */
+  /* gap: 6px; */
+  /* margin: 10px 0 4px; */
 }
-.filters input {
+.filters input[type="checkbox"] {
   display: none;
+}
+#orgDropdown {
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 8px 0;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    margin-top: 8px;
+}
+
+#orgDropdown .dropdown-item {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    color: #333;
+    transition: background 0.2s, color 0.2s;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+}
+
+#orgDropdown .dropdown-item:hover {
+    background: #f8f9fa;
+    color: var(--primary);
 }
 
 .filters label {

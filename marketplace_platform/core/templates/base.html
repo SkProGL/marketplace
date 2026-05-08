@@ -69,83 +69,51 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <div class="navbar-nav align-items-center">
+                <div class="navbar-nav align-items-center ms-auto">
                 {% if user.is_authenticated %}
-
-                     <!-- PROFILE -->
-                    <div class="base-btn-group">
-                        <a href="{% url 'profile' %}" title="Profile">
-                            {% include 'includes/icons/icon_profile.html' %} Profile
-                        </a>
-                    </div>
-                    {% if user.is_superuser or user.category == 'Admin' or user.category == 'Producer' %}
-                    
-                    <!-- INVENTORY -->
-                    <div class="base-btn-group" id="base-product">
-                        <a href="{% url 'inventory_upload' %}" title="Add new product">
-                            {% include 'includes/icons/icon_product.html' %} Product</a>
-                    </div>
-                    
-                    <!-- MANAGEMENT -->
-                    <div class="base-btn-group" id="base-manage">
-                        <a href="{% url 'management' %}" title="View stored data" class="position-relative">
+                    <!-- MANAGE DROPDOWN -->
+                    <div class="dropdown mx-2">
+                        <button class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown">
                             {% include 'includes/icons/icon_manage.html' %} Manage
-                            {% if stock_alert.total %}
-                            
-                            <span class="position-absolute start-100 translate-middle badge rounded-pill bg-danger text-white">{{ stock_alert.total }}</span>
-                            {% endif %}
-                        </a>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- COMMUNITY -->
-                    <div class="base-btn-group" id="base-community">
-                        <a href="{% url 'community' %}" title="Community hub">
-                            {% include 'includes/icons/icon_community.html' %} Community</a>
-                    </div>
-                    
-                    <!-- ORDERS -->
-                    <div class="base-btn-group" id="base-order-history">
-                        <a href="{% url 'orders' %}" title="Order history">
-                            {% include 'includes/icons/icon_orders.html' %} Orders
-                        </a>
-                    </div>
-
-                    <!-- FINANCE -->
-                    <div class="base-btn-group" id="base-finance">
-                        <a href="{% url 'finance' %}" title="Finance">
-                            Finance
-                        </a>
-                    </div>
-                    
-                    <!-- CART -->
-                    <div class="base-btn-group" onclick="openCart()" id="base-cart">
-                        <span class="cart-bubble" title="View cart">
-                            {% include 'includes/icons/icon_cart.html' %}
-                            <span style="padding:0;padding-left:3px;font-weight:600;letter-spacing:2px;">£{{cart_total_price|default:"0.00"}}</span>
-                        </span>
-                    </div>
-
-                    <!-- LOGOUT -->
-                    <form action="{% url 'logout' %}" method="post">
-                        {% csrf_token %}
-                        <button type="submit" class="base-btn-group" title="Logout" style="background:none;border:none;padding:0;cursor:pointer;">
-                            {% include 'includes/icons/icon_logout.html' %} Logout
                         </button>
-                    </form>
+                        <ul class="dropdown-menu">
+                            {% if user.is_superuser or user.category == 'Admin' or user.category == 'Producer' %}
+                            <li><a class="dropdown-item" href="{% url 'inventory_upload' %}">Inventory</a></li>
+                            <li><a class="dropdown-item" href="{% url 'management' %}">Management</a></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="{% url 'community' %}">Community</a></li>
+                            <li><a class="dropdown-item" href="{% url 'orders' %}">Orders</a></li>
+                            <li><a class="dropdown-item" href="{% url 'finance' %}">Finance</a></li>
+                        </ul>
+                    </div>
+                    <!-- ACCOUNT DROPDOWN -->
+                    <div class="dropdown mx-2">
+                        <button class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown">
+                            {% include 'includes/icons/icon_profile.html' %} Account
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'profile' %}">Profile</a></li>
+                            <li>
+                                <form action="{% url 'logout' %}" method="post" class="px-3">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-link text-danger p-0">Logout</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
                 {% else %}
-                <!-- LOGIN AND SIGNUP -->
-                    <div class="base-btn-group">
-                        <a href="{% url 'login' %}">{% include 'includes/icons/icon_profile.html' %} Log in</a>
-                    </div>
-                    <div class="base-btn-group">
-                        <a href="{% url 'signup' %}">{% include 'includes/icons/icon_signup.html' %} Sign up</a>
-                    </div>
+                    <!-- LOGIN AND SIGNUP -->
+                    <a href="{% url 'login' %}" class="btn btn-outline-success btn-sm mx-1">Log in</a>
+                    <a href="{% url 'signup' %}" class="btn btn-success btn-sm mx-1">Sign up</a>
                 {% endif %}
                 </div>
             </div>
         </div>
     </nav>
+    
+    <button id="cart-launcher" class="cart-launcher" onclick="openCart()">
+        {% include 'includes/icons/icon_cart.html' %} £{{cart_total_price|default:"0.00"}}
+    </button>
 
     {% if messages %}
     <div id="toast-container">

@@ -836,23 +836,31 @@ def home_view(request):
     })
 
     
+def get_producers_api(request):
+    q = request.GET.get('q', '')
+    producers = User.objects.filter(category='Producer')
+    if q:
+        producers = producers.filter(organisation_name__icontains=q)
+    producers = producers.values('id', 'organisation_name')
+    return JsonResponse(list(producers), safe=False)
+
+@login_required
 def add_to_cart(request, product_id):
-    if request.method == 'POST':
-        # Get the current memory, or start a blank dictionary
-        cart = request.session.get('cart', {})
+    # Get the current memory, or start a blank dictionary
+    cart = request.session.get('cart', {})
 
-        quantity = int(request.POST.get('quantity', 1))
-        pid = str(product_id)  # Session keys must be strings
+    quantity = int(request.POST.get('quantity', 1))
+    pid = str(product_id)  # Session keys must be strings
 
-        # Add or update the quantity
-        if pid in cart:
-            cart[pid] += quantity
-        else:
-            cart[pid] = quantity
+    # Add or update the quantity
+    if pid in cart:
+        cart[pid] += quantity
+    else:
+        cart[pid] = quantity
 
-        # Save it back to the session
-        request.session['cart'] = cart
-        messages.success(request, "Item added!")
+    # Save it back to the session
+    request.session['cart'] = cart
+    messages.success(request, "Item added!")
 
     return redirect('home')
 

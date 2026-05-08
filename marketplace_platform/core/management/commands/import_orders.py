@@ -50,8 +50,9 @@ class Command(BaseCommand):
             reader = csv.DictReader(file)
 
             brfn_lat, brfn_lon = (51.503269, -2.602925)
-            for row in reader:
-                # for (i, row) in enumerate(reader):
+            limit = 20
+            # for row in reader:
+            for (i, row) in enumerate(reader):
                 # if i>=limit:
                 #     break
                 try:
@@ -147,3 +148,4 @@ class Command(BaseCommand):
                     self.stderr.write(f"Error with row {row}: {e}")
 
         self.stdout.write("All orders done.")
+
