@@ -594,11 +594,7 @@
   function commitCart() {
     const delta = localQty - (cartState[currentBatchId] || 0);
     if (delta === 0) {
-      showCartConfirm(
-        document.getElementById('modalName').textContent.trim(),
-        localQty,
-        document.getElementById('modalImage').src
-      );
+      // Surgical fix: Don't show popup if quantity hasn't actually changed
       return;
     }
     fetch(`/cart/update/${currentBatchId}/`, {
@@ -641,27 +637,36 @@
       sel.click();
       return;
     }
+    
+    // Surgical fix: If first time adding, show stepper but don't commit/popup yet
     if (localQty === 0) {
       localQty = 1;
       updateModalCartUI();
+      return;
     }
+    
     commitCart();
   });
   document.getElementById('modalIncBtn').addEventListener('click', () => {
     const effectiveCap = currentBatchMaxQty !== null
       ? Math.min(currentBatchStock, currentBatchMaxQty) : currentBatchStock;
-    if (localQty < effectiveCap) { localQty++; updateModalCartUI(); }
+    if (localQty < effectiveCap) { 
+      localQty++; 
+      updateModalCartUI(); 
+      // Surgical fix: Remove immediate commitCart() call from stepper buttons
+    }
   });
   document.getElementById('modalDecBtn').addEventListener('click', () => {
     if (localQty > 0) {
       localQty--;
       updateModalCartUI();
-      if (localQty === 0) commitCart();
+      // Surgical fix: Remove immediate commitCart() call from stepper buttons
     }
   });
   document.getElementById('modalRemoveBtn').addEventListener('click', () => {
     localQty = 0;
     updateModalCartUI();
+    // Keep immediate commit for explicit removal
     commitCart();
   });
   document.getElementById('modalQty').addEventListener('input', () => {
@@ -671,7 +676,7 @@
     if (!isNaN(raw)) {
       localQty = Math.max(0, Math.min(raw, effectiveCap));
       updateModalCartUI();
-      if (localQty === 0) commitCart();
+      // Surgical fix: Remove immediate commitCart() from input
     }
   });
 
