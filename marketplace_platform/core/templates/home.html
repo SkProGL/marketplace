@@ -6,7 +6,7 @@
 
 <div class="home-header">
   <h1>Browse Products</h1>
-  <p>Fresh from local producers &mdash; filter, search, and add to your basket</p>
+  <p>Fresh from local producers &mdash; filter, search and add to your basket</p>
 </div>
 
 <form method="GET" action="">
@@ -33,15 +33,8 @@
     <input type="checkbox" id="preserve" name="category" value="Preserve"
            {% if "Preserve" in selected_categories %}checked{% endif %}>
     <label for="preserve">Preserve</label>
-    <input type="checkbox" id="in_season" name="in_season" value="1"
-           {% if in_season %}checked{% endif %}>
-    <label for="in_season">In Season</label>
-
     <span class="home-filter-divider"></span>
 
-    <input type="checkbox" id="stock" name="in_stock" value="1"
-           {% if in_stock %}checked{% endif %}>
-    <label for="stock">In Stock</label>
     <input type="checkbox" id="discount" name="discounted" value="1"
            {% if discounted %}checked{% endif %}>
     <label for="discount">Discounted</label>
@@ -64,7 +57,7 @@
   </div>
 </form>
 
-
+<hr>
 <div class="home-results">
   <b>Found {{ total_count }} matches</b>
   <p id="search-suggestion" {% if not suggestion %}style="display:none"{% endif %}>
