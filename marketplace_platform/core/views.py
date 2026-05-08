@@ -1229,6 +1229,10 @@ def management_view(request: HttpResponse):
             'selected_model_name': selected_model_name,
         })
     instructions = MODEL_INSTRUCTIONS.get(selected_model_name, '')
+    
+    # Surgical change: Add view_mode to context
+    view_mode = request.GET.get('view_mode', 'basic')
+
     return render(
         request, 'management.html', {
             'model_names': model_names,
@@ -1236,6 +1240,7 @@ def management_view(request: HttpResponse):
             'selected_model_name': selected_model_name,
             'selected_data': selected_data,
             'model_instructions': instructions,
+            'view_mode': view_mode,
         })
 
 @login_required

@@ -295,6 +295,12 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
     priority = MODEL_FIELD_PRIORITY.get(selected_model_name, [])
     if priority:
         visible_fields.sort(key=lambda f: priority.index(f.name) if f.name in priority else len(priority))
+
+    # Surgical change: Implement basic view column limiting
+    view_mode = request.GET.get('view_mode', 'basic')
+    if view_mode == 'basic':
+        visible_fields = visible_fields[:5]
+
     final_headers = [field.name for field in visible_fields]
     header_labels = [field.verbose_name.title() for field in visible_fields]
 

@@ -22,29 +22,42 @@
             <!-- Primary card -->
             <div class="card shadow p-4 ">
                 <!-- Model selection button group -->
-                <div class="flex-wrap gap-2 btn-group card-header  border-0 bg-transparent management-topbar"
-                    role="group">
-                    {% for model_name in model_names %}
-                    <input type="radio" class="btn-check " name="btnradio" id="btnradio{{ forloop.counter }}"
-                        onchange="location.href='?model={{ model_name }}'" {% if model_name == selected_model_name%}checked{% endif %}>
-                    <label class="btn btn-outline-success" for="btnradio{{ forloop.counter }}">
-                        {{ model_display_names|slice:forloop.counter|last }}
-                        <!-- Producers - Show alert badges indicating stock and pending order counts -->
-                        {% if model_name == "ProductBatch" %}
-                            {% if stock_alert.warning_count > 0 %}
-                            <span class="badge bg-warning">{{ stock_alert.warning_count }}</span>
+                <div class="d-flex flex-column gap-3 mb-3">
+                    <!-- Surgical fix: Move toggle above model buttons and ensure layout -->
+                    <div class="d-flex justify-content-end">
+                        <div class="btn-group" role="group">
+                            <a href="?model={{ selected_model_name }}&view_mode=basic" 
+                               class="btn btn-sm {% if view_mode == 'basic' %}btn-success{% else %}btn-outline-success{% endif %}">Basic</a>
+                            <a href="?model={{ selected_model_name }}&view_mode=advanced" 
+                               class="btn btn-sm {% if view_mode == 'advanced' %}btn-success{% else %}btn-outline-success{% endif %}">Advanced</a>
+                        </div>
+                    </div>
+
+                    <div class="flex-wrap gap-2 btn-group management-topbar" role="group">
+                        {% for model_name in model_names %}
+                        {% if view_mode == 'advanced' or forloop.counter <= 5 %}
+                        <input type="radio" class="btn-check " name="btnradio" id="btnradio{{ forloop.counter }}"
+                            onchange="location.href='?model={{ model_name }}&view_mode={{ view_mode }}'" {% if model_name == selected_model_name%}checked{% endif %}>
+                        <label class="btn btn-outline-success" for="btnradio{{ forloop.counter }}">
+                            {{ model_display_names|slice:forloop.counter|last }}
+                            <!-- Producers - Show alert badges indicating stock and pending order counts -->
+                            {% if model_name == "ProductBatch" %}
+                                {% if stock_alert.warning_count > 0 %}
+                                <span class="badge bg-warning">{{ stock_alert.warning_count }}</span>
+                                {% endif %}
+                                {% if stock_alert.error_count > 0 %}
+                                <span class="badge bg-danger">{{ stock_alert.error_count }}</span>
+                                {% endif %}
                             {% endif %}
-                            {% if stock_alert.error_count > 0 %}
-                            <span class="badge bg-danger">{{ stock_alert.error_count }}</span>
+                            {% if model_name == "Order" %}
+                                {% if stock_alert.pending_orders > 0 %}
+                                <span class="badge bg-danger">{{ stock_alert.pending_orders }}</span>
+                                {% endif %}
                             {% endif %}
+                        </label>
                         {% endif %}
-                        {% if model_name == "Order" %}
-                            {% if stock_alert.pending_orders > 0 %}
-                            <span class="badge bg-danger">{{ stock_alert.pending_orders }}</span>
-                            {% endif %}
-                        {% endif %}
-                    </label>
-                    {% endfor %}
+                        {% endfor %}
+                    </div>
                 </div>
                 {% if selected_data.rows %}
                 <small class="text-center text-muted">{{ model_instructions|safe }}</small>
@@ -139,10 +152,19 @@
             .then(r => r.text())
             .then(html => {
                 document.getElementById('management-table-container').innerHTML = html;
+                // Surgical change: Update view mode links if they exist in the new fragment
+                // (Though they are in the main template, ensure state is consistent)
                 attachDirtyListeners();
                 history.pushState({}, '', link.href);
             });
     });
+
+    // Surgical change: Update search and model links to include view_mode
+    function updateUrlParameter(url, param, value) {
+        const urlObj = new URL(url, window.location.origin);
+        urlObj.searchParams.set(param, value);
+        return urlObj.toString();
+    }
 
     // Warn on full page navigation (model switch, sort, etc.) with unsaved rows
     window.addEventListener('beforeunload', function (e) {
@@ -314,6 +336,8 @@ function submitSearch(q) {
     const params = new URLSearchParams(location.search);
     if (q) params.set('q', q); else params.delete('q');
     params.delete('page');
+    // Ensure view_mode is preserved
+    if (!params.has('view_mode')) params.set('view_mode', '{{ view_mode }}');
     location.href = '?' + params.toString();
 }
 

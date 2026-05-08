@@ -1,7 +1,7 @@
 {% include 'includes/management/management_table.html' %}
 {% with p=selected_data.page_obj sort_params=selected_data.current_sort|yesno:"true," %}
 {% if p.paginator.num_pages > 1 %}
-{% with base="?model="|add:selected_model_name sort="&sortby="|add:selected_data.current_sort|add:"&direction="|add:selected_data.current_direction q_param=selected_data.q %}
+{% with base="?model="|add:selected_model_name|add:"&view_mode="|add:view_mode sort="&sortby="|add:selected_data.current_sort|add:"&direction="|add:selected_data.current_direction q_param=selected_data.q %}
 <style>
    .flip-horizontal {
   transform: scaleX(-1);
