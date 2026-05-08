@@ -1,0 +1,3 @@
+[submodule "aai_service"]
+	path = aai_service
+	url = https://github.com/Ironcloude/AAI
