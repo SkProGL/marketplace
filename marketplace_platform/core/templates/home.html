@@ -111,7 +111,7 @@
 	  <br>
         </div>
         <div class="card-btn-wrap">
-          <button type="button" class="add-to-cart-btn">Add</button>
+          <button type="button" class="add-to-cart-btn">Add </button>
           <span class="card-cart-badge"></span>
         </div>
       </div>
@@ -225,7 +225,7 @@
                 <div id="modalCartTotal" class="pm-cart-total"></div>
               </div>
               <div class="pm-add-row">
-                <button id="modalAddBtn" class="add-to-cart-btn pm-add-btn">Add</button>
+                <button id="modalAddBtn" class="add-to-cart-btn pm-add-btn">Add to cart</button>
                 <button id="modalNotifyBtn" class="pm-notify-btn" style="display:none">Notify me when available</button>
               </div>
             </div>
@@ -554,7 +554,7 @@
     document.getElementById('modalCartTotal').textContent = localQty > 0
       ? '£' + (localQty * currentItemPrice).toFixed(2) + ', ' + localQty + currentBatchUnit : '';
     stepper.style.display = localQty > 0 ? 'flex' : 'none';
-    addBtn.textContent    = localQty > 0 ? 'Add to cart' : 'Add';
+    addBtn.textContent    = 'Add to cart';
     document.getElementById('modalIncBtn').disabled = localQty >= effectiveCap;
     const atCap = localQty > 0 && localQty >= effectiveCap;
     document.getElementById('modalNotifyBtn').style.display = (atCap && localQty >= currentBatchStock) ? '' : 'none';
@@ -581,7 +581,14 @@
 
   function commitCart() {
     const delta = localQty - (cartState[currentBatchId] || 0);
-    if (delta === 0) return;
+    if (delta === 0) {
+      showCartConfirm(
+        document.getElementById('modalName').textContent.trim(),
+        localQty,
+        document.getElementById('modalImage').src
+      );
+      return;
+    }
     fetch(`/cart/update/${currentBatchId}/`, {
       method: 'POST',
       headers: {
@@ -625,9 +632,8 @@
     if (localQty === 0) {
       localQty = 1;
       updateModalCartUI();
-    } else {
-      commitCart();
     }
+    commitCart();
   });
   document.getElementById('modalIncBtn').addEventListener('click', () => {
     const effectiveCap = currentBatchMaxQty !== null
@@ -794,7 +800,7 @@
                 : `<span class="card-rating card-rating--none">No reviews yet</span>`}
             </div>
             <div class="card-btn-wrap">
-              <button type="button" class="add-to-cart-btn">Add</button>
+              <button type="button" class="add-to-cart-btn">Add to cart</button>
               <span class="card-cart-badge"></span>
             </div>
           </div>

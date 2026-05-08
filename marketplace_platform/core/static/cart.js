@@ -28,6 +28,12 @@ function addToCart(productId, btn) {
                 <button class="widget-stepper-btn" onclick="updateCart('${productId}', 1, this)">+</button>
             </div>`;
       updateNavbarCart(data.total_items, data.total_price);
+      if (typeof showCartConfirm === "function") {
+        const card = btn.closest(".card");
+        const name = card ? card.dataset.name : "";
+        const image = card ? card.dataset.image : "";
+        showCartConfirm(name, data.quantity, image);
+      }
     });
 }
 
@@ -55,7 +61,7 @@ function updateCart(productId, delta, btn) {
       const widget = btn.closest(".cart-widget");
       if (data.quantity <= 0) {
         // Swap back to Add button
-        widget.innerHTML = `<button class="add-to-cart-btn" onclick="addToCart('${productId}', this)">Add</button>`;
+        widget.innerHTML = `<button class="add-to-cart-btn" onclick="addToCart('${productId}', this)">Add to cart</button>`;
       } else {
         widget.querySelector(".stepper-qty").innerText = data.quantity;
       }
@@ -205,7 +211,7 @@ function syncCardWidget(productId, quantity) {
   );
   if (!card) return;
   if (quantity <= 0) {
-    card.innerHTML = `<button class="add-to-cart-btn" onclick="addToCart('${productId}', this)">Add</button>`;
+    card.innerHTML = `<button class="add-to-cart-btn" onclick="addToCart('${productId}', this)">Add to cart</button>`;
   } else {
     const qty = card.querySelector(".stepper-qty");
     if (qty) qty.innerText = quantity;
