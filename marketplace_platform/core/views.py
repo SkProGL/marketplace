@@ -658,6 +658,10 @@ def home_view(request):
     if categories:
         items = items.filter(category__in=categories)
 
+    producer_id = request.GET.get('producer')
+    if producer_id:
+        items = items.filter(producer_id=producer_id)
+
     if request.GET.get('discounted'):
         items = items.filter(batches__surplus=True).distinct()
 
