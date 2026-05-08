@@ -11,7 +11,7 @@
 
 <form method="GET" action="">
   <div class="form-control">
-    <input class="input input-alt" placeholder="Search organizations&hellip;" type="text"
+    <input class="input input-alt" placeholder="Search products&hellip;" type="text"
            name="q" value="{{ request.GET.q }}">
     <span class="input-border input-border-alt"></span>
   </div>
@@ -19,12 +19,12 @@
   <div class="filters home-filter-row">
     <!-- Producer Search -->
     <div class="position-relative me-3" style="width:200px;">
-        <input type="text" id="orgSearch" placeholder="Search organisations..." class="form-control form-control-sm" onkeyup="filterOrgs()" onfocus="filterOrgs()">
+        <input type="text" id="orgSearch" placeholder="Search organisations..." class="form-control form-control-sm" onkeyup="filterOrgs()">
         <div id="orgDropdown" class="dropdown-menu" style="display:none; max-height:200px; overflow-y:auto; z-index:1000;"></div>
     </div>
     <input type="hidden" name="producer" id="selectedOrgId">
-    <br>
     
+    <br>
     <span class="home-allergen-label me-2">Categories:</span>
     <input type="checkbox" id="fruit" name="category" value="Fruit" {% if "Fruit" in selected_categories %}checked{% endif %}>
     <label for="fruit" class="me-2">Fruits</label>
@@ -37,6 +37,8 @@
     <input type="checkbox" id="preserve" name="category" value="Preserve" {% if "Preserve" in selected_categories %}checked{% endif %}>
     <label for="preserve" class="me-3">Preserve</label>
     
+    <br>
+    <br>
     <input type="checkbox" id="stock" name="in_stock" value="1" {% if in_stock %}checked{% endif %}>
     <label for="stock" class="me-2">In Stock</label>
     <input type="checkbox" id="discount" name="discounted" value="1" {% if discounted %}checked{% endif %}>
@@ -866,25 +868,17 @@
   }
 
   function filterOrgs() {
-      const searchInput = document.getElementById('orgSearch');
-      const search = searchInput.value.toLowerCase();
+      const search = document.getElementById('orgSearch').value.toLowerCase();
       const dropdown = document.getElementById('orgDropdown');
       
-      if (search === "") {
-          const oldId = document.getElementById('selectedOrgId').value;
-          document.getElementById('selectedOrgId').value = "";
-          if (oldId !== "") {
-              fetchResults(true);
-          }
+      if (search.length < 2) {
+          dropdown.style.display = 'none';
+          return;
       }
       
       fetch(`/api/producers/?q=${search}`)
       .then(r => r.json())
       .then(data => {
-          if (data.length === 0) {
-              dropdown.style.display = 'none';
-              return;
-          }
           dropdown.innerHTML = data.map(p => `<button type="button" class="dropdown-item" onclick="selectOrg('${p.id}', '${p.organisation_name}')">${p.organisation_name}</button>`).join('');
           dropdown.style.display = 'block';
       });
@@ -903,12 +897,48 @@
     renderReviews();
   }
 
-  document.addEventListener('click', function(e) {
-      const dropdown = document.getElementById('orgDropdown');
-      const searchInput = document.getElementById('orgSearch');
-      if (dropdown && !dropdown.contains(e.target) && e.target !== searchInput) {
-          dropdown.style.display = 'none';
+  function initMoreLessFilters() {
+    const filterGroups = [
+      { name: 'category', limit: 3 },
+      { name: 'exclude_allergen', limit: 3 }
+    ];
+
+    filterGroups.forEach(group => {
+      const inputs = document.querySelectorAll(`input[name="${group.name}"]`);
+      if (inputs.length <= group.limit) return;
+
+      const labels = Array.from(inputs).map(input => document.querySelector(`label[for="${input.id}"]`)).filter(l => l);
+      if (labels.length <= group.limit) return;
+
+      labels.forEach((label, index) => {
+        if (index >= group.limit) {
+          label.style.display = 'none';
+        }
+      });
+
+      const toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.className = 'page-btn';
+      toggleBtn.textContent = 'More';
+      
+      let expanded = false;
+      toggleBtn.onclick = (e) => {
+        e.preventDefault();
+        expanded = !expanded;
+        labels.forEach((label, index) => {
+          if (index >= group.limit) {
+            label.style.display = expanded ? 'inline-block' : 'none';
+          }
+        });
+        toggleBtn.textContent = expanded ? 'Less' : 'More';
+      };
+
+      const lastLabel = labels[labels.length - 1];
+      if (lastLabel) {
+        lastLabel.parentNode.insertBefore(toggleBtn, lastLabel.nextSibling);
       }
-  });
+    });
+  }
+  initMoreLessFilters();
 </script>
 {% endblock %}

@@ -112,7 +112,7 @@
     </nav>
     
     <button id="cart-launcher" class="cart-launcher" onclick="openCart()">
-        {% include 'includes/icons/icon_cart.html' %} £{{cart_total_price|default:"0.00"}}
+        {% include 'includes/icons/icon_cart.html' %} &nbsp;&nbsp;£{{cart_total_price|default:"0.00"}}
     </button>
 
     {% if messages %}
