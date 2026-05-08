@@ -49,7 +49,12 @@ class Command(BaseCommand):
         with open("synthetic_data/orders.csv", newline="", encoding="utf-8") as file:
             reader = csv.DictReader(file)
 
-            for row in reader:
+            brfn_lat, brfn_lon = (51.503269, -2.602925)
+            limit = 20
+            # for row in reader:
+            for (i, row) in enumerate(reader):
+                if i>=limit:
+                    break
                 try:
                     indexes = row["product_ids"].replace('"', "").split(",")
                     batches_for_order = [
@@ -143,3 +148,4 @@ class Command(BaseCommand):
                     self.stderr.write(f"Error with row {row}: {e}")
 
         self.stdout.write("All orders done.")
+

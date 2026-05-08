@@ -3,6 +3,7 @@ from django.contrib.auth import views as auth_views
 from core import views
 
 urlpatterns = [
+    path('api/producers/', views.get_producers_api, name='api_producers'),
     # General/Account URLs
     path('', views.home_view, name='home'),
     path('login/', views.login_view, name='login'),
