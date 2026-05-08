@@ -1630,6 +1630,12 @@ def auto_update_order_statuses():
     for order in Order.objects.filter(id__in=affected_orders):
         order.sync_status()
 
+    # Catch any orders whose badge is stale (ProducerOrder advanced but Order not synced)
+    for order in Order.objects.prefetch_related('producer_orders').exclude(
+        order_status__in=['DELIVERED', 'CANCELLED']
+    ):
+        order.sync_status()
+
 
 @management_access_required
 def advance_order_status(request, producer_order_id):
