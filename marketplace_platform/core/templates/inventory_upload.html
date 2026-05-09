@@ -180,9 +180,22 @@
         <input type="file" name="image" accept="image/*" id="ab-image" />
         <span class="upload-label">Select image (auto-compressed on upload)</span>
       </label>
+      <style>
+        @keyframes img-spin { to { transform: rotate(360deg); } }
+        #img-spinner {
+          display: inline-block;
+          width: 14px; height: 14px;
+          border: 2px solid #ccc;
+          border-top-color: #555;
+          border-radius: 50%;
+          animation: img-spin 0.7s linear infinite;
+          vertical-align: middle;
+          margin-right: 6px;
+        }
+      </style>
       <div id="img-feedback" style="display:none;margin-top:8px;padding:10px 14px;border-radius:8px;font-size:0.88rem;background:#fff8e1;border:1px solid #f6c90e;">
-        <strong id="img-feedback-title">Image quality suggestions:</strong>
-        <div id="img-stats" style="display:none;margin-top:6px;font-size:0.82rem;color:#555;display:flex;gap:16px;flex-wrap:wrap;">
+        <span id="img-spinner" style="display:none;"></span><strong id="img-feedback-title">Image quality suggestions:</strong>
+        <div id="img-stats" style="display:none;margin-top:6px;font-size:0.82rem;color:#555;gap:16px;flex-wrap:wrap;">
           <span>Brightness: <strong id="img-brightness-val"></strong></span>
           <span>Coverage: <strong id="img-coverage-pct"></strong></span>
         </div>
@@ -296,6 +309,7 @@
   const fbBox           = document.getElementById('img-feedback');
   const fbList          = document.getElementById('img-feedback-list');
   const fbTitle         = document.getElementById('img-feedback-title');
+  const fbSpinner       = document.getElementById('img-spinner');
   const fbStats         = document.getElementById('img-stats');
   const brightnessVal   = document.getElementById('img-brightness-val');
   const rembgSection    = document.getElementById('img-rembg-section');
@@ -333,8 +347,11 @@
     // Show loading state while rembg runs server-side
     fbBox.style.background = '#f5f5f5';
     fbBox.style.borderColor = '#ccc';
-    fbBox.querySelector('strong').textContent = 'Analysing image…';
+    fbTitle.textContent = 'Analysing image…';
     fbList.innerHTML = '';
+    fbStats.style.display = 'none';
+    rembgSection.style.display = 'none';
+    fbSpinner.style.display = 'inline-block';
     fbBox.style.display = '';
 
     // --- server-side coverage check via rembg ---
@@ -362,10 +379,11 @@
     } else {
       fbBox.style.background = '#f0fff4';
       fbBox.style.borderColor = '#198754';
-      fbTitle.textContent = '✓ Image looks gooda!';
+      fbTitle.textContent = 'Image looks good!';
       fbList.innerHTML = '';
     }
 
+    fbSpinner.style.display = 'none';
     brightnessVal.textContent = `${avgLum.toFixed(0)} / 255`;
     fbStats.style.display = 'flex';
 
