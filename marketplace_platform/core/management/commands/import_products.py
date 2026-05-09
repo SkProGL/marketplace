@@ -7,7 +7,7 @@ from core.models import Product, ProductBatch, User
 def to_decimal(value, default=0):
     return Decimal(value) if value not in ("", None) else Decimal(default)
 
-#CSV:name,category,description,price,unit,availability,seasonStart,seasonEnd,best_before,food_miles,stock,stock_alert_threshold,allergens,organic,surplus,discount_percentage,discount_expiry,discount note,images,producer_id
+
 class Command(BaseCommand):
     help = "Import products and producer batches from CSV"
 
@@ -19,7 +19,6 @@ class Command(BaseCommand):
                 try:
                     name = row.get("name")
                     producer_id = random.choice(producer_ids)
-                    # One Product per unique name; price is the Class A base price
                     product, _ = Product.objects.get_or_create(
                         name=name,
                         defaults={
@@ -35,20 +34,25 @@ class Command(BaseCommand):
                             "image_url": row["images"],
                         }
                     )
-                    # Each CSV row creates a Class A batch (price derived from product)
+
+                    # Clear old batches so re-imports don't stack
+                    product.batches.all().delete()
+
+                    is_surplus = row["surplus"] == "True"
                     ProductBatch.objects.create(
                         product=product,
-                        quality_class='A',
+                        quality_class=row["quality_class"],
                         stock=int(row["stock"]),
-                        availability=row["availability"].capitalize(),
+                        availability=row["availability"].title(),
                         seasonStart=row["seasonStart"].capitalize(),
                         seasonEnd=row["seasonEnd"].capitalize(),
                         best_before=row["best_before"],
-                        surplus=row["surplus"] == "True",
+                        surplus=is_surplus,
                         discount_percentage=to_decimal(row["discount_percentage"]),
-                        image=f"item_images/{row['img_path']}"
+                        image=f"item_images/{row['img_path']}",
                     )
-                    print(f"Batch created for: {name}")
+
+                    print(f"Batches created for: {name}")
                 except Exception as e:
                     print(f"Error with row {row}: {e}")
         print("done")

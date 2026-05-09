@@ -1004,6 +1004,58 @@ def upload_item(request):
 
 
 @login_required
+def analyse_image(request):
+    if request.method != 'POST' or not request.FILES.get('image'):
+        return JsonResponse({'error': 'No image provided'}, status=400)
+    try:
+        from rembg import remove  # type: ignore[import-untyped]
+        from PIL import Image as PILImage
+        import numpy as np  # type: ignore[import-untyped]
+        import io, base64
+
+        img = PILImage.open(request.FILES['image']).convert('RGBA')
+        W, H = img.size
+
+        # Pad with white so rembg always has background context even for close-up shots
+        pad = max(W, H) // 5
+        padded = PILImage.new('RGBA', (W + 2 * pad, H + 2 * pad), (255, 255, 255, 255))
+        padded.paste(img, (pad, pad))
+
+        result_padded = remove(padded)
+
+        # Crop result back to original dimensions for the preview
+        result = result_padded.crop((pad, pad, pad + W, pad + H))
+        padded_mask = np.array(result_padded)[:, :, 3]
+        cropped_mask = np.array(result)[:, :, 3]
+
+        # Coverage relative to original image area (not padded)
+        coverage = min(float((padded_mask > 128).sum()) / (W * H), 1.0)
+
+        buf = io.BytesIO()
+        result.save(buf, format='PNG')
+        preview_b64 = base64.b64encode(buf.getvalue()).decode()
+
+        tips = []
+        if coverage < 0.20:
+            tips.append(f"The produce takes up only {coverage*100:.0f}% of the frame. Move the camera closer.")
+        elif coverage > 0.70:
+            tips.append("The produce fills almost the entire frame. Move the camera slightly further away.")
+
+        # Check if produce is cut off at any edge of the original frame
+        edge_fg_threshold = 0.05
+        edges = [cropped_mask[0, :], cropped_mask[-1, :], cropped_mask[:, 0], cropped_mask[:, -1]]
+        if any((e > 128).mean() > edge_fg_threshold for e in edges):
+            tips.append("Part of the produce appears to be cut off. Make sure the full item fits within the frame.")
+
+        return JsonResponse({
+            'coverage': round(coverage, 3),
+            'tips': tips,
+            'preview': preview_b64,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 def add_batch(request):
     producer = request.user
     products = Product.objects.filter(producer=producer).order_by('name')

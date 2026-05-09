@@ -188,6 +188,21 @@
         <input type="file" name="image" accept="image/*" id="ab-image" />
         <span class="upload-label">Select image (auto-compressed on upload)</span>
       </label>
+      <div id="img-feedback" style="display:none;margin-top:8px;padding:10px 14px;border-radius:8px;font-size:0.88rem;background:#fff8e1;border:1px solid #f6c90e;">
+        <strong id="img-feedback-title">Image quality suggestions:</strong>
+        <div id="img-stats" style="display:none;margin-top:6px;font-size:0.82rem;color:#555;display:flex;gap:16px;flex-wrap:wrap;">
+          <span>Brightness: <strong id="img-brightness-val"></strong></span>
+          <span>Coverage: <strong id="img-coverage-pct"></strong></span>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start;margin-top:8px;">
+          <div id="img-rembg-section" style="display:none;flex-shrink:0;">
+            <div style="font-size:0.82rem;color:#555;margin-bottom:4px;">What the model sees</div>
+            <img id="img-rembg-preview" src="" alt="rembg output"
+                 style="max-width:160px;max-height:160px;border-radius:6px;border:1px solid #ddd;background:repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 0 0/16px 16px;" />
+          </div>
+          <ul id="img-feedback-list" style="margin:0;padding-left:18px;"></ul>
+        </div>
+      </div>
 
       <button type="submit">Add Batch</button>
     </form>
@@ -285,11 +300,101 @@
     }
   });
 
-  const abImage = document.getElementById('ab-image');
+  const abImage         = document.getElementById('ab-image');
+  const fbBox           = document.getElementById('img-feedback');
+  const fbList          = document.getElementById('img-feedback-list');
+  const fbTitle         = document.getElementById('img-feedback-title');
+  const fbStats         = document.getElementById('img-stats');
+  const brightnessVal   = document.getElementById('img-brightness-val');
+  const rembgSection    = document.getElementById('img-rembg-section');
+  const rembgPreview    = document.getElementById('img-rembg-preview');
+  const coveragePct     = document.getElementById('img-coverage-pct');
+
+  async function analyseImage(file) {
+    // Draw image to canvas — used for brightness check AND to produce a
+    // JPEG blob for the server (handles HEIC and other exotic formats PIL can't open)
+    const { brightnessTips, avgLum, jpegBlob } = await new Promise(resolve => {
+      const img = new Image();
+      img.onload = function() {
+        const W = img.naturalWidth, H = img.naturalHeight;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const data = ctx.getImageData(0, 0, W, H).data;
+        let lumSum = 0;
+        const total = W * H;
+        for (let i = 0; i < data.length; i += 4)
+          lumSum += 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+        const lum = lumSum / total;
+        const tips = [];
+        if (lum < 80)
+          tips.push(`Image is too dark (brightness ${lum.toFixed(0)}/255). Move to better lighting or increase brightness.`);
+        else if (lum > 230)
+          tips.push(`Image is overexposed (brightness ${lum.toFixed(0)}/255). Reduce direct light or avoid flash.`);
+        URL.revokeObjectURL(img.src);
+        canvas.toBlob(blob => resolve({ brightnessTips: tips, avgLum: lum, jpegBlob: blob }), 'image/jpeg', 0.85);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+
+    // Show loading state while rembg runs server-side
+    fbBox.style.background = '#f5f5f5';
+    fbBox.style.borderColor = '#ccc';
+    fbBox.querySelector('strong').textContent = 'Analysing image…';
+    fbList.innerHTML = '';
+    fbBox.style.display = '';
+
+    // --- server-side coverage check via rembg ---
+    let coverageTips = [];
+    let serverResult = null;
+    try {
+      const formData = new FormData();
+      formData.append('image', jpegBlob, 'image.jpg');
+      formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+      const resp = await fetch('/inventory_upload/analyse/', { method: 'POST', body: formData });
+      if (resp.ok) {
+        serverResult = await resp.json();
+        if (serverResult.tips) coverageTips = serverResult.tips;
+      }
+    } catch (e) {
+      // silently ignore server errors — coverage check is non-critical
+    }
+
+    const tips = [...brightnessTips, ...coverageTips];
+    if (tips.length) {
+      fbBox.style.background = '#fff8e1';
+      fbBox.style.borderColor = '#f6c90e';
+      fbTitle.textContent = 'Image quality suggestions:';
+      fbList.innerHTML = tips.map(t => `<li>${t}</li>`).join('');
+    } else {
+      fbBox.style.background = '#f0fff4';
+      fbBox.style.borderColor = '#198754';
+      fbTitle.textContent = '✓ Image looks gooda!';
+      fbList.innerHTML = '';
+    }
+
+    brightnessVal.textContent = `${avgLum.toFixed(0)} / 255`;
+    fbStats.style.display = 'flex';
+
+    if (serverResult && serverResult.preview) {
+      coveragePct.textContent = `${(serverResult.coverage * 100).toFixed(1)}%`;
+      rembgPreview.src = `data:image/png;base64,${serverResult.preview}`;
+      rembgSection.style.display = '';
+    } else {
+      coveragePct.textContent = '—';
+      rembgSection.style.display = 'none';
+    }
+
+    fbBox.style.display = '';
+  }
+
   if (abImage) {
     abImage.addEventListener('change', function() {
       const span = this.closest('label.upload').querySelector('.upload-label');
       span.textContent = this.files[0] ? this.files[0].name : 'Select image (auto-compressed on upload)';
+      if (this.files[0]) analyseImage(this.files[0]);
+      else { fbBox.style.display = 'none'; }
     });
   }
 
