@@ -229,15 +229,39 @@ def cancel_order(request, order_id):
 
 @login_required
 def orders(request):
+    now = timezone.now()
+    # Auto-deliver READY producer orders whose delivery date has passed
+    user_ready = ProducerOrder.objects.filter(
+        order__customer=request.user,
+        order_status='READY',
+    ).filter(
+        Q(delivery_date__lte=now) | Q(order__delivery_date__lte=now)
+    ).select_related('order')
+    if user_ready.exists():
+        OrderStatusHistory.objects.bulk_create([
+            OrderStatusHistory(
+                producer_order=po, from_status='READY', to_status='DELIVERED',
+                changed_by=None, note='Auto-delivered: delivery date reached.',
+            ) for po in user_ready
+        ])
+        affected = set(po.order_id for po in user_ready)
+        user_ready.update(order_status='DELIVERED')
+        for order in Order.objects.filter(id__in=affected):
+            order.sync_status()
+
     qs = (Order.objects
           .filter(customer=request.user)
           .order_by('-order_date')
           .prefetch_related(
               'orderproduct_set__batch__product__producer',
               'producer_orders__status_history',
+              'producer_orders',
           ))
     paginator = Paginator(qs, 5)
     page_obj = paginator.get_page(request.GET.get('page'))
+    # Sync badge status against actual ProducerOrder states
+    for order in page_obj:
+        order.sync_status()
     return render(request, 'orders.html', {
         'orders': page_obj,
         'page_obj': page_obj,
@@ -338,11 +362,15 @@ def checkout(request):
             subtotal * Decimal('0.05')
         ).quantize(Decimal('0.01'))
 
+        earliest_bb = min(item['product'].best_before for item in items)
+        max_delivery = (earliest_bb - timedelta(days=3)).strftime('%Y-%m-%d')
+
         cart_by_producer.append({
             'producer': producer,
             'items': items,
             'subtotal': subtotal,
             'commission': commission,
+            'max_delivery_date': max_delivery,
         })
 
         total_commission += commission
@@ -390,7 +418,18 @@ def checkout(request):
                             f"must be at least 48 hours from now."
                         )
                     else:
-                        producer_dates[pid] = d
+                        earliest_bb = min(
+                            item['product'].best_before for item in group['items']
+                        )
+                        latest_delivery = earliest_bb - timedelta(days=3)
+                        if d > latest_delivery:
+                            date_errors.append(
+                                f"Delivery date for {producer_name} must be at least "
+                                f"3 days before the earliest best before date "
+                                f"({earliest_bb.strftime('%d %b %Y')})."
+                            )
+                        else:
+                            producer_dates[pid] = d
 
                 except ValueError:
                     date_errors.append(
@@ -641,7 +680,14 @@ def home_view(request):
     items = Product.objects.select_related('producer').prefetch_related(
         Prefetch('batches', queryset=in_stock_batches_qs, to_attr='in_stock_batches')
     ).annotate(
-        total_stock=Sum('batches__stock'),
+        total_stock=Sum(
+            'batches__stock',
+            filter=Q(
+                batches__stock__gt=0,
+                batches__best_before__gt=min_best_before,
+                batches__availability__in=['Available', 'Available All Year'],
+            ),
+        ),
         primary_image=Subquery(
             ProductBatch.objects.filter(
                 product=OuterRef('pk'),
@@ -688,6 +734,9 @@ def home_view(request):
     filtered_items = []
 
     for item in items:
+        if item.availability not in ('Available', 'Available All Year'):
+            continue
+
         if customer_coords:
             miles = get_producer_food_miles(
                 item.producer,
@@ -721,11 +770,12 @@ def home_view(request):
     page_obj = paginator.get_page(page_number)
     items_list = list(page_obj)
 
-    def _batch_dict(b, unit=''):
+    def _batch_dict(b, unit='', base_price=None):
         return {
             'id': str(b.id),
             'quality_class': b.quality_class,
             'price': str(b.price),
+            'base_price': str(base_price or b.product.price),
             'unit': unit,
             'stock': b.stock,
             'best_before': str(b.best_before),
@@ -739,7 +789,7 @@ def home_view(request):
         }
 
     batch_data = {
-        str(item.id): [_batch_dict(b, item.unit) for b in item.in_stock_batches]
+        str(item.id): [_batch_dict(b, item.unit, item.price) for b in item.in_stock_batches]
         for item in items_list
     }
 
@@ -750,8 +800,11 @@ def home_view(request):
             lo = min(prices)
             hi = max(prices)
             item.price_display = f'From £{lo:.2f}' if lo != hi else f'£{lo:.2f}'
+            base = float(item.price)
+            item.original_price_display = f'£{base:.2f}' if lo < base else None
         else:
             item.price_display = f'£{item.price}'
+            item.original_price_display = None
 
     product_ids = [item.id for item in items_list]
     reviews_qs = Review.objects.filter(product_id__in=product_ids).select_related('user').order_by('-date_posted')
@@ -896,7 +949,8 @@ def login_view(request):
 
             if user is not None:
                 login(request, user)
-                request.session.update(food_mile_session_builder(user))
+                for k, v in food_mile_session_builder(user).items():
+                    request.session[k] = v
                 if not remember_me:
                     request.session.set_expiry(0)
                 else:
@@ -1281,6 +1335,10 @@ def management_view(request: HttpResponse):
             'selected_model_name': selected_model_name,
         })
     instructions = MODEL_INSTRUCTIONS.get(selected_model_name, '')
+    
+    # Surgical change: Add view_mode to context
+    view_mode = request.GET.get('view_mode', 'basic')
+
     return render(
         request, 'management.html', {
             'model_names': model_names,
@@ -1288,6 +1346,7 @@ def management_view(request: HttpResponse):
             'selected_model_name': selected_model_name,
             'selected_data': selected_data,
             'model_instructions': instructions,
+            'view_mode': view_mode,
         })
 
 @login_required
@@ -1598,7 +1657,9 @@ def auto_update_order_statuses():
     """Auto-update ProducerOrders when delivery date has passed, then sync parent Order."""
     now = timezone.now()
 
-    ready_due = ProducerOrder.objects.filter(order_status='READY', delivery_date__lte=now).select_related('order')
+    ready_due = ProducerOrder.objects.filter(order_status='READY').filter(
+        Q(delivery_date__lte=now) | Q(order__delivery_date__lte=now)
+    ).select_related('order')
     OrderStatusHistory.objects.bulk_create([
         OrderStatusHistory(producer_order=po, from_status='READY', to_status='DELIVERED',
                            changed_by=None, note='Auto-delivered: delivery date reached.')
@@ -1619,6 +1680,12 @@ def auto_update_order_statuses():
     unacknowledged.update(order_status='CANCELLED')
 
     for order in Order.objects.filter(id__in=affected_orders):
+        order.sync_status()
+
+    # Catch any orders whose badge is stale (ProducerOrder advanced but Order not synced)
+    for order in Order.objects.prefetch_related('producer_orders').exclude(
+        order_status__in=['DELIVERED', 'CANCELLED']
+    ):
         order.sync_status()
 
 
@@ -1702,9 +1769,15 @@ def edit_profile(request):
 
         if "update_profile" in request.POST:
             if profile_form.is_valid():
+                old_postcode = request.user.postcode
+                new_postcode = profile_form.cleaned_data.get('postcode', old_postcode)
                 profile_form.save()
+                if new_postcode != old_postcode:
+                    for k, v in food_mile_session_builder(request.user).items():
+                        request.session[k] = v
                 messages.success(request, "Profile updated successfully.")
                 return redirect("profile")
+
 
         elif "change_password" in request.POST:
             if password_form.is_valid():

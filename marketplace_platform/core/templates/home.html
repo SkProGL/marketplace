@@ -114,7 +114,7 @@
           {% if item.producer.organisation_name %}
             <span class="card-producer">{{ item.producer.organisation_name }}</span>
           {% endif %}
-          <span class="price">{{ item.price_display }}</span>
+          {% if item.original_price_display %}<span class="price-original">{{ item.original_price_display }}</span>{% endif %}<span class="price">{{ item.price_display }}</span>
           {% if item.avg_rating %}
             <span class="card-rating">&#11088; {{ item.avg_rating }}/5 ({{ item.review_count }})</span>
           {% else %}
@@ -297,14 +297,22 @@
   const isBulkBuyer  = userCategory === 'Restaurant' || userCategory === 'Community';
 
   function selectBatch(batch) {
-    document.getElementById('modalPrice').textContent      = '£' + batch.price + (batch.unit ? '/' + batch.unit : '');
+    const unitSuffix = batch.unit ? '/' + batch.unit : '';
+    const discountedPrice = parseFloat(batch.price);
+    const basePrice = parseFloat(batch.base_price);
+    const priceEl = document.getElementById('modalPrice');
+    if (basePrice > discountedPrice) {
+      priceEl.innerHTML = `<span class="price-original">£${basePrice.toFixed(2)}${unitSuffix}</span> £${discountedPrice.toFixed(2)}${unitSuffix}`;
+    } else {
+      priceEl.textContent = '£' + discountedPrice.toFixed(2) + unitSuffix;
+    }
     document.getElementById('modalBestBefore').textContent = batch.best_before;
     document.getElementById('modalStockLabel').textContent = 'In stock:';
     document.getElementById('modalTotalStock').textContent = batch.stock;
     document.getElementById('modalStockUnit').textContent  = batch.unit || '';
     document.getElementById('modalSurplusBadge').style.display = batch.surplus ? '' : 'none';
     const discRow = document.getElementById('modalDiscountRow');
-    if (batch.quality_class === 'Discounted' && parseFloat(batch.discount) > 0) {
+    if (parseFloat(batch.discount) > 0) {
       discRow.style.display = '';
       document.getElementById('modalDiscount').textContent = batch.discount;
     } else {
@@ -581,24 +589,28 @@
       ? `Max ${currentBatchMaxQty} per order for standard customers.` : '';
   }
 
+  function dismissCartConfirm() {
+    const el = document.getElementById('cartConfirm');
+    el.classList.add('hiding');
+    el.addEventListener('animationend', () => {
+      el.style.display = 'none';
+      el.classList.remove('hiding');
+    }, { once: true });
+  }
   function showCartConfirm(name, qty, imgSrc) {
     bootstrap.Modal.getInstance(document.getElementById('productModal'))?.hide();
+    const el = document.getElementById('cartConfirm');
+    el.classList.remove('hiding');
     document.getElementById('cartConfirmImg').src = imgSrc || '';
     document.getElementById('cartConfirmQty').textContent = `Quantity: ${qty}`;
-    document.getElementById('cartConfirm').style.display = 'flex';
+    el.style.display = 'flex';
   }
-  document.getElementById('cartConfirmClose').addEventListener('click', () => {
-    document.getElementById('cartConfirm').style.display = 'none';
-  });
+  document.getElementById('cartConfirmClose').addEventListener('click', dismissCartConfirm);
 
   function commitCart() {
     const delta = localQty - (cartState[currentBatchId] || 0);
     if (delta === 0) {
-      showCartConfirm(
-        document.getElementById('modalName').textContent.trim(),
-        localQty,
-        document.getElementById('modalImage').src
-      );
+      // Surgical fix: Don't show popup if quantity hasn't actually changed
       return;
     }
     fetch(`/cart/update/${currentBatchId}/`, {
@@ -641,27 +653,36 @@
       sel.click();
       return;
     }
+    
+    // Surgical fix: If first time adding, show stepper but don't commit/popup yet
     if (localQty === 0) {
       localQty = 1;
       updateModalCartUI();
+      return;
     }
+    
     commitCart();
   });
   document.getElementById('modalIncBtn').addEventListener('click', () => {
     const effectiveCap = currentBatchMaxQty !== null
       ? Math.min(currentBatchStock, currentBatchMaxQty) : currentBatchStock;
-    if (localQty < effectiveCap) { localQty++; updateModalCartUI(); }
+    if (localQty < effectiveCap) { 
+      localQty++; 
+      updateModalCartUI(); 
+      // Surgical fix: Remove immediate commitCart() call from stepper buttons
+    }
   });
   document.getElementById('modalDecBtn').addEventListener('click', () => {
     if (localQty > 0) {
       localQty--;
       updateModalCartUI();
-      if (localQty === 0) commitCart();
+      // Surgical fix: Remove immediate commitCart() call from stepper buttons
     }
   });
   document.getElementById('modalRemoveBtn').addEventListener('click', () => {
     localQty = 0;
     updateModalCartUI();
+    // Keep immediate commit for explicit removal
     commitCart();
   });
   document.getElementById('modalQty').addEventListener('input', () => {
@@ -671,7 +692,7 @@
     if (!isNaN(raw)) {
       localQty = Math.max(0, Math.min(raw, effectiveCap));
       updateModalCartUI();
-      if (localQty === 0) commitCart();
+      // Surgical fix: Remove immediate commitCart() from input
     }
   });
 
@@ -919,7 +940,8 @@
       fetch(`/api/producers/?q=${search}`)
       .then(r => r.json())
       .then(data => {
-          dropdown.innerHTML = data.map(p => `<button type="button" class="dropdown-item" onclick="selectOrg('${p.id}', '${p.organisation_name}')">${p.organisation_name}</button>`).join('');
+          if (!data.length) { dropdown.style.display = 'none'; return; }
+          dropdown.innerHTML = data.map(p => `<button type="button" class="dropdown-item" style="padding:6px 12px;" onclick="selectOrg('${p.id}', '${p.organisation_name}')">${p.organisation_name}</button>`).join('');
           dropdown.style.display = 'block';
       });
   }

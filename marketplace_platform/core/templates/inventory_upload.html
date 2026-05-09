@@ -10,14 +10,6 @@
 
 <div class="form">
 
-  {% if messages %}
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags|default:'info' }}" style="margin-bottom:16px;padding:12px 16px;border-radius:8px;font-size:0.92rem;">
-        {{ message }}
-      </div>
-    {% endfor %}
-  {% endif %}
-
   <div class="form-tabs">
     <button type="button" class="tab-btn active" id="tab-new" onclick="switchTab('new')">New Product</button>
     <button type="button" class="tab-btn" id="tab-batch" onclick="switchTab('batch')">Add Batch</button>

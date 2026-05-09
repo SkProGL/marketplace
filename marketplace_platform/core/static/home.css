@@ -228,6 +228,13 @@
   letter-spacing: 0;
   font-weight: 600;
 }
+.price-original {
+  text-decoration: line-through;
+  color: #999;
+  font-size: 0.85em;
+  font-weight: 400;
+  margin-right: 4px;
+}
 .allergens {
   position: absolute;
   top: 4%;
@@ -606,6 +613,14 @@ img {
   color: #666;
 }
 
+@keyframes cart-confirm-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes cart-confirm-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
 .cart-confirm-overlay {
   display: none;
   position: fixed;
@@ -614,6 +629,10 @@ img {
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.3);
+  animation: cart-confirm-fade-in 0.15s ease;
+}
+.cart-confirm-overlay.hiding {
+  animation: cart-confirm-fade-out 0.2s ease forwards;
 }
 
 .cart-confirm-box {
@@ -854,6 +873,10 @@ img {
 .pm-price {
   color: var(--primary) !important;
   font-size: 1.05rem !important;
+}
+.pm-price .price-original {
+  color: #aaa !important;
+  font-size: 0.85rem !important;
 }
 
 .pm-desc {

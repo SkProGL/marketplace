@@ -99,9 +99,10 @@
                                         </label>
                                         <input type="date" name="delivery_date_{{ group.producer.id }}"
                                                class="form-control form-control-sm"
-                                               min="{{ min_delivery_date }}" required
+                                               min="{{ min_delivery_date }}"
+                                               max="{{ group.max_delivery_date }}" required
                                                style="max-width:200px;">
-                                        <small class="text-muted" style="font-size:0.75rem;">Min. 48 hours from today</small>
+                                        <small class="text-muted" style="font-size:0.75rem;">Min. 48 hours from today · must arrive 3+ days before best before</small>
                                     </div>
                                 </div>
                             {% endfor %}
