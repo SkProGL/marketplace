@@ -62,13 +62,15 @@ services:
     ports:
       - "8001:8000"
     environment:
-      MODELS_DIR: /app/models 
+      MODELS_DIR: /app/models
       MODEL_REGISTRY_PATH: /app/models/model_registry.json
       ACTIVE_MODEL_NAME: tiny-iris-logreg.joblib
       USE_FILE_MODELS: "true"
       PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /aai_service:/aai_service/task_2
     volumes:
-      - ./aai_service/ai-marketplace-scaffold/models:/app/model
+      - ./aai_service/ai-marketplace-scaffold/models:/app/models
+      - ./aai_service:/aai_service
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
       interval: 15s
@@ -87,10 +89,13 @@ services:
       - "5000:5000"
     environment:
       FLASK_APP: app.py
+      FLASK_DEBUG: "1"
       AI_SERVICE_URL: http://ai-service:8000
       PYTHONUNBUFFERED: "1"
     depends_on:
       ai-service:
         condition: service_healthy
+    volumes:
+    - ./aai_service/ai-marketplace-scaffold/web-app:/app
 volumes:
   postgres_db:
