@@ -13,7 +13,7 @@
                 <!-- Ascending/descending sorting-->
                 <th class="bg-transparent">
                     <!-- Pass the current model, header and current sort method. Selecting the header flips the direction. -->
-                    <a href="?model={{ selected_model_name }}&sortby={{ header }}&direction={% if selected_data.current_sort == header and selected_data.current_direction == 'ascending' %}descending{% else %}ascending{% endif %}{% if selected_data.q %}&q={{ selected_data.q }}{% endif %}"
+                    <a href="?model={{ selected_model_name }}&view_mode={{ view_mode }}&sortby={{ header }}&direction={% if selected_data.current_sort == header and selected_data.current_direction == 'ascending' %}descending{% else %}ascending{% endif %}{% if selected_data.q %}&q={{ selected_data.q }}{% endif %}"
                         class="text-decoration-none text-black d-flex align-items-end gap-1">
                         <span class="flex-grow-1">{{ selected_data.header_labels|slice:forloop.counter|last }}</span>
                         <span class="flex-shrink-0">

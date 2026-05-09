@@ -99,15 +99,16 @@
                                         </label>
                                         <input type="date" name="delivery_date_{{ group.producer.id }}"
                                                class="form-control form-control-sm"
-                                               min="{{ min_delivery_date }}" required
+                                               min="{{ min_delivery_date }}"
+                                               max="{{ group.max_delivery_date }}" required
                                                style="max-width:200px;">
-                                        <small class="text-muted" style="font-size:0.75rem;">Min. 48 hours from today</small>
+                                        <small class="text-muted" style="font-size:0.75rem;">Min. 48 hours from today · must arrive 3+ days before best before</small>
                                     </div>
                                 </div>
                             {% endfor %}
 
                             <hr style="margin:12px 0;">
-                            <div style="font-size:0.82rem;color:#888;margin-bottom:8px;">
+                            <div style="font-size:0.82rem;color:#888;margin-bottom:8px;" title="5% commission goes to Bristol Regional Food Network">
                                 Total network commission: £{{ total_commission|floatformat:2 }} <i class="bi bi-info-circle"></i>
                             </div>
                             <p class="h5 text-success mb-0">Total: £{{ total_price|floatformat:2 }}</p>
@@ -157,7 +158,6 @@
                     </div>
 			<!-- From Uiverse.io by vinodjangid07 --> 
 			<button class="checkout-pay" type="submit"> Pay
-      {% include "includes/icons/icon_payment.html" %}
 			</button>
 			{#<button type="submit" class="btn btn-success w-100 py-3 mt-4 fw-bold"> CONFIRM & PAY £{{ total_price }} </button>#}
                 </div>

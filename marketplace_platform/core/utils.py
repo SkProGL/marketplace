@@ -295,6 +295,12 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
     priority = MODEL_FIELD_PRIORITY.get(selected_model_name, [])
     if priority:
         visible_fields.sort(key=lambda f: priority.index(f.name) if f.name in priority else len(priority))
+
+    # Surgical change: Implement basic view column limiting
+    view_mode = request.GET.get('view_mode', 'basic')
+    if view_mode == 'basic':
+        visible_fields = visible_fields[:5]
+
     final_headers = [field.name for field in visible_fields]
     header_labels = [field.verbose_name.title() for field in visible_fields]
 
@@ -325,6 +331,13 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
         else:
             records = records.order_by(sort_field)
 
+    RELATED_SEARCH_FIELDS = {
+        'ProductBatch': ['product__name', 'product__producer__organisation_name'],
+        'Order':        ['customer__email', 'customer__full_name', 'customer__organisation_name'],
+        'ProducerOrder':['order__customer__email', 'order__customer__full_name', 'producer__organisation_name'],
+        'Payment':      ['producer_order__order__customer__email', 'producer_order__producer__organisation_name'],
+        'Review':       ['product__name', 'customer__email'],
+    }
     q = request.GET.get('q', '').strip()
     if q:
         from django.db.models import Q as DQ
@@ -332,8 +345,10 @@ def get_management_context(request:HttpRequest, selected_model: Type[models.Mode
         for field in visible_fields:
             if isinstance(field, (models.CharField, models.TextField)):
                 search_filter |= DQ(**{f'{field.name}__icontains': q})
+        for related_field in RELATED_SEARCH_FIELDS.get(selected_model_name, []):
+            search_filter |= DQ(**{f'{related_field}__icontains': q})
         if search_filter:
-            records = records.filter(search_filter)
+            records = records.filter(search_filter).distinct()
 
     paginator = Paginator(records, PAGE_SIZE)
     page_obj = paginator.get_page(request.GET.get('page', 1))
@@ -466,7 +481,7 @@ def apply_surplus_if_due(batch):
     if best_before <= timezone.now().date() + timedelta(days=days):
         batch.quality_class = 'Discounted'
         batch.surplus = True
-        batch.discount_percentage = batch.surplus_discount_percentage
+        batch.discount_percentage = max(batch.surplus_discount_percentage, Decimal('10'))
         batch.save(update_fields=['quality_class', 'surplus', 'discount_percentage'])
         return True
     return False
@@ -607,6 +622,8 @@ def get_producer_food_miles(producer,customer_coords):
     key=producer.id
     if key not in producer_distance_cache:
         prod_lat, prod_lon = get_coordinates(producer.postcode)
+        if prod_lat is None or prod_lon is None:
+            return None
         producer_distance_cache[key] = (prod_lat, prod_lon)
 
     prod_lat, prod_lon = producer_distance_cache[key]

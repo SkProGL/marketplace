@@ -3,6 +3,7 @@ from django.contrib.auth import views as auth_views
 from core import views
 
 urlpatterns = [
+    path('api/producers/', views.get_producers_api, name='api_producers'),
     # General/Account URLs
     path('', views.home_view, name='home'),
     path('login/', views.login_view, name='login'),
@@ -27,6 +28,7 @@ urlpatterns = [
     path('community/recipe/<uuid:recipe_id>/favourite/', views.toggle_favourite_recipe, name='toggle_favourite_recipe'),
     path('community/report/', views.report_content, name='report_content'),
     path('inventory_upload/', views.upload_item, name='inventory_upload'),
+    path('inventory_upload/analyse/', views.analyse_image, name='analyse_image'),
     # Order URLs
     path('orders/', views.orders, name='orders'),
     path('orders/<uuid:order_id>/reorder/', views.reorder, name='reorder'),

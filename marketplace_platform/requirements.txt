@@ -9,3 +9,4 @@ django-axes
 django-simple-history
 django-import-export
 django-imagekit
+rembg[cpu]

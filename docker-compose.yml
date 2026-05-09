@@ -35,6 +35,8 @@ services:
         restart: true
     env_file:
       - .env
+
+  # Periodicly (hour) marks stock as surplus 
   scheduler:
     build: .
     command: >
@@ -50,12 +52,50 @@ services:
     env_file:
       - .env
 
-  api:
+  # AI Service
+  ai-service:
     build:
-      context: .
-      args:
-        REQUIREMENTS_FILE: api_requirements.txt
+      context: ./aai_service/ai-marketplace-scaffold/ai-service
+      dockerfile: Dockerfile
+    container_name: ai-service
+    command: python app.py
     ports:
-      - "8001:8001"
+      - "8001:8000"
+    environment:
+      MODELS_DIR: /app/models
+      MODEL_REGISTRY_PATH: /app/models/model_registry.json
+      ACTIVE_MODEL_NAME: tiny-iris-logreg.joblib
+      USE_FILE_MODELS: "true"
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /aai_service:/aai_service/task_2
+    volumes:
+      - ./aai_service/ai-marketplace-scaffold/models:/app/models
+      - ./aai_service:/aai_service
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # AI Service dashboard
+  ai-web-app:
+    build:
+      context: ./aai_service/ai-marketplace-scaffold/web-app
+      dockerfile: Dockerfile
+    container_name: ai-web-app
+    command: flask run --host=0.0.0.0 --port=5000 --reload
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_APP: app.py
+      FLASK_DEBUG: "1"
+      AI_SERVICE_URL: http://ai-service:8000
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      ai-service:
+        condition: service_healthy
+    volumes:
+    - ./aai_service/ai-marketplace-scaffold/web-app:/app
 volumes:
   postgres_db:

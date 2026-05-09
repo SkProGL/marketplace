@@ -184,6 +184,16 @@ class ProductBatchForm(forms.ModelForm):
             'seasonStart', 'seasonEnd',
         ]
 
+    def clean(self):
+        cleaned = super().clean()
+        surplus = cleaned.get('surplus')
+        discount = cleaned.get('discount_percentage') or Decimal('0')
+        if surplus and discount < Decimal('10'):
+            raise forms.ValidationError(
+                "A surplus batch must have a discount of at least 10%."
+            )
+        return cleaned
+
     def clean_best_before(self):
         best_before = self.cleaned_data.get('best_before')
         if best_before is not None:
