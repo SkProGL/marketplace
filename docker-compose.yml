@@ -29,6 +29,8 @@ services:
       - ./marketplace_platform:/app
     ports:
       - "8111:8111"
+    environment:
+      AI_SERVICE_URL: http://ai-service:8000
     depends_on:
       db:
         condition: service_healthy
@@ -36,7 +38,7 @@ services:
     env_file:
       - .env
 
-  # Periodicly (hour) marks stock as surplus 
+  # Periodicly (hour) marks stock as surplus
   scheduler:
     build: .
     command: >
@@ -52,50 +54,73 @@ services:
     env_file:
       - .env
 
+  # Synthetic ActivityLog generator — backfills a week of history on startup,
+  # then streams new events so the /activity/ dashboard stays lively.
+  # Writes directly via the ORM, so it only needs the DB (not `web`).
+  traffic_simulator:
+    build: .
+    command: ["sh", "-c", "sleep 10 && uv run python manage.py simulate_traffic --backfill 800 --rate 1.0 --anon-ratio 0.35"]
+    volumes:
+      - ./marketplace_platform:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+
   # AI Service
-  # ai-service:
-  #   build:
-  #     context: ./aai_service/ai-marketplace-scaffold/ai-service
-  #     dockerfile: Dockerfile
-  #   container_name: ai-service
-  #   command: python app.py
-  #   ports:
-  #     - "8001:8000"
-  #   environment:
-  #     MODELS_DIR: /app/models
-  #     MODEL_REGISTRY_PATH: /app/models/model_registry.json
-  #     ACTIVE_MODEL_NAME: tiny-iris-logreg.joblib
-  #     USE_FILE_MODELS: "true"
-  #     PYTHONUNBUFFERED: "1"
-  #     PYTHONPATH: /aai_service:/aai_service/task_2
-  #   volumes:
-  #     - ./aai_service/ai-marketplace-scaffold/models:/app/models
-  #     - ./aai_service:/aai_service
-  #   healthcheck:
-  #     test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
-  #     interval: 15s
-  #     timeout: 5s
-  #     retries: 5
-  #     start_period: 10s
-  #
-  # # AI Service dashboard
-  # ai-web-app:
-  #   build:
-  #     context: ./aai_service/ai-marketplace-scaffold/web-app
-  #     dockerfile: Dockerfile
-  #   container_name: ai-web-app
-  #   command: flask run --host=0.0.0.0 --port=5000 --reload
-  #   ports:
-  #     - "5000:5000"
-  #   environment:
-  #     FLASK_APP: app.py
-  #     FLASK_DEBUG: "1"
-  #     AI_SERVICE_URL: http://ai-service:8000
-  #     PYTHONUNBUFFERED: "1"
-  #   depends_on:
-  #     ai-service:
-  #       condition: service_healthy
-  #   volumes:
-  #   - ./aai_service/ai-marketplace-scaffold/web-app:/app
+  ai-service:
+    build:
+      context: ./aai_service/ai-marketplace-scaffold/ai-service
+      dockerfile: Dockerfile
+    container_name: ai-service
+    command: python app.py
+    ports:
+      - "8001:8000"
+    environment:
+      MODELS_DIR: /app/models
+      MODEL_REGISTRY_PATH: /app/models/model_registry.json
+      ACTIVE_MODEL_NAME: tiny-iris-logreg.joblib
+      USE_FILE_MODELS: "true"
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /aai_service:/aai_service/task_2
+      # DB access for the demand-forecast trainer/predictor
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./aai_service/ai-marketplace-scaffold/models:/app/models
+      - ./aai_service:/aai_service
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # AI Service dashboard
+  ai-web-app:
+    build:
+      context: ./aai_service/ai-marketplace-scaffold/web-app
+      dockerfile: Dockerfile
+    container_name: ai-web-app
+    command: flask run --host=0.0.0.0 --port=5000 --reload
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_APP: app.py
+      FLASK_DEBUG: "1"
+      AI_SERVICE_URL: http://ai-service:8000
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      ai-service:
+        condition: service_healthy
+    volumes:
+    - ./aai_service/ai-marketplace-scaffold/web-app:/app
 volumes:
   postgres_db:
