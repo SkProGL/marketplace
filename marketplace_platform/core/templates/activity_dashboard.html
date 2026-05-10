@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5 pt-4">
+    <div class="d-flex align-items-end justify-content-between mb-4">
+        <h2 class="mb-0">User Activity</h2>
+        <div class="btn-group" role="group" aria-label="Source filter">
+            <a href="?show=all"       class="btn btn-sm btn-outline-secondary {% if show == 'all' %}active{% endif %}">All</a>
+            <a href="?show=real"      class="btn btn-sm btn-outline-secondary {% if show == 'real' %}active{% endif %}">Real only</a>
+            <a href="?show=synthetic" class="btn btn-sm btn-outline-secondary {% if show == 'synthetic' %}active{% endif %}">Synthetic only</a>
+        </div>
+    </div>
+
+    <div class="row mb-4 g-3">
+        <div class="col-md-3"><div class="card border-0 shadow-sm p-3"><h6 class="text-muted">Last hour</h6><h3>{{ totals.last_hour }}</h3></div></div>
+        <div class="col-md-3"><div class="card border-0 shadow-sm p-3"><h6 class="text-muted">Last 24h</h6><h3>{{ totals.last_day }}</h3></div></div>
+        <div class="col-md-3"><div class="card border-0 shadow-sm p-3"><h6 class="text-muted">Last 7 days</h6><h3>{{ totals.last_week }}</h3></div></div>
+        <div class="col-md-3"><div class="card border-0 shadow-sm p-3"><h6 class="text-muted">All time</h6><h3>{{ totals.all_time }}</h3></div></div>
+    </div>
+
+    <div class="card border-0 shadow-sm p-3 mb-4">
+        <h5>Events per hour (last 24h)</h5>
+        <canvas id="hourlyChart" height="80"></canvas>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm p-3 h-100">
+                <h5>By action (last 7 days)</h5>
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Action</th><th class="text-end">Count</th></tr></thead>
+                    <tbody>
+                    {% for row in by_action %}
+                        <tr><td>{{ row.action }}</td><td class="text-end">{{ row.n }}</td></tr>
+                    {% empty %}
+                        <tr><td colspan="2" class="text-muted text-center">No activity yet</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm p-3 h-100">
+                <h5>By user category (last 7 days)</h5>
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Category</th><th class="text-end">Count</th></tr></thead>
+                    <tbody>
+                    {% for row in by_category %}
+                        <tr><td>{{ row.user_category|default:"(unknown)" }}</td><td class="text-end">{{ row.n }}</td></tr>
+                    {% empty %}
+                        <tr><td colspan="2" class="text-muted text-center">No authenticated activity yet</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm p-3 mb-4">
+        <h5>Top paths (last 7 days)</h5>
+        <table class="table table-sm mb-0">
+            <thead><tr><th>Path</th><th class="text-end">Hits</th></tr></thead>
+            <tbody>
+            {% for row in top_paths %}
+                <tr><td><code>{{ row.path }}</code></td><td class="text-end">{{ row.n }}</td></tr>
+            {% empty %}
+                <tr><td colspan="2" class="text-muted text-center">No activity yet</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <hr class="my-5">
+    <h2 class="mb-4">Order Analytics <small class="text-muted" style="font-size: 0.6em">— last 90 days, excluding cancelled</small></h2>
+
+    <div class="row mb-4 g-3">
+        <div class="col-md-3"><div class="card border-0 shadow-sm p-3"><h6 class="text-muted">Orders (24h)</h6><h3>{{ order_totals.orders_24h }}</h3></div></div>
+        <div class="col-md-3"><div class="card border-0 shadow-sm p-3"><h6 class="text-muted">Orders (7d)</h6><h3>{{ order_totals.orders_7d }}</h3></div></div>
+        <div class="col-md-3"><div class="card border-0 shadow-sm p-3"><h6 class="text-muted">Orders (90d)</h6><h3>{{ order_totals.orders_90d }}</h3></div></div>
+        <div class="col-md-3"><div class="card border-0 shadow-sm p-3"><h6 class="text-muted">Revenue (90d)</h6><h3>£{{ order_totals.revenue_90d|floatformat:2 }}</h3></div></div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm p-3 h-100">
+                <h5>Orders by hour of day</h5>
+                <small class="text-muted mb-2">Watch for the lunch (12-13) and evening (18-20) peaks.</small>
+                <canvas id="ordersByHourChart" height="120"></canvas>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm p-3 h-100">
+                <h5>Orders by weekday</h5>
+                <small class="text-muted mb-2">Saturday/Sunday should sit higher than midweek.</small>
+                <canvas id="ordersByWeekdayChart" height="180"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm p-3 mb-4">
+        <h5>Daily orders (90d)</h5>
+        <canvas id="ordersDailyChart" height="80"></canvas>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm p-3 h-100">
+                <h5>Top products (by units sold)</h5>
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Product</th><th>Category</th><th class="text-end">Units</th><th class="text-end">Revenue</th></tr></thead>
+                    <tbody>
+                    {% for row in top_products %}
+                        <tr>
+                            <td>{{ row.batch__product__name }}</td>
+                            <td><small class="text-muted">{{ row.batch__product__category }}</small></td>
+                            <td class="text-end">{{ row.units }}</td>
+                            <td class="text-end">£{{ row.revenue|floatformat:2 }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="4" class="text-muted text-center">No orders in window</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm p-3 h-100">
+                <h5>Category mix</h5>
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Category</th><th class="text-end">Units</th></tr></thead>
+                    <tbody>
+                    {% for row in by_product_category %}
+                        <tr><td>{{ row.batch__product__category }}</td><td class="text-end">{{ row.units }}</td></tr>
+                    {% empty %}
+                        <tr><td colspan="2" class="text-muted text-center">No orders in window</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm p-3 mb-5">
+        <h5>Latest 50 events</h5>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead><tr>
+                    <th>Time</th><th>User</th><th>Category</th><th>Method</th>
+                    <th>Path</th><th>Action</th><th class="text-end">Status</th><th class="text-end">ms</th><th>Source</th>
+                </tr></thead>
+                <tbody>
+                {% for ev in recent %}
+                    <tr>
+                        <td><small class="text-muted">{{ ev.timestamp|date:'Y-m-d H:i:s' }}</small></td>
+                        <td>{% if ev.user %}{{ ev.user.email }}{% else %}<span class="text-muted">anon</span>{% endif %}</td>
+                        <td>{{ ev.user_category|default:"—" }}</td>
+                        <td>{{ ev.method }}</td>
+                        <td><code>{{ ev.path }}</code></td>
+                        <td><span class="badge bg-light text-dark">{{ ev.action }}</span></td>
+                        <td class="text-end">{{ ev.status_code|default:"—" }}</td>
+                        <td class="text-end">{{ ev.duration_ms|default:"—" }}</td>
+                        <td>{% if ev.is_synthetic %}<span class="badge bg-warning text-dark">synthetic</span>{% else %}<span class="badge bg-success">real</span>{% endif %}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="9" class="text-muted text-center">No events recorded yet</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const hourly = {{ hourly_json|safe }};
+    new Chart(document.getElementById('hourlyChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: hourly.map(h => h.label),
+            datasets: [{
+                label: 'Events',
+                data: hourly.map(h => h.count),
+                backgroundColor: 'rgba(40, 167, 69, 0.6)',
+                borderColor: 'rgba(40, 167, 69, 1)',
+                borderWidth: 1,
+            }],
+        },
+        options: {
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+            plugins: { legend: { display: false } },
+        },
+    });
+
+    // ── Orders charts ────────────────────────────────────────────────────────
+    const ordersByHour = {{ orders_by_hour_json|safe }};
+    new Chart(document.getElementById('ordersByHourChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ordersByHour.map(r => r.h),
+            datasets: [{
+                label: 'Orders',
+                data: ordersByHour.map(r => r.n),
+                backgroundColor: 'rgba(13, 110, 253, 0.6)',
+                borderColor: 'rgba(13, 110, 253, 1)',
+                borderWidth: 1,
+            }],
+        },
+        options: {
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+            plugins: { legend: { display: false } },
+        },
+    });
+
+    const ordersByWeekday = {{ orders_by_weekday_json|safe }};
+    new Chart(document.getElementById('ordersByWeekdayChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ordersByWeekday.map(r => r.label),
+            datasets: [{
+                label: 'Orders',
+                data: ordersByWeekday.map(r => r.n),
+                backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                borderColor: 'rgba(255, 159, 64, 1)',
+                borderWidth: 1,
+            }],
+        },
+        options: {
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+            plugins: { legend: { display: false } },
+        },
+    });
+
+    const ordersDaily = {{ orders_daily_json|safe }};
+    new Chart(document.getElementById('ordersDailyChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: ordersDaily.map(r => r.label),
+            datasets: [{
+                label: 'Orders / day',
+                data: ordersDaily.map(r => r.n),
+                borderColor: 'rgba(108, 117, 125, 1)',
+                backgroundColor: 'rgba(108, 117, 125, 0.15)',
+                borderWidth: 2,
+                tension: 0.25,
+                fill: true,
+                pointRadius: 0,
+            }],
+        },
+        options: {
+            scales: {
+                y: { beginAtZero: true, ticks: { precision: 0 } },
+                x: { ticks: { maxTicksLimit: 12 } },
+            },
+            plugins: { legend: { display: false } },
+        },
+    });
+</script>
+{% endblock %}

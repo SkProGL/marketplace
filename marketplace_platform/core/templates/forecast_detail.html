@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5 pt-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <a href="{% url 'forecasts_index' %}" class="text-decoration-none small text-muted">← All forecasts</a>
+            <h2 class="mb-0 mt-1">{{ product.name }}</h2>
+            <small class="text-muted">{{ product.category }} · {{ product.producer.organisation_name|default:product.producer.email }}</small>
+        </div>
+        {% if forecast %}
+            <div class="text-end">
+                <small class="text-muted d-block">Model trained: <code>{{ forecast.trained_at }}</code></small>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% elif forecast %}
+        <div class="row mb-4 g-3">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm p-3">
+                    <h6 class="text-muted">Predicted units · next 7 days</h6>
+                    <h3 class="text-primary">{{ predicted_total|default:"—" }}</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm p-3">
+                    <h6 class="text-muted">Avg / day · last 28 days</h6>
+                    <h3 id="avgActual">—</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm p-3">
+                    <h6 class="text-muted">Predicted vs recent avg</h6>
+                    <h3 id="trendDelta">—</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm p-3 mb-4">
+            <h5>Actual (last 28d) vs Predicted (next 7d)</h5>
+            <canvas id="forecastChart" height="80"></canvas>
+        </div>
+
+        <div class="card border-0 shadow-sm p-3 mb-5">
+            <h5>Daily predictions</h5>
+            <table class="table table-sm mb-0">
+                <thead><tr><th>Date</th><th>Day</th><th class="text-end">Predicted units</th></tr></thead>
+                <tbody id="predTable"></tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">No forecast available for this product yet.</div>
+    {% endif %}
+</div>
+
+{% if forecast %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const data = {{ forecast_json|safe }};
+
+    // KPIs.
+    const predTotal = data.predictions.reduce((s, p) => s + p.units, 0);
+    document.querySelector('h3.text-primary').textContent = predTotal.toFixed(1);
+    const avgActual = data.actuals.length
+        ? data.actuals.reduce((s, a) => s + a.units, 0) / data.actuals.length
+        : 0;
+    document.getElementById('avgActual').textContent = avgActual.toFixed(1);
+    const avgPred = data.predictions.length ? predTotal / data.predictions.length : 0;
+    const deltaPct = avgActual ? ((avgPred / avgActual - 1) * 100) : 0;
+    const deltaEl = document.getElementById('trendDelta');
+    deltaEl.textContent = (deltaPct >= 0 ? '+' : '') + deltaPct.toFixed(1) + '%';
+    deltaEl.className = deltaPct >= 0 ? 'text-success' : 'text-danger';
+
+    // Chart: stitched timeline of actuals + predictions.
+    const labels = [
+        ...data.actuals.map(a => a.date),
+        ...data.predictions.map(p => p.date),
+    ];
+    const actualSeries = [
+        ...data.actuals.map(a => a.units),
+        ...data.predictions.map(_ => null),
+    ];
+    const predSeries = [
+        ...data.actuals.map(_ => null),
+        ...data.predictions.map(p => p.units),
+    ];
+    // Bridge the gap with the last actual point so the predicted line connects visually.
+    if (data.actuals.length && data.predictions.length) {
+        predSeries[data.actuals.length - 1] = data.actuals[data.actuals.length - 1].units;
+    }
+
+    new Chart(document.getElementById('forecastChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Actual',
+                    data: actualSeries,
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    backgroundColor: 'rgba(40, 167, 69, 0.15)',
+                    tension: 0.25, borderWidth: 2, pointRadius: 2, fill: false,
+                },
+                {
+                    label: 'Predicted',
+                    data: predSeries,
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    backgroundColor: 'rgba(13, 110, 253, 0.15)',
+                    borderDash: [6, 4],
+                    tension: 0.25, borderWidth: 2, pointRadius: 3, fill: false,
+                },
+            ],
+        },
+        options: {
+            scales: { y: { beginAtZero: true } },
+        },
+    });
+
+    // Predictions table.
+    const dayName = d => new Date(d).toLocaleDateString(undefined, { weekday: 'short' });
+    const tbody = document.getElementById('predTable');
+    data.predictions.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${p.date}</td><td><small class="text-muted">${dayName(p.date)}</small></td><td class="text-end">${p.units.toFixed(2)}</td>`;
+        tbody.appendChild(tr);
+    });
+</script>
+{% endif %}
+{% endblock %}

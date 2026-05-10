@@ -2,27 +2,30 @@
 :: hard_reset_server.bat            # runs imports
 :: hard_reset_server.bat --noimport # skips imports
 @echo off
+
 for /r %%i in (migrations\*.py) do (
     if not "%%~nxi"=="__init__.py" del "%%i"
 )
+for /r %%i in (migrations\*.pyc) do del "%%i"
 
-:: Remove containers and delete volumes
 docker compose down -v
-
-:: Rebuild images
 docker compose build
 
-:: Build import commands conditionally
-set IMPORT_CMDS=^&^& python manage.py import_users ^&^& python manage.py import_products ^&^& python manage.py import_orders
-if "%1"=="--noimport" set IMPORT_CMDS=
+echo Running migrations and creating superuser...
 
-:: Create superuser and make migrations
-docker compose run ^
-  -e DJANGO_SUPERUSER_USERNAME=root ^
-  -e DJANGO_SUPERUSER_EMAIL=root@example.com ^
-  -e DJANGO_SUPERUSER_PASSWORD=Password123 ^
-  --rm web sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py createsuperuser --noinput && python manage.py import_users && python manage.py import_products && python manage.py import_orders && python manage.py seed_users"
-:: --rm web sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py createsuperuser --noinput && python manage.py %IMPORT_CMDS% seed_users"
+if "%1"=="--noimport" (
+  docker compose run ^
+    -e DJANGO_SUPERUSER_USERNAME=root ^
+    -e DJANGO_SUPERUSER_EMAIL=root@example.com ^
+    -e DJANGO_SUPERUSER_PASSWORD=Password123 ^
+    --rm web sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py createsuperuser --noinput && python manage.py seed_users"
+) else (
+  docker compose run ^
+    -e DJANGO_SUPERUSER_USERNAME=root ^
+    -e DJANGO_SUPERUSER_EMAIL=root@example.com ^
+    -e DJANGO_SUPERUSER_PASSWORD=Password123 ^
+    --rm web sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py createsuperuser --noinput && python manage.py import_users && python manage.py import_products && python manage.py import_orders && python manage.py seed_users"
+)
 
-:: Start the containers
 docker compose up
+
