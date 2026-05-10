@@ -29,6 +29,7 @@ urlpatterns = [
     path('community/report/', views.report_content, name='report_content'),
     path('inventory_upload/', views.upload_item, name='inventory_upload'),
     path('inventory_upload/analyse/', views.analyse_image, name='analyse_image'),
+    path('inventory_upload/grade/', views.grade_image, name='grade_image'),
     # Order URLs
     path('orders/', views.orders, name='orders'),
     path('orders/<uuid:order_id>/reorder/', views.reorder, name='reorder'),
