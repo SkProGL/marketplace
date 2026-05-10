@@ -69,6 +69,16 @@
   </div>
 </form>
 
+<div id="recommendationsSection" style="display:none;" class="recommendations-section">
+  <div class="recommendations-header">
+    <h2>Recommended for your next order</h2>
+    <p>Based on your previous purchases and availability</p>
+  </div>
+  <div id="recommendationsGrid" class="recommendations-grid">
+    <!-- Rendered via JS -->
+  </div>
+</div>
+
 <hr>
 <div class="home-results">
   <b>Found {{ total_count }} matches</b>
@@ -288,6 +298,7 @@
 {{ review_data|json_script:"review-data" }}
 {{ recipe_suggestions|json_script:"recipe-suggestions-data" }}
 
+<script src="{% static 'js/recommendations.js' %}"></script>
 <script>
   let batchData  = JSON.parse(document.getElementById('batch-data').textContent);
   let reviewData = JSON.parse(document.getElementById('review-data').textContent);
@@ -958,5 +969,51 @@
     reviewPage = Math.max(1, Math.min(totalPages, reviewPage + dir));
     renderReviews();
   }
+
+  // Task 1: Recommendations UI Implementation
+  function renderRecommendations() {
+    const section = document.getElementById('recommendationsSection');
+    const grid = document.getElementById('recommendationsGrid');
+    
+    if (typeof recommendations === 'undefined' || !recommendations.length) {
+      section.style.display = 'none';
+      return;
+    }
+    
+    section.style.display = 'block';
+    grid.innerHTML = recommendations.map(rec => `
+      <div class="rec-card" id="rec-card-${rec.id}">
+        <div class="rec-image">
+          <img src="${rec.image}" alt="${rec.productName}">
+        </div>
+        <div class="rec-content">
+          <div class="rec-title-row">
+            <h3 class="rec-title">${rec.productName}</h3>
+            <span class="rec-price">£${rec.price.toFixed(2)}</span>
+          </div>
+          <span class="rec-producer">${rec.producer}</span>
+          
+          <div class="rec-badge-row">
+            <span class="rec-badge rec-badge-qty">Suggested: ${rec.suggestedQuantity}</span>
+            <span class="rec-badge rec-badge-conf-${rec.confidence.toLowerCase()}">Confidence: ${rec.confidence}</span>
+          </div>
+          
+          <div class="rec-explanation">
+            <span class="rec-explanation-title">Why this?</span>
+            <ul class="rec-explanation-list">
+              ${rec.reasons.map(reason => `<li>${reason}</li>`).join('')}
+            </ul>
+          </div>
+          
+          <div class="rec-buttons">
+            <button class="rec-btn-add" onclick="alert('Added ${rec.productName} to cart (Simulation)')">Add again</button>
+            <button class="rec-btn-ignore" onclick="document.getElementById('rec-card-${rec.id}').style.display='none'">Not relevant</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  document.addEventListener('DOMContentLoaded', renderRecommendations);
 </script>
 {% endblock %}
