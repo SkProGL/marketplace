@@ -35,8 +35,10 @@ services:
         restart: true
     env_file:
       - .env
+    environment:
+      AI_SERVICE_URL: http://ai-service:8000
 
-  # Periodicly (hour) marks stock as surplus 
+  # Periodicly (hour) marks stock as surplus
   scheduler:
     build: .
     command: >
