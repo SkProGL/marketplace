@@ -28,7 +28,7 @@ services:
     volumes:
       - ./marketplace_platform:/app
     ports:
-      - "8000:8000"
+      - "8111:8111"
     environment:
       AI_SERVICE_URL: http://ai-service:8000
     depends_on:
