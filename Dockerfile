@@ -29,6 +29,9 @@ RUN uv pip install -r ${REQUIREMENTS_FILE} --system
 # now copy all files
 COPY marketplace_platform/ .
 
+# pre-download rembg U2Net model so first inference isn't blocked by a 176 MB download
+RUN python -c "from rembg import new_session; new_session('u2net')"
+
 # expose django port
 EXPOSE 8000
 

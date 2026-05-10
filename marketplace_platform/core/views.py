@@ -1118,11 +1118,16 @@ def analyse_image(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+GRADEABLE_CATEGORIES = {'Fruit', 'Vegetable'}
+
 @login_required
 def grade_image(request):
     """Proxy image to ai-service /predict/image and return the grading result."""
     if request.method != 'POST' or not request.FILES.get('image'):
         return JsonResponse({'error': 'No image provided'}, status=400)
+    category = request.POST.get('category', '')
+    if category and category not in GRADEABLE_CATEGORIES:
+        return JsonResponse({'error': f'AI grading is not available for {category} products.'}, status=422)
     try:
         import requests as req_lib
         ai_url = os.environ.get('AI_SERVICE_URL', 'http://ai-service:8000')

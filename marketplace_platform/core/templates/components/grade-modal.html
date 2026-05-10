@@ -1,0 +1,111 @@
+<!-- Grade explanation modal -->
+<div id="grade-modal-backdrop" class="grade-modal-backdrop" onclick="closeGradeModal()" style="display:none;"></div>
+<div id="grade-modal" class="grade-modal" style="display:none;">
+  <div class="grade-modal-header">
+    <h2>How was this grade determined?</h2>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="gm-view-toggle">
+        <button type="button" class="gm-view-btn active" id="gm-btn-basic" onclick="switchGmView('basic')">Summary</button>
+        <button type="button" class="gm-view-btn" id="gm-btn-advanced" onclick="switchGmView('advanced')">Advanced</button>
+      </div>
+      <button type="button" class="grade-modal-close" onclick="closeGradeModal()">&times;</button>
+    </div>
+  </div>
+
+  <!-- BASIC PANEL -->
+  <div id="gm-basic-panel">
+    <div id="gm-result-summary" class="gm-result-summary">
+      <div style="margin-bottom:10px;font-size:0.9rem;color:#555;">Your result: <strong id="gm-grade-badge" style="font-size:1rem;"></strong></div>
+      <div id="gm-rejected-notice" class="gm-rejected-notice" style="display:none;">
+        <strong>Why the other scores don't matter here:</strong> The model classified this item as damaged or past its prime. When the health check fails, the item is automatically rejected. Colour and proportion scores are still shown for reference, but they do not influence this outcome.
+      </div>
+      <div id="gm-metrics-bars" style="display:flex;flex-direction:column;gap:7px;margin-bottom:10px;"></div>
+      <div id="gm-composite-bar-wrap" style="display:none;padding-top:8px;padding-bottom:4px;border-top:1px solid #e8e8e8;">
+        <div id="gm-composite-bar"></div>
+      </div>
+    </div>
+
+    <h3>Grading Rubric</h3>
+    <table class="gm-rubric-table">
+      <thead>
+        <tr>
+          <th>Grade</th><th>Ripeness</th><th>Colour</th><th>Proportion</th><th>Composite avg</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#f0fff4;">
+          <td><strong style="color:#1a7a3c;">A - Premium</strong></td>
+          <td>≥ 80%</td><td>≥ 85%</td><td>≥ 90%</td><td>≥ 85%</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#3a7abf;">B - Standard</strong></td>
+          <td>≥ 70%</td><td>≥ 75%</td><td>≥ 80%</td><td>≥ 75%</td>
+        </tr>
+        <tr style="background:#fffbf0;">
+          <td><strong style="color:#c97a00;">C - Economy</strong></td>
+          <td>≥ 60%</td><td>≥ 65%</td><td>≥ 70%</td><td>≥ 65%</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#c94000;">D - Basic</strong></td>
+          <td colspan="3">Below C thresholds</td><td>&lt; 65%</td>
+        </tr>
+        <tr style="background:#fff5f4;">
+          <td><strong style="color:#991111;">Rejected</strong></td>
+          <td colspan="4">Item classified as damaged or unfit regardless of other scores</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>What each metric means</h3>
+    <div class="gm-metric-accordion">
+      <div class="gm-metric-card">
+        <button type="button" class="gm-metric-btn" onclick="toggleMetric(this)">
+          Ripeness (health confidence) <span class="gm-metric-chevron">&#9660;</span>
+        </button>
+        <p class="gm-metric-body">How confident the neural network is that the item is healthy and fit for sale. Scored 0–100%. <strong>This is the only metric that can trigger a rejection.</strong> If the model determines the item is damaged, over-ripe, or otherwise unfit, it is rejected outright - colour and proportion scores are recorded but carry no weight in the final decision.</p>
+      </div>
+      <div class="gm-metric-card">
+        <button type="button" class="gm-metric-btn" onclick="toggleMetric(this)">
+          Colour <span class="gm-metric-chevron">&#9660;</span>
+        </button>
+        <p class="gm-metric-body">Similarity of the item's colour profile to reference distributions for fresh produce, measured using Bhattacharyya histogram distance. Higher means the colour is more typical of healthy, market-ready produce.</p>
+      </div>
+      <div class="gm-metric-card">
+        <button type="button" class="gm-metric-btn" onclick="toggleMetric(this)">
+          Proportion (contour solidity) <span class="gm-metric-chevron">&#9660;</span>
+        </button>
+        <p class="gm-metric-body">How regular and well-formed the item's shape is, derived from the ratio of its area to its convex hull area (contour solidity). A perfectly solid shape scores 100%. Irregular or fragmented shapes score lower.</p>
+      </div>
+    </div>
+
+    <div id="gm-method-note" class="gm-method-note"></div>
+  </div>
+
+  <!-- ADVANCED PANEL -->
+  <div id="gm-advanced-panel" style="display:none;">
+    <div class="gm-advanced-layout">
+      <div class="gm-advanced-vis">
+        <h3>Model Visualisation</h3>
+        <div class="gm-xai-img-wrap" style="margin-bottom:10px;">
+          <div class="gm-xai-label">Grad-CAM (Health)</div>
+          <img id="gm-xai-cam" class="gm-xai-img" src="" alt="Grad-CAM heatmap" style="display:none;">
+          <p id="gm-xai-cam-na" class="gm-xai-na">Requires MTL model</p>
+        </div>
+        <div class="gm-xai-img-wrap" style="margin-bottom:10px;">
+          <div class="gm-xai-label">Segmentation Mask</div>
+          <img id="gm-xai-mask" class="gm-xai-img" src="" alt="Segmentation mask" style="display:none;">
+          <p id="gm-xai-mask-na" class="gm-xai-na">Not available</p>
+        </div>
+        <div class="gm-xai-img-wrap">
+          <div class="gm-xai-label">Proportion (Contour Solidity)</div>
+          <img id="gm-xai-proportion" class="gm-xai-img" src="" alt="Contour overlay" style="display:none;">
+          <p id="gm-xai-proportion-na" class="gm-xai-na">Not available</p>
+        </div>
+      </div>
+      <div class="gm-advanced-calc">
+        <h3>Grade Calculation</h3>
+        <div id="gm-formula-content" class="gm-formula-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
