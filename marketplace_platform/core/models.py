@@ -655,3 +655,48 @@ class Complaint(models.Model):
 
     def __str__(self):
         return f"Complaint #{str(self.id)[:8]} — {self.category} ({self.submitted_at.strftime('%d-%m-%Y')})"
+
+
+class ActivityLog(models.Model):
+    class Action(models.TextChoices):
+        PAGE_VIEW = "page_view", "Page view"
+        LOGIN = "login", "Login"
+        LOGIN_FAILED = "login_failed", "Login failed"
+        LOGOUT = "logout", "Logout"
+        SIGNUP = "signup", "Signup"
+        ADD_TO_CART = "add_to_cart", "Add to cart"
+        CART_UPDATE = "cart_update", "Cart update"
+        CHECKOUT = "checkout", "Checkout"
+        ORDER_PLACED = "order_placed", "Order placed"
+        REVIEW = "review", "Review"
+        COMMUNITY_POST = "community_post", "Community post"
+        OTHER = "other", "Other"
+
+    id = models.BigAutoField(primary_key=True)
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+    user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='activity_logs')
+    user_category = models.CharField(max_length=20, blank=True, default="")
+    session_key = models.CharField(max_length=40, blank=True, default="")
+    method = models.CharField(max_length=8, default="GET")
+    path = models.CharField(max_length=255, db_index=True)
+    status_code = models.PositiveSmallIntegerField(null=True, blank=True)
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)
+    action = models.CharField(
+        max_length=32, choices=Action.choices,
+        default=Action.PAGE_VIEW, db_index=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True, default="")
+    is_synthetic = models.BooleanField(default=False, db_index=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['-timestamp', 'action']),
+            models.Index(fields=['user_category', '-timestamp']),
+        ]
+
+    def __str__(self):
+        who = self.user.email if self.user else (self.session_key or 'anon')
+        return f"{self.timestamp:%Y-%m-%d %H:%M} {who} {self.method} {self.path} → {self.status_code}"
