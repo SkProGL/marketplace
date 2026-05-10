@@ -30,8 +30,8 @@ RUN uv pip install -r ${REQUIREMENTS_FILE} --system
 COPY marketplace_platform/ .
 
 # expose django port
-EXPOSE 8000
+EXPOSE 8111
 
 # default command
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8111"]
 
