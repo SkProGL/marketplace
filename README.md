@@ -1,4 +1,9 @@
 ### BFRN Marketplace Repository
+
+# init submodule
+git submodule update --init --recursive
+
+
 > [!IMPORTANT]  
 > django version: 5.2  
 > python version: 3.11  
@@ -229,7 +234,7 @@
     </tr>
     <tr>
       <td><code>python manage.py runserver</code></td>
-      <td><strong>starts server (default localhost:8000)</strong></td>
+      <td><strong>starts server (default localhost:8111)</strong></td>
     </tr>
     <tr>
       <td><code>python manage.py startapp blog</code></td>
@@ -248,7 +253,7 @@
     </tr>
     <tr>
       <td><code>project/urls.py</code></td>
-      <td><strong>define website paths/routes (like localhost:8000/admin)</strong></td>
+      <td><strong>define website paths/routes (like localhost:8111/admin)</strong></td>
     </tr>
     <tr>
       <td><code>app/urls.py</code></td>

@@ -74,4 +74,9 @@ urlpatterns = [
     path('management/search/', views.management_search, name='management_search'),
     path('management/order/<uuid:producer_order_id>/advance/', views.advance_order_status, name='advance_order_status'),
     path('finance/', views.finance_view, name='finance'),
-] 
+    # Activity monitoring (admin only)
+    path('activity/', views.activity_dashboard, name='activity_dashboard'),
+    # Demand forecasting (admin + producer)
+    path('forecasts/', views.forecasts_index, name='forecasts_index'),
+    path('forecasts/<uuid:product_id>/', views.forecast_detail, name='forecast_detail'),
+]

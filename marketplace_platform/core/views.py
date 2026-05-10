@@ -2038,3 +2038,245 @@ def finance_view(request):
     }
     
     return render(request, 'finance.html', context)
+
+
+# ─── Activity Monitoring ──────────────────────────────────────────────────────
+@login_required
+def activity_dashboard(request):
+    """Admin-only dashboard summarising recorded user activity."""
+    user = request.user
+    if not (user.is_superuser or getattr(user, 'category', None) == 'Admin'):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    from .models import ActivityLog
+
+    show = request.GET.get('show', 'all')  # all | real | synthetic
+    qs = ActivityLog.objects.all()
+    if show == 'real':
+        qs = qs.filter(is_synthetic=False)
+    elif show == 'synthetic':
+        qs = qs.filter(is_synthetic=True)
+
+    now = timezone.now()
+    last_hour = now - timedelta(hours=1)
+    last_day = now - timedelta(days=1)
+    last_week = now - timedelta(days=7)
+
+    totals = {
+        'all_time': qs.count(),
+        'last_hour': qs.filter(timestamp__gte=last_hour).count(),
+        'last_day': qs.filter(timestamp__gte=last_day).count(),
+        'last_week': qs.filter(timestamp__gte=last_week).count(),
+    }
+
+    by_action = list(
+        qs.filter(timestamp__gte=last_week)
+          .values('action')
+          .annotate(n=Count('id'))
+          .order_by('-n')
+    )
+
+    by_category = list(
+        qs.filter(timestamp__gte=last_week, user__isnull=False)
+          .values('user_category')
+          .annotate(n=Count('id'))
+          .order_by('-n')
+    )
+
+    top_paths = list(
+        qs.filter(timestamp__gte=last_week)
+          .values('path')
+          .annotate(n=Count('id'))
+          .order_by('-n')[:10]
+    )
+
+    # Hourly buckets across the last 24h. Build in Python to avoid
+    # database-specific date_trunc dialects in this small dataset.
+    hourly_qs = qs.filter(timestamp__gte=last_day).values_list('timestamp', flat=True)
+    buckets = {(now - timedelta(hours=i)).replace(minute=0, second=0, microsecond=0): 0
+               for i in range(24)}
+    for ts in hourly_qs:
+        key = ts.replace(minute=0, second=0, microsecond=0)
+        if key in buckets:
+            buckets[key] += 1
+    hourly = [
+        {'label': k.strftime('%H:%M'), 'count': v}
+        for k, v in sorted(buckets.items())
+    ]
+
+    recent = qs.select_related('user').order_by('-timestamp')[:50]
+
+    # ── Orders analytics (last 90 days) ──────────────────────────────────────
+    from django.db.models.functions import ExtractHour, ExtractIsoWeekDay, TruncDate
+    last_90d = now - timedelta(days=90)
+    orders_qs = Order.objects.filter(order_date__gte=last_90d).exclude(
+        order_status=Order.Status.CANCELLED
+    )
+
+    order_totals = {
+        'orders_90d': orders_qs.count(),
+        'orders_7d': orders_qs.filter(order_date__gte=last_week).count(),
+        'orders_24h': orders_qs.filter(order_date__gte=last_day).count(),
+        'revenue_90d': orders_qs.aggregate(s=Sum('total_price'))['s'] or 0,
+    }
+
+    # Hour-of-day distribution (orders per hour, all 90 days, summed).
+    by_hour = list(
+        orders_qs.annotate(h=ExtractHour('order_date'))
+        .values('h').annotate(n=Count('id')).order_by('h')
+    )
+    hour_buckets = {h: 0 for h in range(24)}
+    for row in by_hour:
+        hour_buckets[row['h']] = row['n']
+    orders_by_hour = [{'h': f'{h:02d}', 'n': hour_buckets[h]} for h in range(24)]
+
+    # Weekday distribution (1=Mon … 7=Sun, ISO).
+    weekday_names = {1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun'}
+    by_weekday = list(
+        orders_qs.annotate(d=ExtractIsoWeekDay('order_date'))
+        .values('d').annotate(n=Count('id')).order_by('d')
+    )
+    weekday_buckets = {d: 0 for d in range(1, 8)}
+    for row in by_weekday:
+        weekday_buckets[row['d']] = row['n']
+    orders_by_weekday = [
+        {'label': weekday_names[d], 'n': weekday_buckets[d]} for d in range(1, 8)
+    ]
+
+    # Daily orders time-series.
+    by_day = list(
+        orders_qs.annotate(d=TruncDate('order_date'))
+        .values('d').annotate(n=Count('id')).order_by('d')
+    )
+    orders_daily = [{'label': r['d'].strftime('%Y-%m-%d'), 'n': r['n']} for r in by_day]
+
+    # Top products by total units sold.
+    top_products = list(
+        OrderProduct.objects
+        .filter(order__in=orders_qs)
+        .values('batch__product__name', 'batch__product__category')
+        .annotate(units=Sum('numPurchased'),
+                  revenue=Sum(F('numPurchased') * F('price_at_purchase')))
+        .order_by('-units')[:10]
+    )
+
+    # Category mix by units sold.
+    by_product_category = list(
+        OrderProduct.objects
+        .filter(order__in=orders_qs)
+        .values('batch__product__category')
+        .annotate(units=Sum('numPurchased'))
+        .order_by('-units')
+    )
+
+    context = {
+        'show': show,
+        'totals': totals,
+        'by_action': by_action,
+        'by_category': by_category,
+        'top_paths': top_paths,
+        'hourly_json': json.dumps(hourly),
+        'recent': recent,
+        # Orders block
+        'order_totals': order_totals,
+        'orders_by_hour_json': json.dumps(orders_by_hour),
+        'orders_by_weekday_json': json.dumps(orders_by_weekday),
+        'orders_daily_json': json.dumps(orders_daily),
+        'top_products': top_products,
+        'by_product_category': by_product_category,
+    }
+    return render(request, 'activity_dashboard.html', context)
+
+
+# ─── Demand Forecasting ───────────────────────────────────────────────────────
+import os as _os
+import requests as _requests
+
+AI_SERVICE_URL = _os.environ.get('AI_SERVICE_URL', 'http://ai-service:8000')
+
+
+def _forecast_access_required(user):
+    """Producers see their own products; admins/superusers see all."""
+    return user.is_authenticated and (
+        user.is_superuser or getattr(user, 'category', None) in ('Admin', 'Producer')
+    )
+
+
+@login_required
+def forecasts_index(request):
+    """List products with their trained-model status. Click through to detail."""
+    if not _forecast_access_required(request.user):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    products_qs = Product.objects.select_related('producer').order_by('name')
+    if not (request.user.is_superuser or request.user.category == 'Admin'):
+        products_qs = products_qs.filter(producer=request.user)
+
+    # Pull the trained-model registry from ai-service so we can mark
+    # which products already have a model.
+    trained_ids = set()
+    registry_meta = {'generated_at': None, 'model_count': 0}
+    try:
+        r = _requests.get(f'{AI_SERVICE_URL}/forecast/models', timeout=5)
+        if r.ok:
+            data = r.json()
+            trained_ids = set(data.get('models', []))
+            registry_meta = {
+                'generated_at': data.get('generated_at'),
+                'model_count': data.get('model_count', 0),
+            }
+    except _requests.RequestException:
+        pass  # ai-service unreachable; UI will say so
+
+    products = [{
+        'id': str(p.id),
+        'name': p.name,
+        'category': p.category,
+        'producer': getattr(p.producer, 'organisation_name', '') or p.producer.email,
+        'has_model': str(p.id) in trained_ids,
+    } for p in products_qs]
+
+    return render(request, 'forecasts_index.html', {
+        'products': products,
+        'registry': registry_meta,
+        'ai_service_reachable': bool(trained_ids) or registry_meta['generated_at'] is not None,
+    })
+
+
+@login_required
+def forecast_detail(request, product_id):
+    """Show actual-vs-predicted chart for a single product."""
+    if not _forecast_access_required(request.user):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    product = get_object_or_404(Product, pk=product_id)
+    # Producers can only view their own products.
+    if not (request.user.is_superuser or request.user.category == 'Admin'):
+        if product.producer_id != request.user.id:
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+
+    error = None
+    forecast_payload = None
+    try:
+        r = _requests.post(
+            f'{AI_SERVICE_URL}/forecast/demand',
+            json={'product_id': str(product.id), 'horizon_days': 7},
+            timeout=15,
+        )
+        if r.ok:
+            forecast_payload = r.json()
+        else:
+            error = r.json().get('error', f'ai-service returned {r.status_code}')
+    except _requests.RequestException as e:
+        error = f'ai-service unreachable: {e}'
+
+    return render(request, 'forecast_detail.html', {
+        'product': product,
+        'error': error,
+        'forecast_json': json.dumps(forecast_payload) if forecast_payload else 'null',
+        'forecast': forecast_payload,
+    })

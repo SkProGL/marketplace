@@ -24,11 +24,13 @@ services:
   web:
     build: . # build in current directory
     container_name: django_app
-    command: uv run python manage.py runserver 0.0.0.0:8000
+    command: uv run python manage.py runserver 0.0.0.0:8111
     volumes:
       - ./marketplace_platform:/app
     ports:
-      - "8000:8000"
+      - "8111:8111"
+    environment:
+      AI_SERVICE_URL: http://ai-service:8000
     depends_on:
       db:
         condition: service_healthy
@@ -54,6 +56,20 @@ services:
     env_file:
       - .env
 
+  # Synthetic ActivityLog generator — backfills a week of history on startup,
+  # then streams new events so the /activity/ dashboard stays lively.
+  # Writes directly via the ORM, so it only needs the DB (not `web`).
+  traffic_simulator:
+    build: .
+    command: ["sh", "-c", "sleep 10 && uv run python manage.py simulate_traffic --backfill 800 --rate 1.0 --anon-ratio 0.35"]
+    volumes:
+      - ./marketplace_platform:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+
   # AI Service
   ai-service:
     build:
@@ -69,7 +85,16 @@ services:
       ACTIVE_MODEL_NAME: tiny-iris-logreg.joblib
       USE_FILE_MODELS: "true"
       PYTHONUNBUFFERED: "1"
-      PYTHONPATH: /aai_service/task_2
+      PYTHONPATH: /aai_service:/aai_service/task_2
+      # DB access for the demand-forecast trainer/predictor
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
     volumes:
       - ./aai_service/ai-marketplace-scaffold/models:/app/models
       - ./aai_service/task_2:/aai_service/task_2
