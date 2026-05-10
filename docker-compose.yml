@@ -37,6 +37,8 @@ services:
         restart: true
     env_file:
       - .env
+    environment:
+      AI_SERVICE_URL: http://ai-service:8000
 
   # Periodicly (hour) marks stock as surplus
   scheduler:
@@ -95,7 +97,7 @@ services:
         condition: service_healthy
     volumes:
       - ./aai_service/ai-marketplace-scaffold/models:/app/models
-      - ./aai_service:/aai_service
+      - ./aai_service/task_2:/aai_service/task_2
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
       interval: 15s

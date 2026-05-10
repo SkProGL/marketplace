@@ -123,16 +123,112 @@
       <select name="product_id" id="batch-product" required>
         <option value="" disabled selected>Select product&#8230;</option>
         {% for product in products %}
-          <option value="{{ product.id }}" data-base-price="{{ product.price }}">
-            {{ product.name }} &#8212; Class A: &#163;{{ product.price }}
+          <option value="{{ product.id }}" data-base-price="{{ product.price }}" data-category="{{ product.category }}">
+            {{ product.name }}  {{ product.category }} ({{ product.price }})
           </option>
         {% endfor %}
       </select>
-
-      <div id="base-price-display" class="batch-base-price" style="display:none">
-        Class A base price: <strong id="base-price-value">&#8212;</strong>
+      <label>Image</label>
+      <label class="upload" id="ab-upload-label">
+        <input type="file" name="image" accept="image/*" id="ab-image" />
+        <span class="upload-label">Select image (auto-compressed on upload)</span>
+      </label>
+      <style>
+        @keyframes img-spin { to { transform: rotate(360deg); } }
+        #img-spinner {
+          display: inline-block;
+          width: 14px; height: 14px;
+          border: 2px solid #ccc;
+          border-top-color: #555;
+          border-radius: 50%;
+          animation: img-spin 0.7s linear infinite;
+          vertical-align: middle;
+          margin-right: 6px;
+        }
+      </style>
+      <div id="img-feedback" style="display:none;margin-top:8px;padding:14px 16px;border-radius:10px;font-size:0.88rem;background:#fff8e1;border:1px solid #f6c90e;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span id="img-spinner" style="display:none;"></span>
+          <strong id="img-feedback-title" style="font-size:0.95rem;">Image quality suggestions:</strong>
+        </div>
+        <div style="display:flex;gap:20px;align-items:flex-start;">
+          <div id="img-rembg-section" style="display:none;flex-shrink:0;text-align:center;">
+            <div style="font-size:0.75rem;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">Segmentation</div>
+            <img id="img-rembg-preview" src="" alt="rembg output"
+                 style="max-width:220px;max-height:220px;display:block;border-radius:8px;border:1px solid #ddd;" />
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div id="img-stats" style="display:none;flex-direction:column;gap:6px;margin-bottom:12px;padding:10px 12px;background:rgba(0,0,0,0.04);border-radius:6px;font-size:0.83rem;">
+              <div style="display:flex;justify-content:space-between;"><span style="color:#666;">Brightness</span><strong id="img-brightness-val"></strong></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:#666;">Coverage</span><strong id="img-coverage-pct"></strong></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:#666;">Edge cutoff</span><strong id="img-cutoff-pct"></strong></div>
+              <div id="img-grade-row" style="display:none;border-top:1px solid rgba(0,0,0,0.08);margin-top:4px;padding-top:8px;">
+                <!-- Grade badge + composite -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                  <span style="color:#555;font-size:0.8rem;">Predicted grade</span>
+                  <strong id="img-grade-val" style="font-size:1.35rem;letter-spacing:0.02em;"></strong>
+                </div>
+                <!-- Quality score thermometer (prominent) -->
+                <div id="img-composite-row" style="margin-bottom:10px;padding:10px 10px 16px;border-radius:8px;">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+                    <span style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:#555;">Aggregate score</span>
+                    <span id="img-composite-val" style="font-size:1.1rem;font-weight:900;"></span>
+                  </div>
+                  <!-- Bar + labels populated by JS -->
+                  <div id="img-composite-bar" style="position:relative;height:12px;background:#e0e0e0;border-radius:6px;overflow:visible;"></div>
+                  <div id="img-composite-labels" style="position:relative;height:16px;margin-top:3px;"></div>
+                </div>
+                <!-- Individual metric bars -->
+                <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:8px;">
+                  <div id="img-ripeness-row" class="img-metric-bar-row">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+                      <span style="color:#888;font-size:0.75rem;">Ripeness</span>
+                      <span id="img-ripeness-val" style="font-size:0.75rem;font-weight:600;"></span>
+                    </div>
+                    <div style="height:5px;background:#e8e8e8;border-radius:3px;overflow:hidden;">
+                      <div id="img-ripeness-bar" style="height:100%;width:0%;background:#aaa;border-radius:3px;transition:width 0.5s;"></div>
+                    </div>
+                  </div>
+                  <div id="img-colour-row" class="img-metric-bar-row">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+                      <span style="color:#888;font-size:0.75rem;">Colour</span>
+                      <span id="img-colour-val" style="font-size:0.75rem;font-weight:600;"></span>
+                    </div>
+                    <div style="height:5px;background:#e8e8e8;border-radius:3px;overflow:hidden;">
+                      <div id="img-colour-bar" style="height:100%;width:0%;background:#aaa;border-radius:3px;transition:width 0.5s;"></div>
+                    </div>
+                  </div>
+                  <div id="img-size-row" class="img-metric-bar-row">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+                      <span style="color:#888;font-size:0.75rem;">Proportion</span>
+                      <span id="img-size-val" style="font-size:0.75rem;font-weight:600;"></span>
+                    </div>
+                    <div style="height:5px;background:#e8e8e8;border-radius:3px;overflow:hidden;">
+                      <div id="img-size-bar" style="height:100%;width:0%;background:#aaa;border-radius:3px;transition:width 0.5s;"></div>
+                    </div>
+                  </div>
+                </div>
+                <div id="img-effective-price-row" style="display:none;margin-top:8px;padding:8px 10px;border-radius:7px;background:#f0fff4;border:1px solid #b2dfcd;">
+                  <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#555;margin-bottom:2px;">Effective price</div>
+                  <div style="display:flex;align-items:baseline;gap:6px;">
+                    <strong id="img-effective-price" style="font-size:1.25rem;color:#1a7a3c;font-weight:800;"></strong>
+                    <span id="img-effective-label" style="color:#666;font-size:0.75rem;"></span>
+                  </div>
+                </div>
+                <div style="margin-top:8px;padding-top:7px;border-top:1px solid rgba(0,0,0,0.08);display:flex;flex-direction:column;gap:5px;">
+                  <button type="button" class="grade-action-btn" onclick="openGradeModal()">How was this decision made?</button>
+                  <button type="button" class="grade-action-btn" onclick="openDisputeModal()">Disagree with this prediction?</button>
+                </div>
+              </div>
+            </div>
+            <ul id="img-feedback-list" style="margin:0;padding-left:18px;line-height:1.6;"></ul>
+          </div>
+        </div>
       </div>
-
+      <!-- <div id="base-price-display" class="batch-base-price" style="display:none">
+        Class A base price: <strong id="base-price-value">&#8212;</strong>
+      </div> -->
+<!-- 
       <label>Quality class</label>
       <div class="toggles">
         <input type="radio" name="quality_class" value="A" id="qc-A" checked />
@@ -145,12 +241,9 @@
         <label for="qc-D">D &#8212; Basic</label>
         <input type="radio" name="quality_class" value="Discounted" id="qc-S" />
         <label for="qc-S">Surplus / Discount</label>
-      </div>
+      </div> -->
 
-      <div class="effective-price-row">
-        Effective price: <strong id="effective-price-display">&#8212;</strong>
         <span id="price-suggestion" class="price-suggestion"></span>
-      </div>
       <input type="hidden" name="price" id="batch-price" value="0" />
 
       <label>Stock</label>
@@ -175,45 +268,14 @@
         <input type="text" name="discount_note" placeholder="Reason for discount" />
       </div>
 
-      <label>Image</label>
-      <label class="upload" id="ab-upload-label">
-        <input type="file" name="image" accept="image/*" id="ab-image" />
-        <span class="upload-label">Select image (auto-compressed on upload)</span>
-      </label>
-      <style>
-        @keyframes img-spin { to { transform: rotate(360deg); } }
-        #img-spinner {
-          display: inline-block;
-          width: 14px; height: 14px;
-          border: 2px solid #ccc;
-          border-top-color: #555;
-          border-radius: 50%;
-          animation: img-spin 0.7s linear infinite;
-          vertical-align: middle;
-          margin-right: 6px;
-        }
-      </style>
-      <div id="img-feedback" style="display:none;margin-top:8px;padding:10px 14px;border-radius:8px;font-size:0.88rem;background:#fff8e1;border:1px solid #f6c90e;">
-        <span id="img-spinner" style="display:none;"></span><strong id="img-feedback-title">Image quality suggestions:</strong>
-        <div id="img-stats" style="display:none;margin-top:6px;font-size:0.82rem;color:#555;gap:16px;flex-wrap:wrap;">
-          <span>Brightness: <strong id="img-brightness-val"></strong></span>
-          <span>Coverage: <strong id="img-coverage-pct"></strong></span>
-        </div>
-        <div style="display:flex;gap:14px;align-items:flex-start;margin-top:8px;">
-          <div id="img-rembg-section" style="display:none;flex-shrink:0;">
-            <div style="font-size:0.82rem;color:#555;margin-bottom:4px;">What the model sees</div>
-            <img id="img-rembg-preview" src="" alt="rembg output"
-                 style="max-width:160px;max-height:160px;border-radius:6px;border:1px solid #ddd;background:repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 0 0/16px 16px;" />
-          </div>
-          <ul id="img-feedback-list" style="margin:0;padding-left:18px;"></ul>
-        </div>
-      </div>
-
       <button type="submit">Add Batch</button>
     </form>
   </div>
 
 </div>
+
+{% include "components/dispute-modal.html" %}
+{% include "components/grade-modal.html" %}
 
 <script id="product-season-data" type="application/json">
 {
@@ -222,284 +284,6 @@
 }
 </script>
 
-<script>
-  (function() {
-    const min = new Date();
-    min.setTime(min.getTime() + 72 * 60 * 60 * 1000);
-    const y = min.getFullYear();
-    const m = String(min.getMonth() + 1).padStart(2, '0');
-    const d = String(min.getDate()).padStart(2, '0');
-    const minDate = `${y}-${m}-${d}`;
-    const picker = document.getElementById('best_before');
-    picker.min = minDate;
-    if (!picker.value || picker.value < minDate) picker.value = minDate;
-  })();
-
-  function toggleSeasonFields(allYear) {
-    document.getElementById('np-season-fields').style.display = allYear ? 'none' : '';
-  }
-
-  function switchTab(tab) {
-    document.getElementById('pane-new').style.display   = tab === 'new'   ? '' : 'none';
-    document.getElementById('pane-batch').style.display = tab === 'batch' ? '' : 'none';
-    document.getElementById('tab-new').classList.toggle('active',   tab === 'new');
-    document.getElementById('tab-batch').classList.toggle('active', tab === 'batch');
-    if (tab === 'batch') updateSuggestedPrice();
-  }
-
-  const npDropzone    = document.getElementById('np-dropzone');
-  const npImageInput  = document.getElementById('np-image');
-  const npPreview     = document.getElementById('np-preview');
-  const npPlaceholder = document.getElementById('np-dz-placeholder');
-  const npRevert      = document.getElementById('np-revert');
-
-  function showNpPreview(file) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      npPreview.src = e.target.result;
-      npPreview.style.display = 'block';
-      npPlaceholder.style.display = 'none';
-      npDropzone.style.borderStyle  = 'solid';
-      npDropzone.style.borderColor  = '#198754';
-      npRevert.style.display = 'flex';
-    };
-    reader.readAsDataURL(file);
-  }
-
-  npRevert.addEventListener('click', e => {
-    e.stopPropagation();
-    npImageInput.value      = '';
-    npPreview.style.display = 'none';
-    npPreview.src           = '';
-    npPlaceholder.style.display = 'block';
-    npRevert.style.display  = 'none';
-    npDropzone.style.borderStyle = 'dashed';
-    npDropzone.style.borderColor = '#ccc';
-    npDropzone.style.background  = '#fafafa';
-  });
-
-  npDropzone.addEventListener('click', () => npImageInput.click());
-  npImageInput.addEventListener('change', function() {
-    if (this.files[0]) showNpPreview(this.files[0]);
-  });
-  npDropzone.addEventListener('dragover', e => {
-    e.preventDefault();
-    npDropzone.style.borderColor = '#198754';
-    npDropzone.style.background  = '#f0fff4';
-  });
-  npDropzone.addEventListener('dragleave', e => {
-    if (!npDropzone.contains(e.relatedTarget)) {
-      npDropzone.style.borderColor = '#ccc';
-      npDropzone.style.background  = '#fafafa';
-    }
-  });
-  npDropzone.addEventListener('drop', e => {
-    e.preventDefault();
-    npDropzone.style.background = '#fafafa';
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      npImageInput.files = dt.files;
-      showNpPreview(file);
-    }
-  });
-
-  const abImage         = document.getElementById('ab-image');
-  const fbBox           = document.getElementById('img-feedback');
-  const fbList          = document.getElementById('img-feedback-list');
-  const fbTitle         = document.getElementById('img-feedback-title');
-  const fbSpinner       = document.getElementById('img-spinner');
-  const fbStats         = document.getElementById('img-stats');
-  const brightnessVal   = document.getElementById('img-brightness-val');
-  const rembgSection    = document.getElementById('img-rembg-section');
-  const rembgPreview    = document.getElementById('img-rembg-preview');
-  const coveragePct     = document.getElementById('img-coverage-pct');
-
-  async function analyseImage(file) {
-    // Draw image to canvas — used for brightness check AND to produce a
-    // JPEG blob for the server (handles HEIC and other exotic formats PIL can't open)
-    const { brightnessTips, avgLum, jpegBlob } = await new Promise(resolve => {
-      const img = new Image();
-      img.onload = function() {
-        const W = img.naturalWidth, H = img.naturalHeight;
-        const canvas = document.createElement('canvas');
-        canvas.width = W; canvas.height = H;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const data = ctx.getImageData(0, 0, W, H).data;
-        let lumSum = 0;
-        const total = W * H;
-        for (let i = 0; i < data.length; i += 4)
-          lumSum += 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-        const lum = lumSum / total;
-        const tips = [];
-        if (lum < 80)
-          tips.push(`Image is too dark (brightness ${lum.toFixed(0)}/255). Move to better lighting or increase brightness.`);
-        else if (lum > 230)
-          tips.push(`Image is overexposed (brightness ${lum.toFixed(0)}/255). Reduce direct light or avoid flash.`);
-        URL.revokeObjectURL(img.src);
-        canvas.toBlob(blob => resolve({ brightnessTips: tips, avgLum: lum, jpegBlob: blob }), 'image/jpeg', 0.85);
-      };
-      img.src = URL.createObjectURL(file);
-    });
-
-    // Show loading state while rembg runs server-side
-    fbBox.style.background = '#f5f5f5';
-    fbBox.style.borderColor = '#ccc';
-    fbTitle.textContent = 'Analysing image…';
-    fbList.innerHTML = '';
-    fbStats.style.display = 'none';
-    rembgSection.style.display = 'none';
-    fbSpinner.style.display = 'inline-block';
-    fbBox.style.display = '';
-
-    // --- server-side coverage check via rembg ---
-    let coverageTips = [];
-    let serverResult = null;
-    try {
-      const formData = new FormData();
-      formData.append('image', jpegBlob, 'image.jpg');
-      formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-      const resp = await fetch('/inventory_upload/analyse/', { method: 'POST', body: formData });
-      if (resp.ok) {
-        serverResult = await resp.json();
-        if (serverResult.tips) coverageTips = serverResult.tips;
-      }
-    } catch (e) {
-      // silently ignore server errors — coverage check is non-critical
-    }
-
-    const tips = [...brightnessTips, ...coverageTips];
-    if (tips.length) {
-      fbBox.style.background = '#fff8e1';
-      fbBox.style.borderColor = '#f6c90e';
-      fbTitle.textContent = 'Image quality suggestions:';
-      fbList.innerHTML = tips.map(t => `<li>${t}</li>`).join('');
-    } else {
-      fbBox.style.background = '#f0fff4';
-      fbBox.style.borderColor = '#198754';
-      fbTitle.textContent = 'Image looks good!';
-      fbList.innerHTML = '';
-    }
-
-    fbSpinner.style.display = 'none';
-    brightnessVal.textContent = `${avgLum.toFixed(0)} / 255`;
-    fbStats.style.display = 'flex';
-
-    if (serverResult && serverResult.preview) {
-      coveragePct.textContent = `${(serverResult.coverage * 100).toFixed(1)}%`;
-      rembgPreview.src = `data:image/png;base64,${serverResult.preview}`;
-      rembgSection.style.display = '';
-    } else {
-      coveragePct.textContent = '—';
-      rembgSection.style.display = 'none';
-    }
-
-    fbBox.style.display = '';
-  }
-
-  if (abImage) {
-    abImage.addEventListener('change', function() {
-      const span = this.closest('label.upload').querySelector('.upload-label');
-      span.textContent = this.files[0] ? this.files[0].name : 'Select image (auto-compressed on upload)';
-      if (this.files[0]) analyseImage(this.files[0]);
-      else { fbBox.style.display = 'none'; }
-    });
-  }
-
-  function lockSeasonEnd(startId, endId) {
-    const s = document.getElementById(startId);
-    const e = document.getElementById(endId);
-    if (!s || !e) return;
-    function update() {
-      Array.from(e.options).forEach((opt, i) => { opt.disabled = i < s.selectedIndex; });
-      if (e.selectedIndex < s.selectedIndex) e.selectedIndex = s.selectedIndex;
-    }
-    s.addEventListener('change', update);
-    update();
-  }
-
-  const discounts = { A: 0, B: 0.15, C: 0.30, D: 0.45, Discounted: 0.50 };
-  const labels    = { A: 'base price', B: '−15% from base', C: '−30% from base', D: '−45% from base', Discounted: '−50% from base (suggested)' };
-
-  const productSelect  = document.getElementById('batch-product');
-  const priceInput     = document.getElementById('batch-price');
-  const priceSuggLabel = document.getElementById('price-suggestion');
-  const basePriceDisp  = document.getElementById('base-price-display');
-  const basePriceVal   = document.getElementById('base-price-value');
-  const effectivePriceDisplay = document.getElementById('effective-price-display');
-
-  function getSelectedBasePrice() {
-    const opt = productSelect.options[productSelect.selectedIndex];
-    return opt ? parseFloat(opt.dataset.basePrice) : NaN;
-  }
-
-  function updateSuggestedPrice() {
-    const base = getSelectedBasePrice();
-    const qc   = document.querySelector('input[name="quality_class"]:checked')?.value;
-    if (isNaN(base) || !qc) {
-      priceSuggLabel.textContent      = '';
-      effectivePriceDisplay.textContent = '—';
-      return;
-    }
-    const discount  = discounts[qc] ?? 0;
-    const effective = (base * (1 - discount)).toFixed(2);
-    priceInput.value = effective;
-    effectivePriceDisplay.textContent = `£${effective}`;
-    priceSuggLabel.textContent        = `(${labels[qc]})`;
-  }
-
-  const PRODUCT_SEASONS = JSON.parse(document.getElementById('product-season-data').textContent);
-  const MONTH_NUMS = {
-    'January':1,'February':2,'March':3,'April':4,'May':5,'June':6,
-    'July':7,'August':8,'September':9,'October':10,'November':11,'December':12
-  };
-
-  function updateHarvestDateBounds() {
-    const harvestPicker = document.getElementById('harvest_date');
-    if (!harvestPicker) return;
-    const today = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
-    harvestPicker.max = todayStr;
-    const season = PRODUCT_SEASONS[productSelect.value];
-    if (!season || season.allYear) { harvestPicker.min = ''; return; }
-    const startNum = MONTH_NUMS[season.seasonStart];
-    if (!startNum) return;
-    const currentMonth = today.getMonth() + 1;
-    const year = currentMonth >= startNum ? today.getFullYear() : today.getFullYear() - 1;
-    harvestPicker.min = `${year}-${pad(startNum)}-01`;
-  }
-
-  productSelect.addEventListener('change', () => {
-    const base = getSelectedBasePrice();
-    if (!isNaN(base)) {
-      basePriceDisp.style.display = '';
-      basePriceVal.textContent    = `£${base.toFixed(2)}`;
-    } else {
-      basePriceDisp.style.display = 'none';
-    }
-    updateSuggestedPrice();
-    updateHarvestDateBounds();
-  });
-
-  document.querySelectorAll('input[name="quality_class"]').forEach(r => {
-    r.addEventListener('change', updateSuggestedPrice);
-  });
-
-  function updateDiscountRow() {
-    const qc = document.querySelector('input[name="quality_class"]:checked')?.value;
-    document.getElementById('discount-row').style.display = qc === 'Discounted' ? '' : 'none';
-  }
-  document.querySelectorAll('input[name="quality_class"]').forEach(r => {
-    r.addEventListener('change', updateDiscountRow);
-  });
-  updateDiscountRow();
-
-  lockSeasonEnd('np-season-start', 'np-season-end');
-
-  const formType = '{{ active_tab|default:"new" }}';
-  if (formType === 'new_batch') switchTab('batch');
-</script>
+<script>window.INVENTORY_CONFIG = { activeTab: '{{ active_tab|default:"new" }}' };</script>
+<script src="{% static 'inventory_upload.js' %}"></script>
 {% endblock %}

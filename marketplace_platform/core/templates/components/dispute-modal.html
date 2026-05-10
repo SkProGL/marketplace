@@ -1,0 +1,19 @@
+<!-- Dispute modal -->
+<div id="dispute-modal-backdrop" class="grade-modal-backdrop" onclick="closeDisputeModal()" style="display:none;"></div>
+<div id="dispute-modal" class="grade-modal" style="display:none;width:min(480px,95vw);">
+  <div class="grade-modal-header">
+    <h2>Dispute AI prediction</h2>
+    <button type="button" class="grade-modal-close" onclick="closeDisputeModal()">&times;</button>
+  </div>
+  <p style="margin:0 0 14px;color:#666;font-size:0.85rem;">Your details and grade context are pre-filled. Add any additional notes - an admin will review your dispute.</p>
+  <div id="grade-complaint-sent" class="grade-complaint-sent" style="display:none;">Your dispute has been submitted. An admin will review it shortly.</div>
+  <div id="grade-complaint-form">
+    <label class="grade-complaint-label" for="gc-name">Your name</label>
+    <input type="text" id="gc-name" value="{{ request.user.full_name|default:'' }}">
+    <label class="grade-complaint-label" for="gc-email">Email</label>
+    <input type="email" id="gc-email" value="{{ request.user.email|default:'' }}">
+    <label class="grade-complaint-label" for="grade-complaint-desc">Details</label>
+    <textarea id="grade-complaint-desc" rows="4" style="resize:vertical;"></textarea>
+    <button type="button" class="grade-complaint-submit" onclick="submitGradeComplaint()">Submit dispute</button>
+  </div>
+</div>

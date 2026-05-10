@@ -1,4 +1,5 @@
 import json
+import os
 import difflib
 from collections import defaultdict
 from django.db.models import Q, Sum, Subquery, OuterRef, Prefetch, Avg, Count, F
@@ -1070,9 +1071,10 @@ def analyse_image(request):
         img = PILImage.open(request.FILES['image']).convert('RGBA')
         W, H = img.size
 
-        # Pad with white so rembg always has background context even for close-up shots
+        # Pad with mid-grey so rembg has clear contrast against both light and dark produce.
+        # White padding fools rembg when the original background is also white.
         pad = max(W, H) // 5
-        padded = PILImage.new('RGBA', (W + 2 * pad, H + 2 * pad), (255, 255, 255, 255))
+        padded = PILImage.new('RGBA', (W + 2 * pad, H + 2 * pad), (128, 128, 128, 255))
         padded.paste(img, (pad, pad))
 
         result_padded = remove(padded)
@@ -1085,27 +1087,57 @@ def analyse_image(request):
         # Coverage relative to original image area (not padded)
         coverage = min(float((padded_mask > 128).sum()) / (W * H), 1.0)
 
+        # Composite onto a neutral grey background so the preview looks
+        # like the original image rather than showing misleading transparency.
+        preview_bg = PILImage.new('RGB', result.size, (180, 180, 180))
+        preview_bg.paste(result, mask=result.split()[3])
         buf = io.BytesIO()
-        result.save(buf, format='PNG')
+        preview_bg.save(buf, format='JPEG', quality=85)
         preview_b64 = base64.b64encode(buf.getvalue()).decode()
 
         tips = []
         if coverage < 0.20:
-            tips.append(f"The produce takes up only {coverage*100:.0f}% of the frame. Move the camera closer.")
-        elif coverage > 0.70:
-            tips.append("The produce fills almost the entire frame. Move the camera slightly further away.")
+            tips.append(f"The subject takes up only {coverage*100:.0f}% of the frame. Move the camera closer.")
+        elif coverage > 0.80:
+            tips.append(f"The subject fills up {coverage*100:.0f}% entire frame. Move the camera slightly further away.")
 
-        # Check if produce is cut off at any edge of the original frame
-        edge_fg_threshold = 0.05
-        edges = [cropped_mask[0, :], cropped_mask[-1, :], cropped_mask[:, 0], cropped_mask[:, -1]]
-        if any((e > 128).mean() > edge_fg_threshold for e in edges):
-            tips.append("Part of the produce appears to be cut off. Make sure the full item fits within the frame.")
+        # Check if subject is cut off at any edge of the original frame
+        EDGE_FG_THRESHOLD = 5
+        edge_fg_pct = (np.concatenate([cropped_mask[0, :], cropped_mask[-1, :], cropped_mask[:, 0], cropped_mask[:, -1]]) > 128).mean() * 100
+        if edge_fg_pct > EDGE_FG_THRESHOLD:
+            tips.append(f"The subject appears to be cut off at the edges ({edge_fg_pct:.0f}% of border pixels are foreground). Move the camera further away.")
+
 
         return JsonResponse({
             'coverage': round(coverage, 3),
+            'cutoff': round(edge_fg_pct, 3),
             'tips': tips,
             'preview': preview_b64,
         })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+GRADEABLE_CATEGORIES = {'Fruit', 'Vegetable'}
+
+@login_required
+def grade_image(request):
+    """Proxy image to ai-service /predict/image and return the grading result."""
+    if request.method != 'POST' or not request.FILES.get('image'):
+        return JsonResponse({'error': 'No image provided'}, status=400)
+    category = request.POST.get('category', '')
+    if category and category not in GRADEABLE_CATEGORIES:
+        return JsonResponse({'error': f'AI grading is not available for {category} products.'}, status=422)
+    try:
+        import requests as req_lib
+        ai_url = os.environ.get('AI_SERVICE_URL', 'http://ai-service:8000')
+        image_file = request.FILES['image']
+        resp = req_lib.post(
+            f'{ai_url}/predict/image',
+            files={'image': (image_file.name, image_file, image_file.content_type)},
+            timeout=30,
+        )
+        return JsonResponse(resp.json(), status=resp.status_code)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -1263,6 +1295,9 @@ def management_view(request: HttpResponse):
     print(model_names)
     print(f"{user_category} - {allowed_models}")
 
+    if selected_model_name and selected_model_name not in model_names:
+        selected_model_name = None
+
     print(f"\n[management_view] Selected model is: {selected_model_name}")
 
     if selected_model_name == 'Order':
@@ -1329,15 +1364,15 @@ def management_view(request: HttpResponse):
                 request, selected_model, selected_model_name,
                 add_new, row_filter, distinct, readonly_fields)
 
+    view_mode = request.GET.get('view_mode', 'basic')
+
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render(request, 'includes/management/management_table_fragment.html', {
             'selected_data': selected_data,
             'selected_model_name': selected_model_name,
+            'view_mode': view_mode,
         })
     instructions = MODEL_INSTRUCTIONS.get(selected_model_name, '')
-    
-    # Surgical change: Add view_mode to context
-    view_mode = request.GET.get('view_mode', 'basic')
 
     return render(
         request, 'management.html', {
