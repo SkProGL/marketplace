@@ -29,8 +29,6 @@ services:
       - ./marketplace_platform:/app
     ports:
       - "8111:8111"
-    environment:
-      AI_SERVICE_URL: http://ai-service:8000
     depends_on:
       db:
         condition: service_healthy
