@@ -22,6 +22,14 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from decimal import Decimal
+
+def _image_url(field):
+    if not field:
+        return None
+    try:
+        return field.url
+    except Exception:
+        return None
 from datetime import time, timedelta, date as date_type, datetime as datetime_type
 
 
@@ -845,8 +853,8 @@ def home_view(request):
             'name': item.name,
             'price': str(item.price),
             'price_display': item.price_display,
-            'image': item.image.url if item.image else None,
-            'thumbnail': item.thumbnail.url if item.image else None,
+            'image': _image_url(item.image),
+            'thumbnail': _image_url(item.thumbnail) if item.image else None,
             'allergens': item.allergens,
             'description': item.description,
             'category': item.category,

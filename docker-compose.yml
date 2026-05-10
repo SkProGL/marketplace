@@ -24,7 +24,7 @@ services:
   web:
     build: . # build in current directory
     container_name: django_app
-    command: uv run python manage.py runserver 0.0.0.0:8111
+    command: sh -c "uv run python manage.py migrate && uv run python manage.py runserver 0.0.0.0:8111"
     volumes:
       - ./marketplace_platform:/app
     ports:
@@ -59,7 +59,7 @@ services:
   # Writes directly via the ORM, so it only needs the DB (not `web`).
   traffic_simulator:
     build: .
-    command: ["sh", "-c", "sleep 10 && uv run python manage.py simulate_traffic --backfill 800 --rate 1.0 --anon-ratio 0.35"]
+    command: sh -c "uv run python manage.py migrate && uv run python manage.py simulate_traffic --backfill 800 --rate 1.0 --anon-ratio 0.35"
     volumes:
       - ./marketplace_platform:/app
     depends_on:
