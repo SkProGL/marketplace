@@ -7,6 +7,7 @@
       <div class="gm-view-toggle">
         <button type="button" class="gm-view-btn active" id="gm-btn-basic" onclick="switchGmView('basic')">Summary</button>
         <button type="button" class="gm-view-btn" id="gm-btn-advanced" onclick="switchGmView('advanced')">Advanced</button>
+        <button type="button" class="gm-view-btn" id="gm-btn-manual" onclick="switchGmView('manual')" style="display:none;">Manual review</button>
       </div>
       <button type="button" class="grade-modal-close" onclick="closeGradeModal()">&times;</button>
     </div>
@@ -105,6 +106,42 @@
       <div class="gm-advanced-calc">
         <h3>Grade Calculation</h3>
         <div id="gm-formula-content" class="gm-formula-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANUAL REVIEW PANEL (manager-side override) -->
+  <div id="gm-manual-panel" style="display:none;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
+      <div>
+        <h3 style="margin-top:0;">Customer's uploaded image</h3>
+        <div style="background:#f5f5f5;border:1px solid #e0e0e0;border-radius:6px;padding:10px;min-height:200px;display:flex;align-items:center;justify-content:center;">
+          <img id="gm-manual-image" src="" alt="Original input" style="max-width:100%;max-height:420px;display:none;border-radius:4px;">
+          <p id="gm-manual-image-na" style="color:#888;font-style:italic;margin:0;">Original image not stored with this dispute.</p>
+        </div>
+      </div>
+      <div>
+        <h3 style="margin-top:0;">Assign a manual grade</h3>
+        <p style="color:#666;font-size:0.85rem;margin-bottom:14px;">
+          AI predicted <strong id="gm-manual-ai-grade" style="color:#333;">-</strong>.
+          Choose the grade you believe is correct after reviewing the image and the AI's reasoning.
+        </p>
+        <form id="gm-manual-form" method="POST" action="">
+          <input type="hidden" name="csrfmiddlewaretoken" id="gm-manual-csrf" value="">
+          <input type="hidden" name="action" value="assign_grade">
+          <input type="hidden" name="complaint_id" id="gm-manual-cid" value="">
+          <div id="gm-manual-grade-options" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;">
+            <label class="gm-manual-grade-opt"><input type="radio" name="manager_grade" value="A"><span class="gm-manual-grade-text"><strong style="color:#1a7a3c;">A</strong> — Premium</span></label>
+            <label class="gm-manual-grade-opt"><input type="radio" name="manager_grade" value="B"><span class="gm-manual-grade-text"><strong style="color:#3a7abf;">B</strong> — Standard</span></label>
+            <label class="gm-manual-grade-opt"><input type="radio" name="manager_grade" value="C"><span class="gm-manual-grade-text"><strong style="color:#c97a00;">C</strong> — Economy</span></label>
+            <label class="gm-manual-grade-opt"><input type="radio" name="manager_grade" value="D"><span class="gm-manual-grade-text"><strong style="color:#c94000;">D</strong> — Basic</span></label>
+            <label class="gm-manual-grade-opt"><input type="radio" name="manager_grade" value="Rejected"><span class="gm-manual-grade-text"><strong style="color:#991111;">Rejected</strong> — Unfit for sale</span></label>
+          </div>
+          <button type="submit" class="grade-complaint-submit" style="width:100%;">Save manual grade &amp; mark resolved</button>
+        </form>
+        <p id="gm-manual-current" style="margin-top:12px;font-size:0.85rem;color:#1a7a3c;display:none;">
+          Current manager grade on record: <strong id="gm-manual-current-val"></strong>
+        </p>
       </div>
     </div>
   </div>

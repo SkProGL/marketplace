@@ -496,6 +496,7 @@
     fd.append('email',       document.getElementById('gc-email').value);
     fd.append('category',    'Quality Issue');
     fd.append('description', fullDesc);
+    if (r) fd.append('ai_evidence', JSON.stringify(r));
     try {
       await fetch('/complaint/', { method: 'POST', body: fd, redirect: 'follow' });
     } catch (ex) { /* ignore network error */ }
@@ -616,6 +617,14 @@
     }
 
     if (gradeResult && gradeResult.overall_grade) {
+      // Stash the original input image so a manager reviewing a dispute can
+      // see what the customer uploaded, alongside the AI's Grad-CAM output.
+      gradeResult.input_image_b64 = await new Promise(res => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(',')[1]);
+        r.onerror = () => res(null);
+        r.readAsDataURL(jpegBlob);
+      });
       _lastGradeResult = gradeResult;
       const grade = gradeResult.overall_grade;
       const m = gradeResult.metrics || {};

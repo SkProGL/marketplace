@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load static %}
+{% block container_class %}container-fluid px-5{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'inventory_upload.css' %}">
+
+<div class="row justify-content-center">
+  <div class="col-11">
+    <div class="card shadow p-4">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="mb-0">Grade Disputes</h2>
+        <div>
+          <span class="badge bg-danger" style="font-size:0.85rem;">{{ unresolved_count }} unresolved</span>
+          <a href="{% url 'management' %}" class="btn btn-sm btn-outline-secondary ms-2">Back to management</a>
+        </div>
+      </div>
+      <p class="text-muted" style="font-size:0.9rem;">
+        Customer disputes against AI grading decisions. Click <em>View AI evidence</em> to inspect
+        the same Grad-CAM, segmentation, metrics, and explanation the customer saw at the time of upload.
+      </p>
+
+      {% if disputes %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Submitted</th>
+              <th>Customer</th>
+              <th>AI grade</th>
+              <th>Manager grade</th>
+              <th>Type / Health</th>
+              <th>Notes</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for d in disputes %}
+            <tr {% if d.resolved %}style="opacity:0.55;"{% endif %}>
+              <td style="white-space:nowrap;font-size:0.85rem;">{{ d.submitted_at|date:"Y-m-d H:i" }}</td>
+              <td>
+                <div style="font-weight:600;">{{ d.name }}</div>
+                <div style="color:#888;font-size:0.78rem;">{{ d.email }}</div>
+              </td>
+              <td>
+                {% with grade=d.ai_evidence.overall_grade %}
+                  <strong style="font-size:1rem;
+                    color: {% if grade == 'A' %}#1a7a3c{% elif grade == 'B' %}#3a7abf{% elif grade == 'C' %}#c97a00{% elif grade == 'D' %}#c94000{% else %}#991111{% endif %};">{{ grade|default:'-' }}</strong>
+                {% endwith %}
+              </td>
+              <td>
+                {% if d.manager_grade %}
+                  <strong style="font-size:1rem;
+                    color: {% if d.manager_grade == 'A' %}#1a7a3c{% elif d.manager_grade == 'B' %}#3a7abf{% elif d.manager_grade == 'C' %}#c97a00{% elif d.manager_grade == 'D' %}#c94000{% else %}#991111{% endif %};">{{ d.manager_grade }}</strong>
+                {% else %}
+                  <span style="color:#bbb;">—</span>
+                {% endif %}
+              </td>
+              <td style="font-size:0.85rem;">
+                <div>{{ d.ai_evidence.fruit_type|default:'-' }}</div>
+                <div style="color:#888;">{{ d.ai_evidence.prediction|default:'-' }}</div>
+              </td>
+              <td style="max-width:340px;font-size:0.82rem;white-space:pre-wrap;">{{ d.description }}</td>
+              <td>
+                {% if d.resolved %}
+                  <span class="badge bg-success">Resolved</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Open</span>
+                {% endif %}
+              </td>
+              <td style="white-space:nowrap;">
+                <button type="button"
+                        class="btn btn-sm btn-outline-primary"
+                        data-evidence='{{ d.ai_evidence_json|safe }}'
+                        data-cid="{{ d.id }}"
+                        data-current="{{ d.manager_grade }}"
+                        onclick="openGradeModal(JSON.parse(this.dataset.evidence), {complaintId: this.dataset.cid, currentGrade: this.dataset.current, csrfToken: document.querySelector('[name=csrfmiddlewaretoken]').value, actionUrl: '{% url 'dispute_review' %}'})">
+                  View AI evidence
+                </button>
+                <form method="POST" action="{% url 'dispute_review' %}" style="display:inline;">
+                  {% csrf_token %}
+                  <input type="hidden" name="complaint_id" value="{{ d.id }}">
+                  <input type="hidden" name="action" value="toggle_resolved">
+                  <button type="submit" class="btn btn-sm {% if d.resolved %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                    {% if d.resolved %}Reopen{% else %}Mark resolved{% endif %}
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p style="color:#888;font-style:italic;padding:20px 0;">No grade disputes submitted yet.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% include "components/grade-modal.html" %}
+<script src="{% static 'grade_modal.js' %}"></script>
+{% endblock %}
