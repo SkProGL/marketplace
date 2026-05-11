@@ -94,3 +94,9 @@ marketplace_platform/core/.DS_Store
 marketplace_platform/media/profile_images/three-fennel-bulbs.jpg
 marketplace_platform/.DS_Store
 marketplace_platform/core/.DS_Store
+
+# Large model weight files — never commit these to git
+aai_service/ai-marketplace-scaffold/models/*.safetensors
+aai_service/ai-marketplace-scaffold/models/*.pkl
+aai_service/ai-marketplace-scaffold/models/*.pt
+aai_service/ai-marketplace-scaffold/models/forecasts/
