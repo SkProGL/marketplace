@@ -2308,6 +2308,23 @@ def forecast_detail(request, product_id):
             from django.core.exceptions import PermissionDenied
             raise PermissionDenied
 
+    # Build fresh 28-day actuals from the DB so the chart is always current.
+    from collections import defaultdict as _dd
+    from django.utils import timezone as _tz
+    _cutoff = _tz.now() - timedelta(days=28)
+    _rows = (OrderProduct.objects
+             .filter(batch__product=product, order__order_date__gte=_cutoff)
+             .values_list('order__order_date', 'numPurchased'))
+    _day_totals = _dd(float)
+    for _dt, _u in _rows:
+        _day_totals[_dt.date().isoformat()] += float(_u)
+    _today = _tz.now().date()
+    recent_actuals = [
+        {'date': (_today - timedelta(days=i)).isoformat(),
+         'units': _day_totals.get((_today - timedelta(days=i)).isoformat(), 0.0)}
+        for i in range(27, -1, -1)
+    ]
+
     error = None
     forecast_payload = None
     try:
@@ -2318,6 +2335,7 @@ def forecast_detail(request, product_id):
         )
         if r.ok:
             forecast_payload = r.json()
+            forecast_payload['actuals'] = recent_actuals  # replace stale stored actuals
         else:
             error = r.json().get('error', f'ai-service returned {r.status_code}')
     except _requests.RequestException as e:
