@@ -24,11 +24,16 @@
                 <!-- Model selection button group -->
                 <div class="d-flex flex-column gap-3 mb-3">
                     <!-- Surgical fix: Move toggle above model buttons and ensure layout -->
-                    <div class="d-flex justify-content-end">
+                    <div class="d-flex justify-content-end align-items-center gap-2">
+                        {% if user.is_superuser or user.category == 'Admin' %}
+                        <a href="{% url 'dispute_review' %}" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-exclamation-triangle"></i> Grade disputes
+                        </a>
+                        {% endif %}
                         <div class="btn-group" role="group">
-                            <a href="?model={{ selected_model_name }}&view_mode=basic" 
+                            <a href="?model={{ selected_model_name }}&view_mode=basic"
                                class="btn btn-sm {% if view_mode == 'basic' %}btn-success{% else %}btn-outline-success{% endif %}">Basic</a>
-                            <a href="?model={{ selected_model_name }}&view_mode=advanced" 
+                            <a href="?model={{ selected_model_name }}&view_mode=advanced"
                                class="btn btn-sm {% if view_mode == 'advanced' %}btn-success{% else %}btn-outline-success{% endif %}">Advanced</a>
                         </div>
                     </div>

@@ -1,6 +1,6 @@
 
 from core.utils import get_low_stock_products, get_pending_orders, get_seasonal_coming_soon_products
-from .models import OrderProduct, OrderStatusHistory, ProductBatch, ProducerOrder
+from .models import Complaint, OrderProduct, OrderStatusHistory, ProductBatch, ProducerOrder
 
 
 def navbar_alerts(request):
@@ -45,6 +45,22 @@ def navbar_alerts(request):
                 "message_status": ", ".join(names) + suffix,
                 "link_url": '/management/?model=Order',
                 "link_label": "View orders",
+            })
+
+    if request.user.is_superuser or category == 'Admin':
+        cleared_at = getattr(request.user, 'notifications_cleared_at', None)
+        dispute_qs = Complaint.objects.filter(ai_evidence__isnull=False, resolved=False)
+        if cleared_at:
+            dispute_qs = dispute_qs.filter(submitted_at__gt=cleared_at)
+        for c in dispute_qs.order_by('-submitted_at')[:5]:
+            alerts.append({
+                "key": f"dispute_{c.id}",
+                "icon": "exclamation-triangle-fill",
+                "colour": "danger",
+                "message": f"Grade dispute from {c.name or c.email}",
+                "message_status": (c.description or '').split('\n')[0][:80],
+                "link_url": '/management/disputes/',
+                "link_label": "Review disputes",
             })
 
     if category == 'Producer':

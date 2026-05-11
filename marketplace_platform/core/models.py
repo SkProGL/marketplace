@@ -649,6 +649,8 @@ class Complaint(models.Model):
     description = models.TextField()
     submitted_at = models.DateTimeField(default=timezone.now)
     resolved = models.BooleanField(default=False)
+    ai_evidence = models.JSONField(null=True, blank=True)
+    manager_grade = models.CharField(max_length=10, blank=True, default='')
 
     class Meta:
         ordering = ['-submitted_at']

@@ -1836,6 +1836,41 @@ def terms_view(request):
     return render(request, 'terms.html')
 
 
+@management_access_required
+def dispute_review(request):
+    """Admin-only page listing grade-dispute complaints with AI evidence."""
+    from django.core.exceptions import PermissionDenied
+    if not (request.user.is_superuser or getattr(request.user, 'category', None) == 'Admin'):
+        raise PermissionDenied
+    if request.method == 'POST':
+        complaint_id = request.POST.get('complaint_id')
+        action = request.POST.get('action')
+        complaint = get_object_or_404(Complaint, id=complaint_id)
+        if action == 'toggle_resolved':
+            complaint.resolved = not complaint.resolved
+            complaint.save(update_fields=['resolved'])
+        elif action == 'assign_grade':
+            grade = request.POST.get('manager_grade', '').strip()
+            if grade in {'A', 'B', 'C', 'D', 'Rejected'}:
+                complaint.manager_grade = grade
+                complaint.resolved = True
+                complaint.save(update_fields=['manager_grade', 'resolved'])
+        return redirect('dispute_review')
+
+    disputes = list(
+        Complaint.objects
+        .filter(ai_evidence__isnull=False)
+        .select_related('submitted_by')
+        .order_by('resolved', '-submitted_at')
+    )
+    for d in disputes:
+        d.ai_evidence_json = json.dumps(d.ai_evidence) if d.ai_evidence else 'null'
+    return render(request, 'management_disputes.html', {
+        'disputes': disputes,
+        'unresolved_count': sum(1 for d in disputes if not d.resolved),
+    })
+
+
 def submit_complaint(request):
     if request.method == 'POST':
         form = ComplaintForm(request.POST)
@@ -1843,6 +1878,12 @@ def submit_complaint(request):
             complaint = form.save(commit=False)
             if request.user.is_authenticated:
                 complaint.submitted_by = request.user
+            raw_evidence = request.POST.get('ai_evidence')
+            if raw_evidence:
+                try:
+                    complaint.ai_evidence = json.loads(raw_evidence)
+                except (ValueError, TypeError):
+                    pass
             complaint.save()
             messages.success(request, "Your complaint has been submitted. Our compliance team will review it shortly.")
             return redirect('home')

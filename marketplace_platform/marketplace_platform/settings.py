@@ -59,7 +59,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'core.middleware.AutoLoginMiddleware',
+#    'core.middleware.AutoLoginMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "django_browser_reload.middleware.BrowserReloadMiddleware",
@@ -88,6 +88,10 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'marketplace_platform.wsgi.application'
+
+# Accept larger POST bodies — grade-dispute submissions embed base64 image
+# evidence (Grad-CAM, mask, histogram) which exceeds the 2.5 MB default.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 25 * 1024 * 1024
 
 
 # Database
