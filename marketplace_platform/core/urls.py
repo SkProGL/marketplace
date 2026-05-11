@@ -72,5 +72,6 @@ urlpatterns = [
     path('management/order/<uuid:order_id>/order_summary/', views.get_order_summary_json, name='order_summary'),
     path('management/search/', views.management_search, name='management_search'),
     path('management/order/<uuid:producer_order_id>/advance/', views.advance_order_status, name='advance_order_status'),
+    path('management/inventory/demand-insights/', views.demand_insights, name='demand_insights'),
     path('finance/', views.finance_view, name='finance'),
 ] 

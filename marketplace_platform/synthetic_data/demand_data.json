@@ -1,0 +1,27 @@
+{
+  "demand_forecast": {
+    "labels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "actual": [42, 45, 48, 44, 51, 54, 50],
+    "predicted": [49, 52, 53, 51, 55, 57, 54]
+  },
+  "insights": [
+    {
+      "title": "Supply Alert",
+      "text": "High demand expected for tomatoes next week. Consider increasing harvest schedule.",
+      "icon": "bi-exclamation-triangle",
+      "color": "warning"
+    },
+    {
+      "title": "Inventory Risk",
+      "text": "Low stock risk for carrots detected. Current inventory may not meet weekend surge.",
+      "icon": "bi-box-seam",
+      "color": "danger"
+    },
+    {
+      "title": "Market Trend",
+      "text": "Seasonal increase expected this month across all root vegetables.",
+      "icon": "bi-graph-up",
+      "color": "info"
+    }
+  ]
+}

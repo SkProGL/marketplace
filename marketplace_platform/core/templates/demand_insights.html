@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="mb-4 d-flex justify-content-between align-items-end">
+        <div>
+            <h2 class="text-success mb-1">Producer Demand Insights</h2>
+            <p class="text-muted mb-0">Operational forecasting and stock requirements.</p>
+        </div>
+        <a href="{% url 'management' %}" class="btn btn-sm btn-outline-secondary shadow-sm">
+            <i class="bi bi-arrow-left"></i> Back to Management
+        </a>
+    </div>
+
+    <!-- Chart Card -->
+    <div class="card shadow-sm border-0 mb-4 overflow-hidden">
+        <div class="card-header bg-white py-3 border-bottom-0">
+            <h5 class="card-title mb-0 text-dark">7-Day Demand Forecast</h5>
+        </div>
+        <div class="card-body p-0">
+            {{ chart_html|safe }}
+        </div>
+    </div>
+
+    <!-- Insights Cards -->
+    <div class="row">
+        {% for insight in insights %}
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 border-0 border-start border-{{ insight.color|default:'success' }} border-4 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi {{ insight.icon|default:'bi-cpu-fill' }} text-{{ insight.color|default:'success' }} me-2"></i>
+                        <h6 class="card-title mb-0 font-weight-bold text-dark">{{ insight.title }}</h6>
+                    </div>
+                    <p class="card-text text-secondary" style="font-size: 0.9rem;">{{ insight.text }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

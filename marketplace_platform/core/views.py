@@ -1,4 +1,5 @@
 import json
+import os
 import difflib
 from collections import defaultdict
 from django.db.models import Q, Sum, Subquery, OuterRef, Prefetch, Avg, Count, F
@@ -1334,6 +1335,113 @@ def management_view(request: HttpResponse):
             'selected_data': selected_data,
             'selected_model_name': selected_model_name,
         })
+
+    return render(request, 'management.html', {
+        'model_names': model_names,
+        'model_display_names': model_display_names,
+        'selected_model_name': selected_model_name,
+        'selected_data': selected_data,
+        'add_new': add_new,
+        'instructions': MODEL_INSTRUCTIONS.get(selected_model_name, ''),
+    })
+
+
+@management_access_required
+def demand_insights(request):
+    if request.user.category != 'Producer' and not request.user.is_superuser:
+        raise PermissionDenied
+
+    # Load mock data from separate JSON file
+    data_path = os.path.join(settings.BASE_DIR, 'synthetic_data', 'demand_data.json')
+    try:
+        with open(data_path, 'r') as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        data = {"demand_forecast": {"labels": [], "actual": [], "predicted": []}, "insights": []}
+
+    chart_html = ""
+    try:
+        import plotly.graph_objects as go
+        
+        forecast = data['demand_forecast']
+        labels = forecast['labels']
+        actual = forecast['actual']
+        predicted = forecast['predicted']
+        
+        # Calculate derived data
+        upper_band = [v * 1.15 for v in predicted]
+        lower_band = [v * 0.85 for v in predicted]
+        
+        fig = go.Figure()
+
+        # Confidence Interval
+        fig.add_trace(go.Scatter(
+            x=labels + labels[::-1],
+            y=upper_band + lower_band[::-1],
+            fill='toself',
+            fillcolor='rgba(25, 135, 84, 0.1)',
+            line=dict(color='rgba(25, 135, 84, 0)'),
+            hoverinfo='skip',
+            name='Confidence Interval'
+        ))
+
+        # Actual Demand
+        fig.add_trace(go.Scatter(
+            x=labels, y=actual,
+            mode='lines+markers',
+            name='Actual Demand',
+            line=dict(shape='spline', color='#198754', width=3),
+            marker=dict(size=10, line=dict(color='#fff', width=2)),
+            hovertemplate='<b>Actual</b>: %{y} units<extra></extra>'
+        ))
+
+        # Predicted Demand
+        fig.add_trace(go.Scatter(
+            x=labels, y=predicted,
+            mode='lines+markers',
+            name='Predicted Demand',
+            line=dict(shape='spline', color='#198754', width=3, dash='dot'),
+            marker=dict(size=10, symbol='diamond', color='#fff', line=dict(color='#198754', width=2)),
+            customdata=[((p - a)/a*100) if a != 0 else 0 for p, a in zip(predicted, actual)],
+            hovertemplate='<b>Forecast</b>: %{y} units<br><i>Diff: %{customdata:.1f}%</i><extra></extra>'
+        ))
+
+        # Highlight Weekend (Simplified rectangle via shapes)
+        fig.add_vrect(
+            x0="Sat", x1="Sun",
+            fillcolor="rgba(0,0,0,0.03)", opacity=1,
+            layer="below", line_width=0,
+        )
+
+        # Peak Annotation
+        max_p = max(predicted) if predicted else 0
+        if max_p:
+            peak_label = labels[predicted.index(max_p)]
+            fig.add_annotation(
+                x=peak_label, y=max_p,
+                text="Highest Forecast",
+                showarrow=True, arrowhead=2,
+                ax=0, ay=-40,
+                bgcolor="#198754", font=dict(color="#fff")
+            )
+
+        fig.update_layout(
+            template='plotly_white',
+            hovermode='x unified',
+            margin=dict(t=30, b=30, l=60, r=40),
+            legend=dict(orientation='h', y=-0.2, x=0.5, xanchor='center'),
+            font=dict(family='Inter, sans-serif')
+        )
+        
+        chart_html = fig.to_html(full_html=False, config={'responsive': True, 'displayModeBar': False})
+    except ImportError:
+        chart_html = "<div class='p-5 text-center text-muted'>Plotly library not found. Please install via pip.</div>"
+
+    return render(request, 'demand_insights.html', {
+        'chart_html': chart_html,
+        'insights': data['insights']
+    })
+
     instructions = MODEL_INSTRUCTIONS.get(selected_model_name, '')
     
     # Surgical change: Add view_mode to context

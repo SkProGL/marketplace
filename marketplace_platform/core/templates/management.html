@@ -24,7 +24,14 @@
                 <!-- Model selection button group -->
                 <div class="d-flex flex-column gap-3 mb-3">
                     <!-- Surgical fix: Move toggle above model buttons and ensure layout -->
-                    <div class="d-flex justify-content-end">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            {% if user.category == 'Producer' or user.is_superuser %}
+                            <a href="{% url 'demand_insights' %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-graph-up-arrow me-1"></i> Demand Insights
+                            </a>
+                            {% endif %}
+                        </div>
                         <div class="btn-group" role="group">
                             <a href="?model={{ selected_model_name }}&view_mode=basic" 
                                class="btn btn-sm {% if view_mode == 'basic' %}btn-success{% else %}btn-outline-success{% endif %}">Basic</a>

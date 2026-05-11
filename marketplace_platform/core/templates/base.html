@@ -79,6 +79,9 @@
                         <ul class="dropdown-menu">
                             {% if user.is_superuser or user.category == 'Admin' or user.category == 'Producer' %}
                             <li><a class="dropdown-item" href="{% url 'inventory_upload' %}">Inventory</a></li>
+                            {% if user.is_superuser or user.category == 'Producer' %}
+                            <li><a class="dropdown-item" href="{% url 'demand_insights' %}">Demand Insights</a></li>
+                            {% endif %}
                             <li><a class="dropdown-item" href="{% url 'management' %}">Management</a></li>
                             {% endif %}
                             <li><a class="dropdown-item" href="{% url 'community' %}">Community</a></li>
